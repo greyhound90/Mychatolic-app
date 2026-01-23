@@ -33,6 +33,9 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Local Data Connect (pglite) cache
+dataconnect/.dataconnect/
+
 # Symbolication related
 app.*.symbols
 
