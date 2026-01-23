@@ -147,7 +147,7 @@ class _VerseImageBuilderPageState extends State<VerseImageBuilderPage> {
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: templates.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
+                    separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
                     itemBuilder: (context, index) {
                       final t = templates[index];
                       final selected = index == _selectedTemplate;

@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../models/mass_schedule.dart';
+import 'package:mychatolic_app/models/mass_schedule.dart';
 import '../services/radar_service.dart';
 import '../services/schedule_service.dart';
 
