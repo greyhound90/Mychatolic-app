@@ -1,0 +1,152 @@
+Resolving dependencies...
+Downloading packages...
+  app_links 6.4.1 (7.0.0 available)
+  characters 1.4.0 (1.4.1 available)
+  matcher 0.12.17 (0.12.18 available)
+  material_color_utilities 0.11.1 (0.13.0 available)
+  test_api 0.7.7 (0.7.8 available)
+Got dependencies!
+5 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Analyzing mychatolic_app...                                     
+
+warning • The value of the field 'kBorder' isn't used • lib/chat_page.dart:24:22 • unused_field
+   info • Unnecessary use of multiple underscores • lib/chat_page.dart:178:37 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/church_detail_page.dart:199:64 • deprecated_member_use
+   info • 'background' is deprecated and shouldn't be used. Use surface instead. This feature was deprecated after v3.18.0-0.1.pre • lib/core/theme.dart:46:5 • deprecated_member_use
+   info • Statements in an if should be enclosed in a block • lib/edit_profile_page.dart:123:24 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/edit_profile_page.dart:124:16 • curly_braces_in_flow_control_structures
+   info • 'dialogBackgroundColor' is deprecated and shouldn't be used. Use DialogThemeData.backgroundColor instead. This feature was deprecated after v3.27.0-0.1.pre • lib/edit_profile_page.dart:145:13 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/edit_profile_page.dart:362:67 • deprecated_member_use
+   info • Statements in an if should be enclosed in a block • lib/edit_profile_page.dart:417:29 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/edit_profile_page.dart:418:58 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/edit_profile_page.dart:419:10 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/edit_profile_page.dart:422:30 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/edit_profile_page.dart:423:60 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/edit_profile_page.dart:424:10 • curly_braces_in_flow_control_structures
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/edit_profile_page.dart:441:41 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/edit_profile_page.dart:644:45 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/home_page.dart:77:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/match_finder_page.dart:253:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/match_finder_page.dart:265:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/match_finder_page.dart:328:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/match_finder_page.dart:330:37 • deprecated_member_use
+   info • The import of 'dart:ui' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' • lib/news_feed_page.dart:1:8 • unnecessary_import
+warning • Unused import: 'package:supabase_flutter/supabase_flutter.dart' • lib/news_feed_page.dart:3:8 • unused_import
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/news_feed_page.dart:33:38 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/news_feed_page.dart:86:83 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/news_feed_page.dart:100:43 • unnecessary_underscores
+warning • The operand can't be 'null', so the condition is always 'false' • lib/news_feed_page.dart:103:32 • unnecessary_null_comparison
+warning • Dead code • lib/news_feed_page.dart:103:41 • dead_code
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/notification_page.dart:71:86 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/other_user_profile_page.dart:46:49 • deprecated_member_use
+  error • Undefined name 'AppTheme' • lib/pages/activity/activity_page.dart:19:24 • undefined_identifier
+  error • Invalid constant value • lib/pages/activity/activity_page.dart:34:94 • invalid_constant
+  error • Undefined name 'AppTheme' • lib/pages/activity/activity_page.dart:34:94 • undefined_identifier
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/activity/activity_page.dart:43:80 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/pages/activity/activity_page.dart:54:34 • unnecessary_underscores
+  error • Undefined name 'AppTheme' • lib/pages/activity/activity_page.dart:75:40 • undefined_identifier
+  error • Undefined name 'AppTheme' • lib/pages/activity/activity_page.dart:96:48 • undefined_identifier
+   info • The import of 'dart:ui' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' • lib/pages/church_list_page.dart:1:8 • unnecessary_import
+warning • The value of the field 'kBorder' isn't used • lib/pages/church_list_page.dart:21:22 • unused_field
+   info • Unnecessary use of multiple underscores • lib/pages/church_list_page.dart:133:49 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/church_list_page.dart:293:80 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/church_list_page.dart:346:38 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/church_list_page.dart:381:29 • deprecated_member_use
+warning • The value of the field '_supabase' isn't used • lib/pages/consilium/chat_page.dart:26:24 • unused_field
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/consilium/consilium_page.dart:125:65 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/consilium/consilium_page.dart:233:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/consilium/consilium_page.dart:244:91 • deprecated_member_use
+   info • Statements in an if should be enclosed in a block • lib/pages/consilium/consilium_profile_page.dart:104:44 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/pages/consilium/consilium_profile_page.dart:105:51 • curly_braces_in_flow_control_structures
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/consilium/consilium_profile_page.dart:158:58 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/consilium/consilium_profile_page.dart:236:22 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/consilium/consilium_profile_page.dart:240:34 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/consilium/consilium_profile_page.dart:331:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/consilium/consilium_profile_page.dart:382:43 • deprecated_member_use
+  error • Undefined name 'AppTheme' • lib/pages/consilium/counselor_list_page.dart:26:24 • undefined_identifier
+  error • Undefined name 'AppTheme' • lib/pages/consilium/counselor_list_page.dart:35:23 • undefined_identifier
+  error • Undefined name 'AppTheme' • lib/pages/consilium/counselor_list_page.dart:37:27 • undefined_identifier
+  error • Invalid constant value • lib/pages/consilium/counselor_list_page.dart:76:92 • invalid_constant
+  error • Undefined name 'AppTheme' • lib/pages/consilium/counselor_list_page.dart:76:92 • undefined_identifier
+   info • Unnecessary use of multiple underscores • lib/pages/consilium/counselor_list_page.dart:87:33 • unnecessary_underscores
+  error • Undefined name 'AppTheme' • lib/pages/consilium/counselor_list_page.dart:98:24 • undefined_identifier
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/consilium/counselor_list_page.dart:101:59 • deprecated_member_use
+  error • Undefined name 'AppTheme' • lib/pages/consilium/counselor_list_page.dart:107:39 • undefined_identifier
+  error • Undefined name 'AppTheme' • lib/pages/consilium/counselor_list_page.dart:121:37 • undefined_identifier
+  error • Undefined name 'AppTheme' • lib/pages/consilium/counselor_list_page.dart:123:56 • undefined_identifier
+  error • Invalid constant value • lib/pages/consilium/counselor_list_page.dart:125:76 • invalid_constant
+  error • Undefined name 'AppTheme' • lib/pages/consilium/counselor_list_page.dart:125:76 • undefined_identifier
+warning • The value of the field 'textGrey' isn't used • lib/pages/consilium/create_consilium_page.dart:25:22 • unused_field
+warning • Unused import: 'package:mychatolic_app/main.dart' • lib/pages/login_page.dart:6:8 • unused_import
+warning • Unused import: 'package:mychatolic_app/pages/splash_page.dart' • lib/pages/onboarding_page.dart:3:8 • unused_import
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/onboarding_page.dart:59:26 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/onboarding_page.dart:64:26 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/profile_page.dart:40:38 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/profile_page.dart:148:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/profile_page.dart:194:47 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/pages/profile_page.dart:267:32 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/pages/profile_page.dart:267:35 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/profile_page.dart:395:31 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/profile_page.dart:412:29 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/profile_page.dart:455:78 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/radar_page.dart:130:40 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/radar_page.dart:133:62 • deprecated_member_use
+warning • Unnecessary cast • lib/pages/radar_page.dart:141:30 • unnecessary_cast
+warning • Unnecessary cast • lib/pages/radar_page.dart:142:30 • unnecessary_cast
+   info • Unnecessary use of multiple underscores • lib/pages/radar_page.dart:196:29 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/radar_page.dart:228:70 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/radar_page.dart:365:42 • deprecated_member_use
+warning • The value of the field '_selectedParishId' isn't used • lib/pages/register_page.dart:38:8 • unused_field
+   info • 'dialogBackgroundColor' is deprecated and shouldn't be used. Use DialogThemeData.backgroundColor instead. This feature was deprecated after v3.27.0-0.1.pre • lib/pages/register_page.dart:165:14 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/pages/register_page.dart:661:49 • unnecessary_underscores
+  error • Undefined name 'AppTheme' • lib/pages/search/friend_search_page.dart:44:26 • undefined_identifier
+  error • Undefined name 'AppTheme' • lib/pages/search/friend_search_page.dart:116:24 • undefined_identifier
+  error • Undefined name 'AppTheme' • lib/pages/search/friend_search_page.dart:131:24 • undefined_identifier
+  error • Invalid constant value • lib/pages/search/friend_search_page.dart:163:148 • invalid_constant
+  error • Undefined name 'AppTheme' • lib/pages/search/friend_search_page.dart:163:148 • undefined_identifier
+  error • Undefined name 'AppTheme' • lib/pages/search/friend_search_page.dart:170:34 • undefined_identifier
+  error • Undefined name 'AppTheme' • lib/pages/search/friend_search_page.dart:181:72 • undefined_identifier
+  error • Invalid constant value • lib/pages/search/friend_search_page.dart:194:72 • invalid_constant
+  error • Undefined name 'AppTheme' • lib/pages/search/friend_search_page.dart:194:72 • undefined_identifier
+   info • Unnecessary use of multiple underscores • lib/pages/search/friend_search_page.dart:199:46 • unnecessary_underscores
+  error • Undefined name 'AppTheme' • lib/pages/search/friend_search_page.dart:204:40 • undefined_identifier
+  error • Undefined name 'AppTheme' • lib/pages/search/friend_search_page.dart:206:155 • undefined_identifier
+  error • Invalid constant value • lib/pages/search/friend_search_page.dart:208:125 • invalid_constant
+  error • Undefined name 'AppTheme' • lib/pages/search/friend_search_page.dart:208:125 • undefined_identifier
+  error • Undefined name 'AppTheme' • lib/pages/search/friend_search_page.dart:225:18 • undefined_identifier
+  error • Invalid constant value • lib/pages/search/friend_search_page.dart:233:54 • invalid_constant
+  error • Undefined name 'AppTheme' • lib/pages/search/friend_search_page.dart:233:54 • undefined_identifier
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/settings_page.dart:153:61 • deprecated_member_use
+   info • 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre • lib/pages/settings_page.dart:215:7 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/text_composer_page.dart:259:69 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/text_composer_page.dart:280:67 • deprecated_member_use
+   info • The private field _documents could be 'final' • lib/pages/verification_page.dart:23:24 • prefer_final_fields
+   info • The private field _uploading could be 'final' • lib/pages/verification_page.dart:24:21 • prefer_final_fields
+   info • The constant name 'DOC_KTP' isn't a lowerCamelCase identifier • lib/pages/verification_page.dart:31:23 • constant_identifier_names
+   info • The constant name 'DOC_BAPTIS' isn't a lowerCamelCase identifier • lib/pages/verification_page.dart:32:23 • constant_identifier_names
+   info • The constant name 'DOC_KRISMA' isn't a lowerCamelCase identifier • lib/pages/verification_page.dart:33:23 • constant_identifier_names
+   info • The constant name 'DOC_TUGAS' isn't a lowerCamelCase identifier • lib/pages/verification_page.dart:34:23 • constant_identifier_names
+   info • Unnecessary use of multiple underscores • lib/pages/verification_page.dart:269:42 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/verification_page.dart:360:35 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/verification_page.dart:411:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/verification_page.dart:459:35 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/pages/verification_page.dart:509:48 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps • lib/post_detail_page.dart:155:21 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/post_detail_page.dart:159:28 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/post_detail_page.dart:179:44 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/post_detail_page.dart:182:51 • use_build_context_synchronously
+   info • Unnecessary use of multiple underscores • lib/post_detail_page.dart:354:47 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/search_results_page.dart:81:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/search_results_page.dart:125:56 • deprecated_member_use
+warning • The value of the local variable 'platformDetails' isn't used • lib/services/notification_service.dart:79:33 • unused_local_variable
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/upload_document_page.dart:156:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/upload_document_page.dart:195:75 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/upload_document_page.dart:197:87 • deprecated_member_use
+   info • Statements in an if should be enclosed in a block • lib/verification_upload_page.dart:46:24 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/verification_upload_page.dart:47:29 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/verification_upload_page.dart:48:29 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/verification_upload_page.dart:49:29 • curly_braces_in_flow_control_structures
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/verification_upload_page.dart:192:67 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/verification_upload_page.dart:262:59 • deprecated_member_use
+

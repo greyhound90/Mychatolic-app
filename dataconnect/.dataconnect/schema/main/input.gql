@@ -1,0 +1,1321 @@
+"""
+✨ `Comment_KeyOutput` returns the primary key fields of table type `Comment`.
+
+It has the same format as `Comment_Key`, but is only used as mutation return value.
+"""
+scalar Comment_KeyOutput
+"""
+✨ `Follow_KeyOutput` returns the primary key fields of table type `Follow`.
+
+It has the same format as `Follow_Key`, but is only used as mutation return value.
+"""
+scalar Follow_KeyOutput
+"""
+✨ `Like_KeyOutput` returns the primary key fields of table type `Like`.
+
+It has the same format as `Like_Key`, but is only used as mutation return value.
+"""
+scalar Like_KeyOutput
+"""
+✨ `User_KeyOutput` returns the primary key fields of table type `User`.
+
+It has the same format as `User_Key`, but is only used as mutation return value.
+"""
+scalar User_KeyOutput
+"""
+✨ `Y_KeyOutput` returns the primary key fields of table type `Y`.
+
+It has the same format as `Y_Key`, but is only used as mutation return value.
+"""
+scalar Y_KeyOutput
+"""
+✨ Generated data input type for table 'Comment'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input Comment_Data {
+  """
+  ✨ Generated from Field `Comment`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `Comment`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr
+  """
+  ✨ Generated from Field `Comment`.`userId` of type `UUID!`
+  """
+  userId: UUID
+  """
+  ✨ `_expr` server value variant of `userId` (✨ Generated from Field `Comment`.`userId` of type `UUID!`)
+  """
+  userId_expr: UUID_Expr
+  """
+  ✨ Generated from Field `Comment`.`yId` of type `UUID!`
+  """
+  yId: UUID
+  """
+  ✨ `_expr` server value variant of `yId` (✨ Generated from Field `Comment`.`yId` of type `UUID!`)
+  """
+  yId_expr: UUID_Expr
+  """
+  ✨ Generated from Field `Comment`.`user` of type `User!`
+  """
+  user: User_Key
+  """
+  ✨ Generated from Field `Comment`.`y` of type `Y!`
+  """
+  y: Y_Key
+  """
+  ✨ Generated from Field `Comment`.`content` of type `String!`
+  """
+  content: String
+  """
+  ✨ `_expr` server value variant of `content` (✨ Generated from Field `Comment`.`content` of type `String!`)
+  """
+  content_expr: String_Expr
+  """
+  ✨ Generated from Field `Comment`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `createdAt` (✨ Generated from Field `Comment`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_expr: Timestamp_Expr
+  """
+  ✨ `_time` server value variant of `createdAt` (✨ Generated from Field `Comment`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_time: Timestamp_Relative
+  """
+  ✨ `_update` server value variant of `createdAt` (✨ Generated from Field `Comment`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_update: [Timestamp_Update!]
+}
+"""
+✨ Generated filter input type for table 'Comment'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input Comment_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [Comment_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: Comment_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [Comment_Filter!]
+  """
+  ✨ Generated from Field `Comment`.`id` of type `UUID!`
+  """
+  id: UUID_Filter
+  """
+  ✨ Generated from Field `Comment`.`userId` of type `UUID!`
+  """
+  userId: UUID_Filter
+  """
+  ✨ Generated from Field `Comment`.`yId` of type `UUID!`
+  """
+  yId: UUID_Filter
+  """
+  ✨ Generated from Field `Comment`.`user` of type `User!`
+  """
+  user: User_Filter
+  """
+  ✨ Generated from Field `Comment`.`y` of type `Y!`
+  """
+  y: Y_Filter
+  """
+  ✨ Generated from Field `Comment`.`content` of type `String!`
+  """
+  content: String_Filter
+  """
+  ✨ Generated from Field `Comment`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp_Filter
+}
+"""
+✨ Generated first-row input type for table 'Comment'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input Comment_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [Comment_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: Comment_Filter
+}
+"""
+✨ Generated having input type for table 'Comment'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input Comment_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [Comment_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: Comment_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [Comment_Having!]
+  """
+  ✨ Generated from Field `Comment`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `Comment`.`content_count` of type `Int!`
+  """
+  content_count: Int_Filter
+  """
+  ✨ Generated from Field `Comment`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: Int_Filter
+  """
+  ✨ Generated from Field `Comment`.`id_count` of type `Int!`
+  """
+  id_count: Int_Filter
+  """
+  ✨ Generated from Field `Comment`.`userId_count` of type `Int!`
+  """
+  userId_count: Int_Filter
+  """
+  ✨ Generated from Field `Comment`.`yId_count` of type `Int!`
+  """
+  yId_count: Int_Filter
+  """
+  ✨ Generated from Field `Comment`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `Comment`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: Timestamp_Filter
+}
+"""
+✨ Generated key input type for table 'Comment'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input Comment_Key {
+  """
+  ✨ Generated from Field `Comment`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `Comment`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr
+}
+"""
+✨ Generated list filter input type for table 'Comment'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input Comment_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: Comment_Filter
+}
+"""
+✨ Generated order input type for table 'Comment'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input Comment_Order {
+  """
+  ✨ Generated from Field `Comment`.`id` of type `UUID!`
+  """
+  id: OrderDirection
+  """
+  ✨ Generated from Field `Comment`.`userId` of type `UUID!`
+  """
+  userId: OrderDirection
+  """
+  ✨ Generated from Field `Comment`.`yId` of type `UUID!`
+  """
+  yId: OrderDirection
+  """
+  ✨ Generated from Field `Comment`.`user` of type `User!`
+  """
+  user: User_Order
+  """
+  ✨ Generated from Field `Comment`.`y` of type `Y!`
+  """
+  y: Y_Order
+  """
+  ✨ Generated from Field `Comment`.`content` of type `String!`
+  """
+  content: OrderDirection
+  """
+  ✨ Generated from Field `Comment`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: OrderDirection
+  """
+  ✨ Generated from Field `Comment`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `Comment`.`content_count` of type `Int!`
+  """
+  content_count: OrderDirection
+  """
+  ✨ Generated from Field `Comment`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: OrderDirection
+  """
+  ✨ Generated from Field `Comment`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `Comment`.`userId_count` of type `Int!`
+  """
+  userId_count: OrderDirection
+  """
+  ✨ Generated from Field `Comment`.`yId_count` of type `Int!`
+  """
+  yId_count: OrderDirection
+  """
+  ✨ Generated from Field `Comment`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: OrderDirection
+  """
+  ✨ Generated from Field `Comment`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: OrderDirection
+}
+"""
+✨ Generated data input type for table 'Follow'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input Follow_Data {
+  """
+  ✨ Generated from Field `Follow`.`followerId` of type `UUID!`
+  """
+  followerId: UUID
+  """
+  ✨ `_expr` server value variant of `followerId` (✨ Generated from Field `Follow`.`followerId` of type `UUID!`)
+  """
+  followerId_expr: UUID_Expr
+  """
+  ✨ Generated from Field `Follow`.`followingId` of type `UUID!`
+  """
+  followingId: UUID
+  """
+  ✨ `_expr` server value variant of `followingId` (✨ Generated from Field `Follow`.`followingId` of type `UUID!`)
+  """
+  followingId_expr: UUID_Expr
+  """
+  ✨ Generated from Field `Follow`.`follower` of type `User!`
+  """
+  follower: User_Key
+  """
+  ✨ Generated from Field `Follow`.`following` of type `User!`
+  """
+  following: User_Key
+  """
+  ✨ Generated from Field `Follow`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `createdAt` (✨ Generated from Field `Follow`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_expr: Timestamp_Expr
+  """
+  ✨ `_time` server value variant of `createdAt` (✨ Generated from Field `Follow`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_time: Timestamp_Relative
+  """
+  ✨ `_update` server value variant of `createdAt` (✨ Generated from Field `Follow`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_update: [Timestamp_Update!]
+}
+"""
+✨ Generated filter input type for table 'Follow'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input Follow_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [Follow_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: Follow_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [Follow_Filter!]
+  """
+  ✨ Generated from Field `Follow`.`followerId` of type `UUID!`
+  """
+  followerId: UUID_Filter
+  """
+  ✨ Generated from Field `Follow`.`followingId` of type `UUID!`
+  """
+  followingId: UUID_Filter
+  """
+  ✨ Generated from Field `Follow`.`follower` of type `User!`
+  """
+  follower: User_Filter
+  """
+  ✨ Generated from Field `Follow`.`following` of type `User!`
+  """
+  following: User_Filter
+  """
+  ✨ Generated from Field `Follow`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp_Filter
+}
+"""
+✨ Generated first-row input type for table 'Follow'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input Follow_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [Follow_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: Follow_Filter
+}
+"""
+✨ Generated having input type for table 'Follow'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input Follow_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [Follow_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: Follow_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [Follow_Having!]
+  """
+  ✨ Generated from Field `Follow`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `Follow`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: Int_Filter
+  """
+  ✨ Generated from Field `Follow`.`followerId_count` of type `Int!`
+  """
+  followerId_count: Int_Filter
+  """
+  ✨ Generated from Field `Follow`.`followingId_count` of type `Int!`
+  """
+  followingId_count: Int_Filter
+  """
+  ✨ Generated from Field `Follow`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `Follow`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: Timestamp_Filter
+}
+"""
+✨ Generated key input type for table 'Follow'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input Follow_Key {
+  """
+  ✨ Generated from Field `Follow`.`followerId` of type `UUID!`
+  """
+  followerId: UUID
+  """
+  ✨ `_expr` server value variant of `followerId` (✨ Generated from Field `Follow`.`followerId` of type `UUID!`)
+  """
+  followerId_expr: UUID_Expr
+  """
+  ✨ Generated from Field `Follow`.`followingId` of type `UUID!`
+  """
+  followingId: UUID
+  """
+  ✨ `_expr` server value variant of `followingId` (✨ Generated from Field `Follow`.`followingId` of type `UUID!`)
+  """
+  followingId_expr: UUID_Expr
+}
+"""
+✨ Generated list filter input type for table 'Follow'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input Follow_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: Follow_Filter
+}
+"""
+✨ Generated order input type for table 'Follow'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input Follow_Order {
+  """
+  ✨ Generated from Field `Follow`.`followerId` of type `UUID!`
+  """
+  followerId: OrderDirection
+  """
+  ✨ Generated from Field `Follow`.`followingId` of type `UUID!`
+  """
+  followingId: OrderDirection
+  """
+  ✨ Generated from Field `Follow`.`follower` of type `User!`
+  """
+  follower: User_Order
+  """
+  ✨ Generated from Field `Follow`.`following` of type `User!`
+  """
+  following: User_Order
+  """
+  ✨ Generated from Field `Follow`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: OrderDirection
+  """
+  ✨ Generated from Field `Follow`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `Follow`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: OrderDirection
+  """
+  ✨ Generated from Field `Follow`.`followerId_count` of type `Int!`
+  """
+  followerId_count: OrderDirection
+  """
+  ✨ Generated from Field `Follow`.`followingId_count` of type `Int!`
+  """
+  followingId_count: OrderDirection
+  """
+  ✨ Generated from Field `Follow`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: OrderDirection
+  """
+  ✨ Generated from Field `Follow`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: OrderDirection
+}
+"""
+✨ Generated data input type for table 'Like'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input Like_Data {
+  """
+  ✨ Generated from Field `Like`.`userId` of type `UUID!`
+  """
+  userId: UUID
+  """
+  ✨ `_expr` server value variant of `userId` (✨ Generated from Field `Like`.`userId` of type `UUID!`)
+  """
+  userId_expr: UUID_Expr
+  """
+  ✨ Generated from Field `Like`.`yId` of type `UUID!`
+  """
+  yId: UUID
+  """
+  ✨ `_expr` server value variant of `yId` (✨ Generated from Field `Like`.`yId` of type `UUID!`)
+  """
+  yId_expr: UUID_Expr
+  """
+  ✨ Generated from Field `Like`.`user` of type `User!`
+  """
+  user: User_Key
+  """
+  ✨ Generated from Field `Like`.`y` of type `Y!`
+  """
+  y: Y_Key
+  """
+  ✨ Generated from Field `Like`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `createdAt` (✨ Generated from Field `Like`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_expr: Timestamp_Expr
+  """
+  ✨ `_time` server value variant of `createdAt` (✨ Generated from Field `Like`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_time: Timestamp_Relative
+  """
+  ✨ `_update` server value variant of `createdAt` (✨ Generated from Field `Like`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_update: [Timestamp_Update!]
+}
+"""
+✨ Generated filter input type for table 'Like'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input Like_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [Like_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: Like_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [Like_Filter!]
+  """
+  ✨ Generated from Field `Like`.`userId` of type `UUID!`
+  """
+  userId: UUID_Filter
+  """
+  ✨ Generated from Field `Like`.`yId` of type `UUID!`
+  """
+  yId: UUID_Filter
+  """
+  ✨ Generated from Field `Like`.`user` of type `User!`
+  """
+  user: User_Filter
+  """
+  ✨ Generated from Field `Like`.`y` of type `Y!`
+  """
+  y: Y_Filter
+  """
+  ✨ Generated from Field `Like`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp_Filter
+}
+"""
+✨ Generated first-row input type for table 'Like'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input Like_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [Like_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: Like_Filter
+}
+"""
+✨ Generated having input type for table 'Like'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input Like_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [Like_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: Like_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [Like_Having!]
+  """
+  ✨ Generated from Field `Like`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `Like`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: Int_Filter
+  """
+  ✨ Generated from Field `Like`.`userId_count` of type `Int!`
+  """
+  userId_count: Int_Filter
+  """
+  ✨ Generated from Field `Like`.`yId_count` of type `Int!`
+  """
+  yId_count: Int_Filter
+  """
+  ✨ Generated from Field `Like`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `Like`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: Timestamp_Filter
+}
+"""
+✨ Generated key input type for table 'Like'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input Like_Key {
+  """
+  ✨ Generated from Field `Like`.`userId` of type `UUID!`
+  """
+  userId: UUID
+  """
+  ✨ `_expr` server value variant of `userId` (✨ Generated from Field `Like`.`userId` of type `UUID!`)
+  """
+  userId_expr: UUID_Expr
+  """
+  ✨ Generated from Field `Like`.`yId` of type `UUID!`
+  """
+  yId: UUID
+  """
+  ✨ `_expr` server value variant of `yId` (✨ Generated from Field `Like`.`yId` of type `UUID!`)
+  """
+  yId_expr: UUID_Expr
+}
+"""
+✨ Generated list filter input type for table 'Like'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input Like_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: Like_Filter
+}
+"""
+✨ Generated order input type for table 'Like'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input Like_Order {
+  """
+  ✨ Generated from Field `Like`.`userId` of type `UUID!`
+  """
+  userId: OrderDirection
+  """
+  ✨ Generated from Field `Like`.`yId` of type `UUID!`
+  """
+  yId: OrderDirection
+  """
+  ✨ Generated from Field `Like`.`user` of type `User!`
+  """
+  user: User_Order
+  """
+  ✨ Generated from Field `Like`.`y` of type `Y!`
+  """
+  y: Y_Order
+  """
+  ✨ Generated from Field `Like`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: OrderDirection
+  """
+  ✨ Generated from Field `Like`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `Like`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: OrderDirection
+  """
+  ✨ Generated from Field `Like`.`userId_count` of type `Int!`
+  """
+  userId_count: OrderDirection
+  """
+  ✨ Generated from Field `Like`.`yId_count` of type `Int!`
+  """
+  yId_count: OrderDirection
+  """
+  ✨ Generated from Field `Like`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: OrderDirection
+  """
+  ✨ Generated from Field `Like`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: OrderDirection
+}
+"""
+✨ Generated data input type for table 'User'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input User_Data {
+  """
+  ✨ Generated from Field `User`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `User`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr
+  """
+  ✨ Generated from Field `User`.`bio` of type `String`
+  """
+  bio: String
+  """
+  ✨ `_expr` server value variant of `bio` (✨ Generated from Field `User`.`bio` of type `String`)
+  """
+  bio_expr: String_Expr
+  """
+  ✨ Generated from Field `User`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `createdAt` (✨ Generated from Field `User`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_expr: Timestamp_Expr
+  """
+  ✨ `_time` server value variant of `createdAt` (✨ Generated from Field `User`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_time: Timestamp_Relative
+  """
+  ✨ `_update` server value variant of `createdAt` (✨ Generated from Field `User`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_update: [Timestamp_Update!]
+  """
+  ✨ Generated from Field `User`.`displayName` of type `String!`
+  """
+  displayName: String
+  """
+  ✨ `_expr` server value variant of `displayName` (✨ Generated from Field `User`.`displayName` of type `String!`)
+  """
+  displayName_expr: String_Expr
+  """
+  ✨ Generated from Field `User`.`profilePictureUrl` of type `String`
+  """
+  profilePictureUrl: String
+  """
+  ✨ `_expr` server value variant of `profilePictureUrl` (✨ Generated from Field `User`.`profilePictureUrl` of type `String`)
+  """
+  profilePictureUrl_expr: String_Expr
+  """
+  ✨ Generated from Field `User`.`username` of type `String!`
+  """
+  username: String
+  """
+  ✨ `_expr` server value variant of `username` (✨ Generated from Field `User`.`username` of type `String!`)
+  """
+  username_expr: String_Expr
+}
+"""
+✨ Generated filter input type for table 'User'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input User_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [User_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: User_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [User_Filter!]
+  """
+  ✨ Generated from Field `User`.`id` of type `UUID!`
+  """
+  id: UUID_Filter
+  """
+  ✨ Generated from Field `User`.`bio` of type `String`
+  """
+  bio: String_Filter
+  """
+  ✨ Generated from Field `User`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp_Filter
+  """
+  ✨ Generated from Field `User`.`displayName` of type `String!`
+  """
+  displayName: String_Filter
+  """
+  ✨ Generated from Field `User`.`profilePictureUrl` of type `String`
+  """
+  profilePictureUrl: String_Filter
+  """
+  ✨ Generated from Field `User`.`username` of type `String!`
+  """
+  username: String_Filter
+  """
+  ✨ Generated from Field `User`.`comments_on_user` of type `[Comment!]!`
+  """
+  comments_on_user: Comment_ListFilter
+  """
+  ✨ Generated from Field `User`.`follows_on_follower` of type `[Follow!]!`
+  """
+  follows_on_follower: Follow_ListFilter
+  """
+  ✨ Generated from Field `User`.`follows_on_following` of type `[Follow!]!`
+  """
+  follows_on_following: Follow_ListFilter
+  """
+  ✨ Generated from Field `User`.`likes_on_user` of type `[Like!]!`
+  """
+  likes_on_user: Like_ListFilter
+  """
+  ✨ Generated from Field `User`.`ys_on_author` of type `[Y!]!`
+  """
+  ys_on_author: Y_ListFilter
+  """
+  ✨ Generated from Field `User`.`users_via_Follow_on_follower` of type `[User!]!`
+  """
+  users_via_Follow_on_follower: User_ListFilter
+  """
+  ✨ Generated from Field `User`.`users_via_Follow_on_following` of type `[User!]!`
+  """
+  users_via_Follow_on_following: User_ListFilter
+  """
+  ✨ Generated from Field `User`.`ys_via_Like` of type `[Y!]!`
+  """
+  ys_via_Like: Y_ListFilter
+}
+"""
+✨ Generated first-row input type for table 'User'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input User_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [User_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: User_Filter
+}
+"""
+✨ Generated having input type for table 'User'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input User_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [User_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: User_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [User_Having!]
+  """
+  ✨ Generated from Field `User`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`bio_count` of type `Int!`
+  """
+  bio_count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`displayName_count` of type `Int!`
+  """
+  displayName_count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`id_count` of type `Int!`
+  """
+  id_count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`profilePictureUrl_count` of type `Int!`
+  """
+  profilePictureUrl_count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`username_count` of type `Int!`
+  """
+  username_count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `User`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: Timestamp_Filter
+}
+"""
+✨ Generated key input type for table 'User'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input User_Key {
+  """
+  ✨ Generated from Field `User`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `User`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr
+}
+"""
+✨ Generated list filter input type for table 'User'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input User_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: User_Filter
+}
+"""
+✨ Generated order input type for table 'User'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input User_Order {
+  """
+  ✨ Generated from Field `User`.`id` of type `UUID!`
+  """
+  id: OrderDirection
+  """
+  ✨ Generated from Field `User`.`bio` of type `String`
+  """
+  bio: OrderDirection
+  """
+  ✨ Generated from Field `User`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: OrderDirection
+  """
+  ✨ Generated from Field `User`.`displayName` of type `String!`
+  """
+  displayName: OrderDirection
+  """
+  ✨ Generated from Field `User`.`profilePictureUrl` of type `String`
+  """
+  profilePictureUrl: OrderDirection
+  """
+  ✨ Generated from Field `User`.`username` of type `String!`
+  """
+  username: OrderDirection
+  """
+  ✨ Generated from Field `User`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`bio_count` of type `Int!`
+  """
+  bio_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`displayName_count` of type `Int!`
+  """
+  displayName_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`profilePictureUrl_count` of type `Int!`
+  """
+  profilePictureUrl_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`username_count` of type `Int!`
+  """
+  username_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: OrderDirection
+  """
+  ✨ Generated from Field `User`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: OrderDirection
+}
+"""
+✨ Generated data input type for table 'Y'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input Y_Data {
+  """
+  ✨ Generated from Field `Y`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `Y`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr
+  """
+  ✨ Generated from Field `Y`.`authorId` of type `UUID!`
+  """
+  authorId: UUID
+  """
+  ✨ `_expr` server value variant of `authorId` (✨ Generated from Field `Y`.`authorId` of type `UUID!`)
+  """
+  authorId_expr: UUID_Expr
+  """
+  ✨ Generated from Field `Y`.`author` of type `User!`
+  """
+  author: User_Key
+  """
+  ✨ Generated from Field `Y`.`content` of type `String!`
+  """
+  content: String
+  """
+  ✨ `_expr` server value variant of `content` (✨ Generated from Field `Y`.`content` of type `String!`)
+  """
+  content_expr: String_Expr
+  """
+  ✨ Generated from Field `Y`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `createdAt` (✨ Generated from Field `Y`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_expr: Timestamp_Expr
+  """
+  ✨ `_time` server value variant of `createdAt` (✨ Generated from Field `Y`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_time: Timestamp_Relative
+  """
+  ✨ `_update` server value variant of `createdAt` (✨ Generated from Field `Y`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_update: [Timestamp_Update!]
+  """
+  ✨ Generated from Field `Y`.`imageUrl` of type `String`
+  """
+  imageUrl: String
+  """
+  ✨ `_expr` server value variant of `imageUrl` (✨ Generated from Field `Y`.`imageUrl` of type `String`)
+  """
+  imageUrl_expr: String_Expr
+  """
+  ✨ Generated from Field `Y`.`linkUrl` of type `String`
+  """
+  linkUrl: String
+  """
+  ✨ `_expr` server value variant of `linkUrl` (✨ Generated from Field `Y`.`linkUrl` of type `String`)
+  """
+  linkUrl_expr: String_Expr
+}
+"""
+✨ Generated filter input type for table 'Y'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input Y_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [Y_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: Y_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [Y_Filter!]
+  """
+  ✨ Generated from Field `Y`.`id` of type `UUID!`
+  """
+  id: UUID_Filter
+  """
+  ✨ Generated from Field `Y`.`authorId` of type `UUID!`
+  """
+  authorId: UUID_Filter
+  """
+  ✨ Generated from Field `Y`.`author` of type `User!`
+  """
+  author: User_Filter
+  """
+  ✨ Generated from Field `Y`.`content` of type `String!`
+  """
+  content: String_Filter
+  """
+  ✨ Generated from Field `Y`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp_Filter
+  """
+  ✨ Generated from Field `Y`.`imageUrl` of type `String`
+  """
+  imageUrl: String_Filter
+  """
+  ✨ Generated from Field `Y`.`linkUrl` of type `String`
+  """
+  linkUrl: String_Filter
+  """
+  ✨ Generated from Field `Y`.`comments_on_y` of type `[Comment!]!`
+  """
+  comments_on_y: Comment_ListFilter
+  """
+  ✨ Generated from Field `Y`.`likes_on_y` of type `[Like!]!`
+  """
+  likes_on_y: Like_ListFilter
+  """
+  ✨ Generated from Field `Y`.`users_via_Like` of type `[User!]!`
+  """
+  users_via_Like: User_ListFilter
+}
+"""
+✨ Generated first-row input type for table 'Y'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input Y_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [Y_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: Y_Filter
+}
+"""
+✨ Generated having input type for table 'Y'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input Y_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [Y_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: Y_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [Y_Having!]
+  """
+  ✨ Generated from Field `Y`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `Y`.`authorId_count` of type `Int!`
+  """
+  authorId_count: Int_Filter
+  """
+  ✨ Generated from Field `Y`.`content_count` of type `Int!`
+  """
+  content_count: Int_Filter
+  """
+  ✨ Generated from Field `Y`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: Int_Filter
+  """
+  ✨ Generated from Field `Y`.`id_count` of type `Int!`
+  """
+  id_count: Int_Filter
+  """
+  ✨ Generated from Field `Y`.`imageUrl_count` of type `Int!`
+  """
+  imageUrl_count: Int_Filter
+  """
+  ✨ Generated from Field `Y`.`linkUrl_count` of type `Int!`
+  """
+  linkUrl_count: Int_Filter
+  """
+  ✨ Generated from Field `Y`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `Y`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: Timestamp_Filter
+}
+"""
+✨ Generated key input type for table 'Y'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input Y_Key {
+  """
+  ✨ Generated from Field `Y`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `Y`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr
+}
+"""
+✨ Generated list filter input type for table 'Y'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input Y_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: Y_Filter
+}
+"""
+✨ Generated order input type for table 'Y'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input Y_Order {
+  """
+  ✨ Generated from Field `Y`.`id` of type `UUID!`
+  """
+  id: OrderDirection
+  """
+  ✨ Generated from Field `Y`.`authorId` of type `UUID!`
+  """
+  authorId: OrderDirection
+  """
+  ✨ Generated from Field `Y`.`author` of type `User!`
+  """
+  author: User_Order
+  """
+  ✨ Generated from Field `Y`.`content` of type `String!`
+  """
+  content: OrderDirection
+  """
+  ✨ Generated from Field `Y`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: OrderDirection
+  """
+  ✨ Generated from Field `Y`.`imageUrl` of type `String`
+  """
+  imageUrl: OrderDirection
+  """
+  ✨ Generated from Field `Y`.`linkUrl` of type `String`
+  """
+  linkUrl: OrderDirection
+  """
+  ✨ Generated from Field `Y`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `Y`.`authorId_count` of type `Int!`
+  """
+  authorId_count: OrderDirection
+  """
+  ✨ Generated from Field `Y`.`content_count` of type `Int!`
+  """
+  content_count: OrderDirection
+  """
+  ✨ Generated from Field `Y`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: OrderDirection
+  """
+  ✨ Generated from Field `Y`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `Y`.`imageUrl_count` of type `Int!`
+  """
+  imageUrl_count: OrderDirection
+  """
+  ✨ Generated from Field `Y`.`linkUrl_count` of type `Int!`
+  """
+  linkUrl_count: OrderDirection
+  """
+  ✨ Generated from Field `Y`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: OrderDirection
+  """
+  ✨ Generated from Field `Y`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: OrderDirection
+}

@@ -1,0 +1,28 @@
+mutation CreateY($content: String!, $authorId: UUID!, $createdAt: Timestamp!) @auth(level: USER) {
+  y_insert(data: {content: $content, authorId: $authorId, createdAt: $createdAt})
+}
+
+query ListYs @auth(level: PUBLIC, insecureReason: "This operation is safe to expose to the public") {
+  ys {
+    id
+    content
+    author {
+      id
+      username
+    }
+  }
+}
+
+mutation CreateFollow($followerId: UUID!, $followingId: UUID!, $createdAt: Timestamp!) @auth(level: USER) {
+  follow_insert(data: {followerId: $followerId, followingId: $followingId, createdAt: $createdAt})
+}
+
+query GetUser($id: UUID!) @auth(level: USER, insecureReason: "This operation is safe to expose to all logged in users.") {
+  user(id: $id) {
+    id
+    username
+    displayName
+    bio
+    profilePictureUrl
+  }
+}

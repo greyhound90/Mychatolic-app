@@ -1,0 +1,50 @@
+extend type Comment {
+  """
+  ✨ Implicit primary key field. It's a UUID column default to a generated new value. See `@table` for how to customize it.
+  """
+  id: UUID! @default(expr: "uuidV4()") @fdc_generated(from: "Comment", purpose: IMPLICIT_KEY_FIELD)
+  """
+  ✨ Implicit foreign key field based on `Comment`.`user`. It must match the value of `User`.`id`. See `@ref` for how to customize it.
+  """
+  userId: UUID! @fdc_generated(from: "Comment.user", purpose: IMPLICIT_REF_FIELD)
+  """
+  ✨ Implicit foreign key field based on `Comment`.`y`. It must match the value of `Y`.`id`. See `@ref` for how to customize it.
+  """
+  yId: UUID! @fdc_generated(from: "Comment.y", purpose: IMPLICIT_REF_FIELD)
+}
+extend type Follow {
+  """
+  ✨ Implicit foreign key field based on `Follow`.`follower`. It must match the value of `User`.`id`. See `@ref` for how to customize it.
+  """
+  followerId: UUID! @fdc_generated(from: "Follow.follower", purpose: IMPLICIT_REF_FIELD)
+  """
+  ✨ Implicit foreign key field based on `Follow`.`following`. It must match the value of `User`.`id`. See `@ref` for how to customize it.
+  """
+  followingId: UUID! @fdc_generated(from: "Follow.following", purpose: IMPLICIT_REF_FIELD)
+}
+extend type Like {
+  """
+  ✨ Implicit foreign key field based on `Like`.`user`. It must match the value of `User`.`id`. See `@ref` for how to customize it.
+  """
+  userId: UUID! @fdc_generated(from: "Like.user", purpose: IMPLICIT_REF_FIELD)
+  """
+  ✨ Implicit foreign key field based on `Like`.`y`. It must match the value of `Y`.`id`. See `@ref` for how to customize it.
+  """
+  yId: UUID! @fdc_generated(from: "Like.y", purpose: IMPLICIT_REF_FIELD)
+}
+extend type User {
+  """
+  ✨ Implicit primary key field. It's a UUID column default to a generated new value. See `@table` for how to customize it.
+  """
+  id: UUID! @default(expr: "uuidV4()") @fdc_generated(from: "User", purpose: IMPLICIT_KEY_FIELD)
+}
+extend type Y {
+  """
+  ✨ Implicit primary key field. It's a UUID column default to a generated new value. See `@table` for how to customize it.
+  """
+  id: UUID! @default(expr: "uuidV4()") @fdc_generated(from: "Y", purpose: IMPLICIT_KEY_FIELD)
+  """
+  ✨ Implicit foreign key field based on `Y`.`author`. It must match the value of `User`.`id`. See `@ref` for how to customize it.
+  """
+  authorId: UUID! @fdc_generated(from: "Y.author", purpose: IMPLICIT_REF_FIELD)
+}

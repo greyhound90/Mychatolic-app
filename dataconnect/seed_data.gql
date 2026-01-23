@@ -1,0 +1,64 @@
+mutation CreateSeedData @transaction @auth(level: PUBLIC, insecureReason: "This operation is for seeding data and is safe to expose to the public") {
+  user_insertMany(data: [
+    {
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      username: "demouser1",
+      displayName: "Demo User 1",
+      createdAt: "2024-04-26T12:00:00Z",
+      bio: "Example bio for demouser1",
+      profilePictureUrl: "https://example.com/demouser1.jpg"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440001",
+      username: "demouser2",
+      displayName: "Demo User 2",
+      createdAt: "2024-04-26T13:00:00Z",
+      bio: "Example bio for demouser2",
+      profilePictureUrl: "https://example.com/demouser2.jpg"
+    }
+  ])
+  y_insertMany(data: [
+    {
+      id: "650e8400-e29b-41d4-a716-446655440002",
+      authorId: "550e8400-e29b-41d4-a716-446655440000",
+      content: "Example Y post from demouser1",
+      createdAt: "2024-04-26T14:00:00Z"
+    },
+    {
+      id: "650e8400-e29b-41d4-a716-446655440003",
+      authorId: "550e8400-e29b-41d4-a716-446655440001",
+      content: "Example Y post from demouser2",
+      createdAt: "2024-04-26T15:00:00Z"
+    }
+  ])
+  comment_insertMany(data: [
+    {
+      id: "750e8400-e29b-41d4-a716-446655440004",
+      userId: "550e8400-e29b-41d4-a716-446655440000",
+      yId: "650e8400-e29b-41d4-a716-446655440002",
+      content: "Example comment from demouser1 on demouser1's post",
+      createdAt: "2024-04-26T16:00:00Z"
+    },
+    {
+      id: "750e8400-e29b-41d4-a716-446655440005",
+      userId: "550e8400-e29b-41d4-a716-446655440001",
+      yId: "650e8400-e29b-41d4-a716-446655440003",
+      content: "Example comment from demouser2 on demouser2's post",
+      createdAt: "2024-04-26T17:00:00Z"
+    }
+  ])
+  follow_insertMany(data: [
+    {
+      followerId: "550e8400-e29b-41d4-a716-446655440000",
+      followingId: "550e8400-e29b-41d4-a716-446655440001",
+      createdAt: "2024-04-26T18:00:00Z"
+    }
+  ])
+  like_insertMany(data: [
+    {
+      userId: "550e8400-e29b-41d4-a716-446655440000",
+      yId: "650e8400-e29b-41d4-a716-446655440002",
+      createdAt: "2024-04-26T19:00:00Z"
+    }
+  ])
+}
