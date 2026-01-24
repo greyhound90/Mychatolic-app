@@ -16,6 +16,10 @@ import 'package:mychatolic_app/pages/social_chat_detail_page.dart';
 import 'package:mychatolic_app/pages/story/story_view_page.dart';
 import 'package:mychatolic_app/pages/profile/edit_profile_page.dart';
 
+// --- VISUAL CONSTANTS ---
+const Color kBrownAccent = Color(0xFF8B5A2B); // Cokelat Emas/Tua
+const Color kScaffoldBg = Color(0xFFF5F5F5);
+
 class ProfilePage extends StatefulWidget {
   final String? userId; // If null, shows current user's profile
   final bool isBackButtonEnabled; // For navigation from other pages
@@ -38,7 +42,7 @@ class _ProfilePageState extends State<ProfilePage>
   final ScrollController _scrollController = ScrollController();
 
   // State Variables
-  bool _isLoading = false; // False by default to rely on dummy data or immediate check
+  bool _isLoading = true; 
   String? _error;
 
   Profile? _profile;
@@ -64,14 +68,10 @@ class _ProfilePageState extends State<ProfilePage>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     
-    // -----------------------------------------------------------------------
-    // CRITICAL: DUMMY DATA INITIALIZATION
-    // -----------------------------------------------------------------------
-    _initializeDummyData();
-    
+    // Check if current user
     _checkIsMe();
     
-    // Fetch Real Data (Silent update)
+    // Fetch Real Data 
     _loadProfileData();
 
     // Scroll Listener
@@ -83,41 +83,6 @@ class _ProfilePageState extends State<ProfilePage>
           _hasNextPage) {
         _loadMorePosts();
       }
-    });
-  }
-
-  void _initializeDummyData() {
-    // Initial dummy data to render UI immediately
-    _profile = Profile(
-      id: 'dummy_user',
-      fullName: 'Gabriella Wulandari',
-      bio: 'Pencinta seni, musik liturgi, dan traveling. Berbagi momen iman setiap hari. 🕊️',
-      userRole: UserRole.umat,
-      accountStatus: AccountStatus.verified_catholic,
-      avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=300&auto=format&fit=crop',
-      parish: 'Katedral Jakarta',
-      diocese: 'Keuskupan Agung Jakarta',
-      country: 'Indonesia',
-       ministryCount: 2,
-    );
-
-    _stats = {'followers': 1250, 'following': 340, 'posts': 48};
-    _isMe = true; 
-
-    // Dummy Photos for immediate visual feedback
-    _photoPosts = List.generate(6, (index) {
-       return UserPost(
-         id: 'post_$index',
-         userId: 'dummy_user',
-         userName: 'Gabriella',
-         userFullName: 'Gabriella Wulandari',
-         userAvatar: _profile!.avatarUrl!,
-         caption: 'Momen indah di gereja hari ini.',
-         imageUrls: ['https://images.unsplash.com/photo-1543791959-8b61074e8979?q=80&w=${800+index}&auto=format&fit=crop'],
-         likesCount: 50 + index * 2,
-         commentsCount: 5,
-         createdAt: DateTime.now().subtract(Duration(days: index)),
-       );
     });
   }
 
@@ -138,11 +103,20 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   Future<void> _loadProfileData() async {
-    // Note: We do NOT set _isLoading=true here to preserve dummy UI
-    
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
     try {
       final targetUserId = widget.userId ?? _supabase.auth.currentUser?.id;
-      if (targetUserId == null) return;
+      if (targetUserId == null) {
+        setState(() {
+          _error = "User not found";
+          _isLoading = false;
+        });
+        return;
+      }
 
       final data = await _profileService.fetchUserProfile(targetUserId);
       final stories = await _storyService.fetchUserStories(targetUserId);
@@ -156,15 +130,23 @@ class _ProfilePageState extends State<ProfilePage>
           _profile = data['profile'] as Profile;
           _stats = data['stats'] as Map<String, int>;
           _userStories = stories;
-           // If error persists from somewhere else, clear it
-          _error = null;
         });
+        // Fetch posts after profile is loaded
+        await _loadInitialPosts(targetUserId);
       }
-
-      _loadInitialPosts(targetUserId);
     } catch (e) {
       debugPrint("Error loading profile: $e");
-      // Don't set state error to avoid showing error screen if dummy data exists
+      if (mounted) {
+        setState(() {
+          _error = "Gagal memuat profil. Silakan coba lagi.";
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -197,6 +179,9 @@ class _ProfilePageState extends State<ProfilePage>
         setState(() {
           if (posts.isNotEmpty) {
              _separatePosts(posts);
+             // Update posts count in stats based on actual valid posts
+             int totalPosts = _photoPosts.length + _textPosts.length;
+             // _stats['posts'] = totalPosts; // Optional: Override stats or keep DB count
           }
           if (posts.length < _limit) {
             _hasNextPage = false;
@@ -356,34 +341,39 @@ class _ProfilePageState extends State<ProfilePage>
 
   @override
   Widget build(BuildContext context) {
-    const primaryBlue = Color(0xFF0088CC);
-    const bgColor = Color(0xFFF5F5F5);
-
-    // -----------------------------------------------------------------------
-    // CRITICAL FIX 1: STRICT NULL CHECK
-    // -----------------------------------------------------------------------
-    // This prevents "Null check operator used on a null value" 
-    // down the tree if data is not ready.
-    if (_profile == null) {
+    if (_isLoading) {
       return const Scaffold(
-        backgroundColor: bgColor,
-        body: Center(child: CircularProgressIndicator(color: primaryBlue)),
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator(color: kBrownAccent)),
       );
     }
 
-    if (_error != null) {
+    if (_error != null || _profile == null) {
       return Scaffold(
-        backgroundColor: bgColor,
-        appBar: AppBar(title: const Text("Error")),
-        body: Center(child: Text(_error ?? "Unknown Error")),
+        backgroundColor: kScaffoldBg,
+        appBar: AppBar(title: const Text("Profil")),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.grey),
+              const SizedBox(height: 16),
+              Text(_error ?? "Data profil tidak ditemukan.", style: GoogleFonts.outfit(color: Colors.black54)),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadProfileData,
+                child: const Text("Coba Lagi"),
+              )
+            ],
+          ),
+        ),
       );
     }
 
-    // Safe to unwrap
     final displayProfile = _profile!;
 
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: kScaffoldBg,
       body: NestedScrollView(
         controller: _scrollController,
         headerSliverBuilder: (context, innerBoxIsScrolled) {
@@ -393,7 +383,7 @@ class _ProfilePageState extends State<ProfilePage>
               floating: false,
               pinned: true,
               stretch: true,
-              backgroundColor: primaryBlue,
+              backgroundColor: Colors.black, // Dark bg for banner
               leading: widget.isBackButtonEnabled
                   ? Container(
                       margin: const EdgeInsets.all(8),
@@ -416,15 +406,22 @@ class _ProfilePageState extends State<ProfilePage>
                   fit: StackFit.expand,
                   children: [
                     Image.network(
-                      "https://images.unsplash.com/photo-1437603568260-1950d3ca6eab?q=80&w=2000&auto=format&fit=crop", 
+                      "https://i.pinimg.com/originals/9a/b3/24/9ab324c3563fb3518bb9019379ca774b.jpg", // Heart Hand Sunset
                       fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                         // Fallback if pinterest blocks request
+                         return Image.network(
+                           "https://images.unsplash.com/photo-1518621736915-f3b1c41bfd00?q=80&w=2000&auto=format&fit=crop",
+                           fit: BoxFit.cover
+                         );
+                      },
                     ),
                     const DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [Colors.transparent, Colors.black26],
+                          colors: [Colors.transparent, Colors.black38],
                         ),
                       ),
                     ),
@@ -481,14 +478,23 @@ class _ProfilePageState extends State<ProfilePage>
               delegate: _SliverTabBarDelegate(
                 TabBar(
                   controller: _tabController,
-                  indicatorColor: primaryBlue,
-                  labelColor: primaryBlue,
+                  indicatorColor: kBrownAccent, // Brown indicator
+                  labelColor: Colors.black, // Dark text for active tab
                   unselectedLabelColor: Colors.grey,
                   indicatorWeight: 3,
-                  labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                  labelStyle: GoogleFonts.outfit(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
                   tabs: const [
-                    Tab(icon: Icon(Icons.grid_on_rounded), text: "Foto"),
-                    Tab(icon: Icon(Icons.list_rounded), text: "Status"),
+                    Tab(
+                      icon: Icon(Icons.grid_on_rounded), 
+                      text: "Foto",
+                    ),
+                    Tab(
+                      icon: Icon(Icons.list_rounded), 
+                      text: "Status",
+                    ),
                   ],
                 ),
               ),
@@ -546,7 +552,7 @@ class _ProfilePageState extends State<ProfilePage>
           const SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.all(10),
-              child: Center(child: CircularProgressIndicator()),
+              child: Center(child: CircularProgressIndicator(color: kBrownAccent)),
             ),
           ),
         const SliverPadding(padding: EdgeInsets.only(bottom: 50)),
@@ -567,7 +573,7 @@ class _ProfilePageState extends State<ProfilePage>
         if (index == _textPosts.length) {
           return const Padding(
               padding: EdgeInsets.all(20),
-              child: Center(child: CircularProgressIndicator()));
+              child: Center(child: CircularProgressIndicator(color: kBrownAccent)));
         }
         final post = _textPosts[index];
         return PostCard(
@@ -606,14 +612,12 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   _SliverTabBarDelegate(this._tabBar);
 
   @override
-  double get minExtent => _tabBar.preferredSize.height;
+  double get minExtent => _tabBar.preferredSize.height + 1; // +1 for border
   @override
-  double get maxExtent => _tabBar.preferredSize.height;
+  double get maxExtent => _tabBar.preferredSize.height + 1;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    // CRITICAL FIX 2: Cannot provide both color and decoration
-    // Moved color inside BoxDecoration
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -653,7 +657,6 @@ class ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primaryBlue = Color(0xFF0088CC);
     const double avatarRadius = 55; 
     const double avatarDiameter = avatarRadius * 2;
     
@@ -681,29 +684,32 @@ class ProfileHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                 // Info Row (Name & Bio)
+                 // NOTE: Spacer for avatar is needed because Avatar is floating
                  Row(
                    crossAxisAlignment: CrossAxisAlignment.start,
                    children: [
-                     const SizedBox(width: 110), 
+                     const SizedBox(width: 110), // Space for floating avatar
                      Expanded(
                        child: Column(
                          crossAxisAlignment: CrossAxisAlignment.start,
                          children: [
                            Text(
-                             profile.fullName ?? "Umat",
+                             profile.fullName ?? "User",
                              style: GoogleFonts.outfit(
-                               fontSize: 22, 
-                               fontWeight: FontWeight.bold,
-                               height: 1.2
+                               fontSize: 24, 
+                               fontWeight: FontWeight.bold, // Name Bold
+                               height: 1.2,
+                               color: Colors.black,
                              ),
                            ),
-                           const SizedBox(height: 8),
+                           const SizedBox(height: 4),
                            Text(
-                             "Biografi",
+                             "Biografi", // Label "Biografi"
                              style: GoogleFonts.outfit(
-                               fontSize: 14,
-                               fontWeight: FontWeight.bold,
-                               color: Colors.grey[800],
+                               fontSize: 16,
+                               fontWeight: FontWeight.bold, // Bold
+                               color: Colors.black,
                              ),
                            ),
                          ],
@@ -712,76 +718,52 @@ class ProfileHeader extends StatelessWidget {
                    ],
                  ),
                  
-                 const SizedBox(height: 8),
-                 
-                 Row(
-                   crossAxisAlignment: CrossAxisAlignment.start,
-                   children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                              Text(
-                                profile.bio ?? "-",
-                                style: GoogleFonts.outfit(
-                                  fontSize: 14, color: Colors.grey[600],
-                                  height: 1.4
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  _buildStat(stats['posts'].toString(), "Post"),
-                                  _buildStat(stats['followers'].toString(), "Followers"),
-                                  _buildStat(stats['following'].toString(), "Following"),
-                                ],
-                              )
-                          ],
-                        ),
-                      )
-                   ],
-                 ),
-                 
                  const SizedBox(height: 24),
                  
+                 // Stats Row
+                 Padding(
+                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                   child: Row(
+                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                     children: [
+                       _buildStat(stats['posts'] ?? 0, "Post"),
+                       _buildStat(stats['followers'] ?? 0, "Followers"),
+                       _buildStat(stats['following'] ?? 0, "Following"),
+                     ],
+                   ),
+                 ),
+
+                 const SizedBox(height: 30),
+                 
+                 // Bottom Row: Location & Button
                  Row(
+                   crossAxisAlignment: CrossAxisAlignment.end,
                    children: [
+                     // Location (Left side)
                      Expanded(
                        flex: 4,
                        child: Column(
                          crossAxisAlignment: CrossAxisAlignment.start,
                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.church, size: 14, color: Colors.grey),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    (profile.parish ?? "Paroki -").toUpperCase(),
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                           const SizedBox(height: 4),
+                           // Hardcoded Location Text to match reference
                            Text(
-                             "${profile.diocese ?? '-'}, ${profile.country ?? 'Indonesia'}",
+                             "INDONESIA,\n${(profile.diocese ?? 'Keuskupan').toUpperCase()}\n${(profile.parish ?? 'Paroki').toUpperCase()}",
                              style: GoogleFonts.outfit(
-                               fontSize: 11, color: Colors.grey[500]
+                               fontSize: 10, 
+                               fontWeight: FontWeight.w600, // Semi bold
+                               color: Colors.black87,
+                               height: 1.3
                              ),
                            ),
                          ],
                        ),
                      ),
-                     const SizedBox(width: 12),
+                     const SizedBox(width: 16),
+                     
+                     // Button (Right side, expanded)
                      Expanded(
                        flex: 5,
-                       child: _buildActionButton(primaryBlue),
+                       child: _buildActionButton(kBrownAccent),
                      )
                    ],
                  )
@@ -790,6 +772,7 @@ class ProfileHeader extends StatelessWidget {
           ),
         ),
         
+        // Avatar (Floating)
         Positioned(
           top: -50,
           left: 20,
@@ -816,31 +799,26 @@ class ProfileHeader extends StatelessWidget {
           ),
         ),
         
+        // Badge "100% KATOLIK"
         Positioned(
-          top: -20,
+          top: -20, // Overlapping height (20 above, 20 below approx)
           right: 20,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: primaryBlue,
-              borderRadius: BorderRadius.circular(50),
+              color: kBrownAccent, // Brown Gold
+              borderRadius: BorderRadius.circular(50), // Stadium / Pill
               boxShadow: const [
                 BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0,2))
               ]
             ),
-            child: Row(
-              children: [
-                const Icon(Icons.verified, size: 14, color: Colors.white),
-                const SizedBox(width: 4),
-                Text(
-                  "100% KATOLIK",
-                  style: GoogleFonts.outfit(
-                    color: Colors.white, 
-                    fontWeight: FontWeight.bold,
-                    fontSize: 11,
-                  ),
-                ),
-              ],
+            child: Text(
+              "100% KATOLIK",
+              style: GoogleFonts.outfit(
+                color: Colors.white, 
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
             ),
           ),
         )
@@ -851,21 +829,23 @@ class ProfileHeader extends StatelessWidget {
   Widget _buildActionButton(Color primaryColor) {
     if (isMe) {
       return SizedBox(
-        height: 45,
+        height: 48,
+        width: double.infinity,
         child: ElevatedButton(
           onPressed: onEditTap,
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryColor,
             foregroundColor: Colors.white,
             elevation: 0,
-            shape: const StadiumBorder()
+            shape: const StadiumBorder() // Pill shape
           ),
-          child: Text("EDIT PROFIL", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+          child: Text("EDIT PROFIL", style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 13)),
         ),
       );
     } else {
       return SizedBox(
-        height: 45,
+        height: 48,
+        width: double.infinity,
         child: ElevatedButton(
           onPressed: onFollowToggle,
           style: ElevatedButton.styleFrom(
@@ -874,22 +854,39 @@ class ProfileHeader extends StatelessWidget {
             elevation: 0,
             shape: const StadiumBorder()
           ),
-          child: Text(isFollowing ? "MENGIKUTI" : "IKUTI", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+          child: Text(isFollowing ? "MENGIKUTI" : "IKUTI", style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 13)),
         ),
       );
     }
   }
 
-  Widget _buildStat(String val, String label) {
+  Widget _buildStat(int val, String label) {
+    String displayVal = val.toString();
+    // Simple formatter k
+    if (val >= 1000) {
+      double v = val / 1000;
+      // Remove decimal if .0
+      String s = v.toStringAsFixed(v.truncateToDouble() == v ? 0 : 1); 
+      displayVal = "${s}k";
+    }
+
     return Column(
       children: [
         Text(
-          val,
-          style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold),
+          displayVal,
+          style: GoogleFonts.outfit(
+            fontSize: 24, 
+            fontWeight: FontWeight.w900, // Black/Extrabold
+            color: Colors.black
+          ),
         ),
         Text(
           label,
-          style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey),
+          style: GoogleFonts.outfit(
+            fontSize: 14, 
+            color: Colors.black, // Dark text
+            fontWeight: FontWeight.w600 // Semibold
+          ),
         ),
       ],
     );

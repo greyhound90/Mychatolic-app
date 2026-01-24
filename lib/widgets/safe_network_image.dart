@@ -78,8 +78,8 @@ class SafeNetworkImage extends StatelessWidget {
         // Removed border as requested for cleaner look
       ),
       child: Icon(
-        Icons.person, // Forced to Person icon as requested default
-        color: iconColor ?? Colors.grey, // Updated default icon color
+        fallbackIcon, 
+        color: iconColor ?? Colors.grey, 
         size: (width != null && height != null) ? (width! * 0.5) : 24,
       ),
     );
