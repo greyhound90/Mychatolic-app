@@ -1,6 +1,6 @@
 class NotificationItem {
   final String id;
-  final String type; // 'like', 'comment', 'consilium'
+  final String type; // 'like', 'comment'
   final String? actorName;
   final String? actorAvatar;
   final String title;

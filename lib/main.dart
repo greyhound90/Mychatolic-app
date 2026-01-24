@@ -8,6 +8,7 @@ import 'package:mychatolic_app/core/theme.dart';
 import 'package:mychatolic_app/providers/theme_provider.dart';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:mychatolic_app/bible/presentation/bible_view_model.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,8 +29,11 @@ void main() async {
   await initializeDateFormatting('id_ID', null);
 
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => BibleViewModel()),
+      ],
       child: const MyChatolicApp(),
     ),
   );

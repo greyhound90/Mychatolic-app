@@ -6,8 +6,9 @@ import 'package:mychatolic_app/pages/home_screen.dart';
 import 'package:mychatolic_app/pages/create_post_screen.dart';
 // Replaced ChurchListPage with SchedulePage
 import 'package:mychatolic_app/pages/schedule_page.dart';
-import 'package:mychatolic_app/pages/bible/bible_home_page.dart';
+
 import 'package:mychatolic_app/pages/profile_page.dart';
+import 'package:mychatolic_app/bible/presentation/bible_library_screen.dart';
 import 'package:mychatolic_app/pages/radar_page.dart';
 import 'package:mychatolic_app/pages/social_inbox_page.dart';
 
@@ -73,7 +74,7 @@ class _HomePageState extends State<HomePage> {
     final List<Widget> children = [
       HomeScreen(key: _homeScreenKey),
       const SchedulePage(), // New Schedule Page
-      const BibleHomePage(),
+      const BibleLibraryScreen(), // Bible Screen
       const RadarPage(), // Radar Page
       const SocialInboxPage(), // Social Inbox
       ProfilePage(key: _profilePageKey), // Profile Page

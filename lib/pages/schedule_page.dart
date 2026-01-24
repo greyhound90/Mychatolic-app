@@ -12,7 +12,7 @@ import 'package:mychatolic_app/services/schedule_service.dart';
 import 'package:mychatolic_app/services/liturgy_service.dart';
 import 'package:mychatolic_app/services/master_data_service.dart';
 import 'package:mychatolic_app/widgets/my_catholic_app_bar.dart';
-import 'package:mychatolic_app/services/bible_service.dart';
+
 import 'package:mychatolic_app/services/profile_service.dart';
 import 'package:mychatolic_app/pages/profile/edit_profile_page.dart';
 
@@ -625,7 +625,7 @@ class _SchedulePageState extends State<SchedulePage> {
         ),
         children: [
           FutureBuilder<String?>(
-            future: BibleService().getVersesText(ref),
+            future: Future.value("Fitur Alkitab dinonaktifkan."),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
