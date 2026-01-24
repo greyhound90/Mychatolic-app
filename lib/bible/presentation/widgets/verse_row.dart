@@ -34,8 +34,14 @@ class VerseRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final highlight = _resolveHighlight(verse.highlightColor);
     final basePadding = paragraphMode
-        ? const EdgeInsets.symmetric(vertical: AppSpacing.sm, horizontal: AppSpacing.md)
-        : const EdgeInsets.symmetric(vertical: AppSpacing.md, horizontal: AppSpacing.lg);
+        ? const EdgeInsets.symmetric(
+            vertical: AppSpacing.sm,
+            horizontal: AppSpacing.md,
+          )
+        : const EdgeInsets.symmetric(
+            vertical: AppSpacing.md,
+            horizontal: AppSpacing.lg,
+          );
     final baseMargin = paragraphMode
         ? const EdgeInsets.symmetric(vertical: AppSpacing.xs)
         : const EdgeInsets.symmetric(vertical: AppSpacing.xs);
@@ -54,10 +60,10 @@ class VerseRow extends StatelessWidget {
           color: selected
               ? Colors.amber.withValues(alpha: 0.2)
               : flash
-                  ? flashColor
-                  : highlight == Colors.transparent
-                      ? Colors.transparent
-                      : highlight.withValues(alpha: 0.35),
+              ? flashColor
+              : highlight == Colors.transparent
+              ? Colors.transparent
+              : highlight.withValues(alpha: 0.35),
           borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
         child: RichText(

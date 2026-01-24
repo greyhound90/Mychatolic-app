@@ -18,7 +18,8 @@ class BibleBook {
   });
 
   factory BibleBook.fromJson(Map<String, dynamic> json) {
-    final order = _toInt(json['order_number']) ??
+    final order =
+        _toInt(json['order_number']) ??
         _toInt(json['order']) ??
         _toInt(json['no']) ??
         _toInt(json['id']) ??
@@ -29,10 +30,12 @@ class BibleBook {
       name: json['name']?.toString() ?? '',
       category: json['category']?.toString(),
       orderNumber: order,
-      isDeuterocanonical: json['is_deuterocanonical'] == true ||
+      isDeuterocanonical:
+          json['is_deuterocanonical'] == true ||
           json['deuterocanonical'] == true,
       testament: json['testament']?.toString(),
-      chapterCount: _toInt(json['chapter_count']) ??
+      chapterCount:
+          _toInt(json['chapter_count']) ??
           _toInt(json['chapters']) ??
           _toInt(json['total_chapters']) ??
           _toInt(json['total_pasal']),
@@ -90,7 +93,8 @@ class BibleVerse {
       content: json['content']?.toString() ?? '',
       highlightColor: interaction?['highlight_color']?.toString(),
       note: interaction?['note']?.toString(),
-      isBookmarked: interaction?['is_bookmarked'] == true ||
+      isBookmarked:
+          interaction?['is_bookmarked'] == true ||
           interaction?['bookmarked'] == true,
       interactionId: interaction?['id']?.toString(),
     );
@@ -108,8 +112,9 @@ class BibleVerse {
       chapter: chapter,
       verse: verse,
       content: content,
-      highlightColor:
-          clearHighlight ? null : (highlightColor ?? this.highlightColor),
+      highlightColor: clearHighlight
+          ? null
+          : (highlightColor ?? this.highlightColor),
       note: clearNote ? null : (note ?? this.note),
       isBookmarked: isBookmarked ?? this.isBookmarked,
       interactionId: interactionId,

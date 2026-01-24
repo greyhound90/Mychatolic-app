@@ -13,13 +13,13 @@ class VerificationUploadPage extends StatefulWidget {
 
 class _VerificationUploadPageState extends State<VerificationUploadPage> {
   final _supabase = Supabase.instance.client;
-  
+
   // Files
   File? _baptismImage;
   File? _ktpImage;
   File? _faceImage;
   File? _confirmationImage;
-  
+
   bool _isUploading = false;
 
   // --- DESIGN SYSTEM CONSTANTS (Kulikeun Premium) ---
@@ -39,12 +39,12 @@ class _VerificationUploadPageState extends State<VerificationUploadPage> {
 
   Future<void> _pickImage(int type, ImageSource source) async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: source, imageQuality: 70); 
+    final pickedFile = await picker.pickImage(source: source, imageQuality: 70);
 
     if (pickedFile != null) {
       setState(() {
         if (type == 1) {
-          _baptismImage = File(pickedFile.path); 
+          _baptismImage = File(pickedFile.path);
         } else if (type == 2) {
           _ktpImage = File(pickedFile.path);
         } else if (type == 3) {
@@ -62,7 +62,7 @@ class _VerificationUploadPageState extends State<VerificationUploadPage> {
   }
 
   Future<void> _submitVerification() async {
-    if (!_isFormValid) return; 
+    if (!_isFormValid) return;
 
     setState(() => _isUploading = true);
 
@@ -71,38 +71,57 @@ class _VerificationUploadPageState extends State<VerificationUploadPage> {
       if (user != null) {
         // 1. Upload Files
         final timePrefix = DateTime.now().millisecondsSinceEpoch;
-        
+
         // Baptis
         final baptismPath = '${user.id}/baptism_$timePrefix.jpg';
-        await _supabase.storage.from('verifications').upload(baptismPath, _baptismImage!);
-        final baptismUrl = _supabase.storage.from('verifications').getPublicUrl(baptismPath);
+        await _supabase.storage
+            .from('verifications')
+            .upload(baptismPath, _baptismImage!);
+        final baptismUrl = _supabase.storage
+            .from('verifications')
+            .getPublicUrl(baptismPath);
 
         // KTP
         final ktpPath = '${user.id}/ktp_$timePrefix.jpg';
-        await _supabase.storage.from('verifications').upload(ktpPath, _ktpImage!);
-        final ktpUrl = _supabase.storage.from('verifications').getPublicUrl(ktpPath);
+        await _supabase.storage
+            .from('verifications')
+            .upload(ktpPath, _ktpImage!);
+        final ktpUrl = _supabase.storage
+            .from('verifications')
+            .getPublicUrl(ktpPath);
 
         // Face
         final facePath = '${user.id}/face_$timePrefix.jpg';
-        await _supabase.storage.from('verifications').upload(facePath, _faceImage!);
-        final faceUrl = _supabase.storage.from('verifications').getPublicUrl(facePath);
+        await _supabase.storage
+            .from('verifications')
+            .upload(facePath, _faceImage!);
+        final faceUrl = _supabase.storage
+            .from('verifications')
+            .getPublicUrl(facePath);
 
         // Krisma (Optional)
 
         if (_confirmationImage != null) {
-           final confirmationPath = '${user.id}/confirmation_$timePrefix.jpg';
-           await _supabase.storage.from('verifications').upload(confirmationPath, _confirmationImage!);
-           _supabase.storage.from('verifications').getPublicUrl(confirmationPath);
+          final confirmationPath = '${user.id}/confirmation_$timePrefix.jpg';
+          await _supabase.storage
+              .from('verifications')
+              .upload(confirmationPath, _confirmationImage!);
+          _supabase.storage
+              .from('verifications')
+              .getPublicUrl(confirmationPath);
         }
-        
+
         // 2. Update Profiles Table
-        await _supabase.from('profiles').update({
-          'verification_status': 'pending',
-          'baptism_certificate_url': baptismUrl,
-          'verification_ktp_url': ktpUrl,
-          'verification_video_url': faceUrl, 
-          'updated_at': DateTime.now().toIso8601String(),
-        }).eq('id', user.id);
+        await _supabase
+            .from('profiles')
+            .update({
+              'verification_status': 'pending',
+              'baptism_certificate_url': baptismUrl,
+              'verification_ktp_url': ktpUrl,
+              'verification_video_url': faceUrl,
+              'updated_at': DateTime.now().toIso8601String(),
+            })
+            .eq('id', user.id);
 
         if (mounted) {
           _showSuccessDialog();
@@ -111,17 +130,22 @@ class _VerificationUploadPageState extends State<VerificationUploadPage> {
     } catch (e) {
       debugPrint("Error upload: $e");
       // Fallback
-       try {
-         final user = _supabase.auth.currentUser;
-         if (user != null) {
-            await _supabase.from('profiles').update({
-              'verification_status': 'pending',
-            }).eq('id', user.id);
-            if(mounted) _showSuccessDialog();
-            return;
-         }
+      try {
+        final user = _supabase.auth.currentUser;
+        if (user != null) {
+          await _supabase
+              .from('profiles')
+              .update({'verification_status': 'pending'})
+              .eq('id', user.id);
+          if (mounted) _showSuccessDialog();
+          return;
+        }
       } catch (e2) {
-         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal mengirim: $e")));
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("Gagal mengirim: $e")));
+        }
       }
     } finally {
       if (mounted) setState(() => _isUploading = false);
@@ -134,12 +158,21 @@ class _VerificationUploadPageState extends State<VerificationUploadPage> {
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: bgNavy,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: accentIndigo)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: accentIndigo),
+        ),
         title: Row(
           children: [
-              const Icon(Icons.check_circle, color: accentIndigo),
-              const SizedBox(width: 8),
-              Text("Terkirim!", style: GoogleFonts.outfit(color: textWhite, fontWeight: FontWeight.bold)),
+            const Icon(Icons.check_circle, color: accentIndigo),
+            const SizedBox(width: 8),
+            Text(
+              "Terkirim!",
+              style: GoogleFonts.outfit(
+                color: textWhite,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
         content: Text(
@@ -150,10 +183,16 @@ class _VerificationUploadPageState extends State<VerificationUploadPage> {
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
-              Navigator.pop(context, true); 
+              Navigator.pop(context, true);
             },
-            child: Text("OK, MENGERTI", style: GoogleFonts.outfit(color: accentIndigo, fontWeight: FontWeight.bold)),
-          )
+            child: Text(
+              "OK, MENGERTI",
+              style: GoogleFonts.outfit(
+                color: accentIndigo,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -170,7 +209,14 @@ class _VerificationUploadPageState extends State<VerificationUploadPage> {
           icon: const Icon(Icons.close_rounded, color: textWhite),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text("Verifikasi Akun", style: GoogleFonts.outfit(color: textWhite, fontWeight: FontWeight.bold, fontSize: 18)),
+        title: Text(
+          "Verifikasi Akun",
+          style: GoogleFonts.outfit(
+            color: textWhite,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
         centerTitle: true,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
@@ -194,14 +240,25 @@ class _VerificationUploadPageState extends State<VerificationUploadPage> {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: accentIndigo.withValues(alpha: 0.1), shape: BoxShape.circle),
-                    child: const Icon(Icons.shield_outlined, color: accentIndigo, size: 24),
+                    decoration: BoxDecoration(
+                      color: accentIndigo.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.shield_outlined,
+                      color: accentIndigo,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Text(
                       "Lengkapi 3 data wajib untuk mendapatkan lencana Terverifikasi.",
-                      style: GoogleFonts.outfit(color: textGrey, fontSize: 13, height: 1.4),
+                      style: GoogleFonts.outfit(
+                        color: textGrey,
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
                     ),
                   ),
                 ],
@@ -264,21 +321,47 @@ class _VerificationUploadPageState extends State<VerificationUploadPage> {
               decoration: BoxDecoration(
                 gradient: primaryGradient,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [BoxShadow(color: accentIndigo.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))]
+                boxShadow: [
+                  BoxShadow(
+                    color: accentIndigo.withValues(alpha: 0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: ElevatedButton(
-                onPressed: (_isFormValid && !_isUploading) ? _submitVerification : null,
+                onPressed: (_isFormValid && !_isUploading)
+                    ? _submitVerification
+                    : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
-                  disabledBackgroundColor: Colors.transparent, // Keep gradient visible but maybe dim it manually if needed, or just let opacity handle it
+                  disabledBackgroundColor: Colors
+                      .transparent, // Keep gradient visible but maybe dim it manually if needed, or just let opacity handle it
                   padding: const EdgeInsets.symmetric(vertical: 18),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   minimumSize: const Size(double.infinity, 54),
                 ),
-                child: _isUploading 
-                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
-                    : Text("KIRIM DATA VERIFIKASI", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1, color: textWhite)),
+                child: _isUploading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 3,
+                        ),
+                      )
+                    : Text(
+                        "KIRIM DATA VERIFIKASI",
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          letterSpacing: 1,
+                          color: textWhite,
+                        ),
+                      ),
               ),
             ),
             if (!_isFormValid)
@@ -301,24 +384,46 @@ class _VerificationUploadPageState extends State<VerificationUploadPage> {
     return Row(
       children: [
         Container(
-          width: 24, height: 24,
+          width: 24,
+          height: 24,
           alignment: Alignment.center,
           decoration: const BoxDecoration(
             color: accentIndigo,
             shape: BoxShape.circle,
           ),
-          child: Text(number, style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+          child: Text(
+            number,
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
         ),
         const SizedBox(width: 12),
-        Text(title, style: GoogleFonts.outfit(color: textWhite, fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(
+          title,
+          style: GoogleFonts.outfit(
+            color: textWhite,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
       ],
     );
   }
 
   // GLASS DASHED BORDER CARD (Simulated with Border.all for simplicity in Flutter default, can use DottedBorder package if available, but staying clean for now)
-  Widget _buildUploadCard({required File? file, required String hint, required IconData icon, required VoidCallback onTap, bool isOptional = false, bool isCamera = false}) {
+  Widget _buildUploadCard({
+    required File? file,
+    required String hint,
+    required IconData icon,
+    required VoidCallback onTap,
+    bool isOptional = false,
+    bool isCamera = false,
+  }) {
     final bool isFilled = file != null;
-    
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -326,29 +431,56 @@ class _VerificationUploadPageState extends State<VerificationUploadPage> {
         decoration: BoxDecoration(
           color: glassCard,
           borderRadius: BorderRadius.circular(20),
-          border: isFilled 
-            ? Border.all(color: accentIndigo, width: 2) 
-            : Border.all(color: glassBorder, width: 1.5, style: BorderStyle.solid), // Use DottedBorder package if strictly needed, otherwise solid glass border is fine
-          image: isFilled ? DecorationImage(image: FileImage(file), fit: BoxFit.cover) : null,
+          border: isFilled
+              ? Border.all(color: accentIndigo, width: 2)
+              : Border.all(
+                  color: glassBorder,
+                  width: 1.5,
+                  style: BorderStyle.solid,
+                ), // Use DottedBorder package if strictly needed, otherwise solid glass border is fine
+          image: isFilled
+              ? DecorationImage(image: FileImage(file), fit: BoxFit.cover)
+              : null,
         ),
         child: isFilled
             ? Stack(
                 children: [
-                  Container(decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), color: Colors.black26)), // Dim overlay
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      color: Colors.black26,
+                    ),
+                  ), // Dim overlay
                   Center(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.refresh, color: Colors.white, size: 16),
+                          const Icon(
+                            Icons.refresh,
+                            color: Colors.white,
+                            size: 16,
+                          ),
                           const SizedBox(width: 8),
-                          Text("Ulangi Foto", style: GoogleFonts.outfit(color: Colors.white, fontSize: 12))
+                          Text(
+                            "Ulangi Foto",
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 12,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                  )
+                  ),
                 ],
               )
             : Column(
@@ -359,16 +491,29 @@ class _VerificationUploadPageState extends State<VerificationUploadPage> {
                     decoration: BoxDecoration(
                       color: bgNavy,
                       shape: BoxShape.circle,
-                      border: Border.all(color: glassBorder)
+                      border: Border.all(color: glassBorder),
                     ),
-                    child: Icon(icon, color: isCamera ? accentIndigo : Colors.white54, size: 32),
+                    child: Icon(
+                      icon,
+                      color: isCamera ? accentIndigo : Colors.white54,
+                      size: 32,
+                    ),
                   ),
                   const SizedBox(height: 16),
-                  Text(hint, style: GoogleFonts.outfit(color: textWhite, fontSize: 14, fontWeight: FontWeight.w500)),
+                  Text(
+                    hint,
+                    style: GoogleFonts.outfit(
+                      color: textWhite,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Text(
-                    isCamera ? "Tap untuk membuka kamera" : "Tap untuk pilih file", 
-                    style: GoogleFonts.outfit(color: textGrey, fontSize: 12)
+                    isCamera
+                        ? "Tap untuk membuka kamera"
+                        : "Tap untuk pilih file",
+                    style: GoogleFonts.outfit(color: textGrey, fontSize: 12),
                   ),
                 ],
               ),

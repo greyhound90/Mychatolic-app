@@ -8,7 +8,10 @@ class PhotoPostFlow {
   static final ImagePicker _picker = ImagePicker();
 
   /// Initiates the Photo Post Flow: Picker -> Cropper -> Final Caption Screen
-  static Future<void> start(BuildContext context, {required bool fromCamera}) async {
+  static Future<void> start(
+    BuildContext context, {
+    required bool fromCamera,
+  }) async {
     try {
       // 1. Pick Image
       final XFile? pickedFile = await _picker.pickImage(
@@ -29,7 +32,7 @@ class PhotoPostFlow {
             toolbarWidgetColor: Colors.white,
             initAspectRatio: CropAspectRatioPreset.original,
             lockAspectRatio: true, // Enforce 4:5
-            hideBottomControls: true, 
+            hideBottomControls: true,
           ),
           IOSUiSettings(
             title: 'Crop Photo',
@@ -46,16 +49,16 @@ class PhotoPostFlow {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => FinalPhotoCaptionPage(imageFile: File(croppedFile.path)),
+            builder: (_) =>
+                FinalPhotoCaptionPage(imageFile: File(croppedFile.path)),
           ),
         );
       }
-
     } catch (e) {
       debugPrint("Photo Flow Error: $e");
       if (context.mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
         );
       }
     }

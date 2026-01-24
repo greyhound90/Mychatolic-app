@@ -8,7 +8,8 @@ import 'package:timeago/timeago.dart' as timeago;
 class StoryViewPage extends StatefulWidget {
   final List<Story> stories;
   final int initialIndex;
-  final Map<String, dynamic>? userProfile; // Kept for compatibility with StoryRail
+  final Map<String, dynamic>?
+  userProfile; // Kept for compatibility with StoryRail
 
   const StoryViewPage({
     super.key,
@@ -21,10 +22,11 @@ class StoryViewPage extends StatefulWidget {
   State<StoryViewPage> createState() => _StoryViewPageState();
 }
 
-class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateMixin {
+class _StoryViewPageState extends State<StoryViewPage>
+    with TickerProviderStateMixin {
   late PageController _pageController;
   late AnimationController _animController;
-  
+
   int _currentIndex = 0;
   final StoryService _storyService = StoryService();
 
@@ -33,10 +35,10 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
     super.initState();
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: _currentIndex);
-    
+
     _animController = AnimationController(
-        vsync: this, 
-        duration: const Duration(seconds: 5)
+      vsync: this,
+      duration: const Duration(seconds: 5),
     );
 
     _animController.addStatusListener((status) {
@@ -71,7 +73,7 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
     if (animatePage && _pageController.hasClients) {
       _pageController.jumpToPage(index);
     }
-    
+
     if (mounted) setState(() {});
   }
 
@@ -154,13 +156,13 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
               child: Column(
                 children: [
                   const SizedBox(height: 8),
-                  
+
                   // A. PROGRESS BAR ROW
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     child: Row(
                       children: widget.stories.asMap().entries.map((entry) {
-                         return _buildSegmentedProgressBar(entry.key);
+                        return _buildSegmentedProgressBar(entry.key);
                       }).toList(),
                     ),
                   ),
@@ -174,18 +176,23 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
                       children: [
                         // Avatar
                         Container(
-                          width: 36, height: 36,
-                          decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.grey),
+                          width: 36,
+                          height: 36,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.grey,
+                          ),
                           child: ClipOval(
                             child: SafeNetworkImage(
                               imageUrl: avatar,
-                              width: 36, height: 36,
+                              width: 36,
+                              height: 36,
                               fit: BoxFit.cover,
                             ),
                           ),
                         ),
                         const SizedBox(width: 10),
-                        
+
                         // Name & Time
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -195,14 +202,17 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
                               style: GoogleFonts.outfit(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 14
+                                fontSize: 14,
                               ),
                             ),
                             Text(
-                              timeago.format(story.createdAt, locale: 'en_short'),
+                              timeago.format(
+                                story.createdAt,
+                                locale: 'en_short',
+                              ),
                               style: GoogleFonts.outfit(
                                 color: Colors.white70,
-                                fontSize: 12
+                                fontSize: 12,
                               ),
                             ),
                           ],
@@ -213,8 +223,12 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
                         // Close Button
                         IconButton(
                           onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.close, color: Colors.white, size: 28),
-                        )
+                          icon: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -235,7 +249,11 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
                     color: Colors.white,
                     fontSize: 16,
                     shadows: [
-                      const Shadow(color: Colors.black, blurRadius: 4, offset: Offset(0, 1))
+                      const Shadow(
+                        color: Colors.black,
+                        blurRadius: 4,
+                        offset: Offset(0, 1),
+                      ),
                     ],
                   ),
                 ),
@@ -251,45 +269,45 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 2.0),
         child: LayoutBuilder(
-           builder: (context, constraints) {
-             return Stack(
-               children: [
-                 // Background (Grey)
-                 Container(
-                   height: 3,
-                   decoration: BoxDecoration(
-                     color: Colors.grey[700],
-                     borderRadius: BorderRadius.circular(1.5),
-                   ),
-                 ),
-                 
-                 // Foreground (White)
-                 if (index < _currentIndex) 
-                   Container(
-                     height: 3,
-                     width: double.infinity,
-                     decoration: BoxDecoration(
-                       color: Colors.white,
-                       borderRadius: BorderRadius.circular(1.5),
-                     ),
-                   )
-                 else if (index == _currentIndex)
-                   AnimatedBuilder(
-                     animation: _animController,
-                     builder: (context, child) {
-                       return Container(
-                         height: 3,
-                         width: constraints.maxWidth * _animController.value,
-                         decoration: BoxDecoration(
-                           color: Colors.white,
-                           borderRadius: BorderRadius.circular(1.5),
-                         ),
-                       );
-                     },
-                   )
-               ],
-             );
-           }
+          builder: (context, constraints) {
+            return Stack(
+              children: [
+                // Background (Grey)
+                Container(
+                  height: 3,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[700],
+                    borderRadius: BorderRadius.circular(1.5),
+                  ),
+                ),
+
+                // Foreground (White)
+                if (index < _currentIndex)
+                  Container(
+                    height: 3,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(1.5),
+                    ),
+                  )
+                else if (index == _currentIndex)
+                  AnimatedBuilder(
+                    animation: _animController,
+                    builder: (context, child) {
+                      return Container(
+                        height: 3,
+                        width: constraints.maxWidth * _animController.value,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(1.5),
+                        ),
+                      );
+                    },
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );

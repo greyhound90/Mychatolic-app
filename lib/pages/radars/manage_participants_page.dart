@@ -49,20 +49,22 @@ class _ManageParticipantsPageState extends State<ManageParticipantsPage> {
     try {
       await _radarService.approveParticipant(widget.radarId, userId);
       if (!mounted) return;
-      setState(() => _pending.removeWhere(
-            (p) => (p['user_id'] ?? '').toString() == userId,
-          ));
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Peserta disetujui")),
+      setState(
+        () => _pending.removeWhere(
+          (p) => (p['user_id'] ?? '').toString() == userId,
+        ),
       );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Peserta disetujui")));
     } catch (e, st) {
       if (kDebugMode) {
         debugPrint("[RADAR APPROVE UI] $e\n$st");
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Gagal menyetujui peserta")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Gagal menyetujui peserta")));
     } finally {
       if (mounted) setState(() => _processing.remove(userId));
     }
@@ -75,20 +77,22 @@ class _ManageParticipantsPageState extends State<ManageParticipantsPage> {
     try {
       await _radarService.rejectParticipant(widget.radarId, userId);
       if (!mounted) return;
-      setState(() => _pending.removeWhere(
-            (p) => (p['user_id'] ?? '').toString() == userId,
-          ));
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Peserta ditolak")),
+      setState(
+        () => _pending.removeWhere(
+          (p) => (p['user_id'] ?? '').toString() == userId,
+        ),
       );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Peserta ditolak")));
     } catch (e, st) {
       if (kDebugMode) {
         debugPrint("[RADAR REJECT UI] $e\n$st");
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Gagal menolak peserta")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Gagal menolak peserta")));
     } finally {
       if (mounted) setState(() => _processing.remove(userId));
     }
@@ -115,93 +119,88 @@ class _ManageParticipantsPageState extends State<ManageParticipantsPage> {
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _pending.isEmpty
-                ? ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: [
-                      const SizedBox(height: 80),
-                      Center(
-                        child: Text(
-                          "Tidak ada permintaan join.",
-                          style: GoogleFonts.outfit(color: Colors.grey[700]),
+            ? ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
+                  const SizedBox(height: 80),
+                  Center(
+                    child: Text(
+                      "Tidak ada permintaan join.",
+                      style: GoogleFonts.outfit(color: Colors.grey[700]),
+                    ),
+                  ),
+                ],
+              )
+            : ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: _pending.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final item = _pending[index];
+                  final profile = item['profiles'] is Map
+                      ? Map<String, dynamic>.from(item['profiles'] as Map)
+                      : const <String, dynamic>{};
+                  final name = (profile['full_name'] ?? 'Umat').toString();
+                  final avatarUrl = (profile['avatar_url'] ?? '').toString();
+                  final userId = (item['user_id'] ?? '').toString();
+                  final isProcessing = _processing.contains(userId);
+
+                  return Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.grey.shade200,
+                        child: ClipOval(
+                          child: SafeNetworkImage(
+                            imageUrl: avatarUrl,
+                            width: 40,
+                            height: 40,
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
-                    ],
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _pending.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final item = _pending[index];
-                      final profile = item['profiles'] is Map
-                          ? Map<String, dynamic>.from(item['profiles'] as Map)
-                          : const <String, dynamic>{};
-                      final name = (profile['full_name'] ?? 'Umat').toString();
-                      final avatarUrl =
-                          (profile['avatar_url'] ?? '').toString();
-                      final userId = (item['user_id'] ?? '').toString();
-                      final isProcessing = _processing.contains(userId);
-
-                      return Card(
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.grey.shade200,
-                            child: ClipOval(
-                              child: SafeNetworkImage(
-                                imageUrl: avatarUrl,
-                                width: 40,
-                                height: 40,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          title: Text(
-                            name,
-                            style: GoogleFonts.outfit(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          subtitle: Text(
-                            "Ingin bergabung",
-                            style: GoogleFonts.outfit(color: Colors.grey[600]),
-                          ),
-                          trailing: isProcessing
-                              ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
+                      title: Text(
+                        name,
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+                      ),
+                      subtitle: Text(
+                        "Ingin bergabung",
+                        style: GoogleFonts.outfit(color: Colors.grey[600]),
+                      ),
+                      trailing: isProcessing
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  tooltip: "Tolak",
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: Colors.red,
                                   ),
-                                )
-                              : Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      tooltip: "Tolak",
-                                      icon: const Icon(
-                                        Icons.close,
-                                        color: Colors.red,
-                                      ),
-                                      onPressed: () => _reject(item),
-                                    ),
-                                    IconButton(
-                                      tooltip: "Setujui",
-                                      icon: const Icon(
-                                        Icons.check,
-                                        color: Colors.green,
-                                      ),
-                                      onPressed: () => _approve(item),
-                                    ),
-                                  ],
+                                  onPressed: () => _reject(item),
                                 ),
-                        ),
-                      );
-                    },
-                  ),
+                                IconButton(
+                                  tooltip: "Setujui",
+                                  icon: const Icon(
+                                    Icons.check,
+                                    color: Colors.green,
+                                  ),
+                                  onPressed: () => _approve(item),
+                                ),
+                              ],
+                            ),
+                    ),
+                  );
+                },
+              ),
       ),
     );
   }

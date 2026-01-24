@@ -33,27 +33,23 @@ class ProfileService {
           ''')
           .eq('id', userId)
           .single();
-      
+
       // Safe Extract Profile
       final profile = Profile.fromJson(response);
 
       // Safe Extract Stats (Nullable Integers)
       int followers = (response['followers_count'] as num?)?.toInt() ?? 0;
       int following = (response['following_count'] as num?)?.toInt() ?? 0;
-      
+
       // Posts count is handled locally by counting fetched posts in ProfilePage
       // or we return 0 here.
       Map<String, int> stats = {
         'followers': followers,
         'following': following,
-        'posts': 0, 
+        'posts': 0,
       };
 
-      return {
-        'profile': profile,
-        'stats': stats,
-      };
-
+      return {'profile': profile, 'stats': stats};
     } catch (e) {
       throw Exception('Gagal mengambil data profil: ${e.toString()}');
     }
@@ -76,7 +72,7 @@ class ProfileService {
           .eq('follower_id', currentUser.id)
           .eq('following_id', targetUserId)
           .maybeSingle();
-      
+
       return response != null;
     } catch (e) {
       return false;
@@ -107,8 +103,8 @@ class ProfileService {
         }),
       ]);
     } catch (e) {
-       if (e.toString().contains('duplicate key')) return; 
-       throw Exception('Gagal follow user: ${e.toString()}');
+      if (e.toString().contains('duplicate key')) return;
+      throw Exception('Gagal follow user: ${e.toString()}');
     }
   }
 
@@ -129,7 +125,11 @@ class ProfileService {
   }
 
   // 16. Report User
-  Future<void> reportUser(String targetUserId, String reason, String description) async {
+  Future<void> reportUser(
+    String targetUserId,
+    String reason,
+    String description,
+  ) async {
     final currentUser = _supabase.auth.currentUser;
     if (currentUser == null) throw Exception("User belum login");
 
@@ -159,7 +159,7 @@ class ProfileService {
       final data = response as List<dynamic>;
       return data.map((json) => UserPost.fromJson(json)).toList();
     } catch (e) {
-      return []; 
+      return [];
     }
   }
 
@@ -176,7 +176,7 @@ class ProfileService {
           'current_user_id': user.id, // Ensure SQL param name matches
         },
       );
-      
+
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       debugPrint("Search users failed: $e");

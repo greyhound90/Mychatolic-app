@@ -25,7 +25,7 @@ class _SearchUserPageState extends State<SearchUserPage> {
   final ChatService _chatService = ChatService();
   final SocialService _socialService = SocialService(); // Added SocialService
   final TextEditingController _searchController = TextEditingController();
-  
+
   // Data
   List<Profile> _searchResults = []; // Changed to Profile Model
   bool _isLoading = false;
@@ -42,15 +42,15 @@ class _SearchUserPageState extends State<SearchUserPage> {
   @override
   void initState() {
     super.initState();
-    _fetchCountries(); 
-    _searchUsers(""); 
+    _fetchCountries();
+    _searchUsers("");
   }
 
   /// Helper to fetch master data
   Future<void> _fetchCountries() async {
     try {
-       final data = await _masterService.fetchCountries();
-       if (mounted) setState(() => _countries = data);
+      final data = await _masterService.fetchCountries();
+      if (mounted) setState(() => _countries = data);
     } catch (e) {
       debugPrint("Error fetching countries: $e");
     }
@@ -58,8 +58,8 @@ class _SearchUserPageState extends State<SearchUserPage> {
 
   Future<void> _fetchDioceses(String countryId) async {
     try {
-       final data = await _masterService.fetchDioceses(countryId);
-       if (mounted) setState(() => _dioceses = data);
+      final data = await _masterService.fetchDioceses(countryId);
+      if (mounted) setState(() => _dioceses = data);
     } catch (e) {
       debugPrint("Error fetching dioceses: $e");
     }
@@ -67,8 +67,8 @@ class _SearchUserPageState extends State<SearchUserPage> {
 
   Future<void> _fetchChurches(String dioceseId) async {
     try {
-       final data = await _masterService.fetchChurches(dioceseId);
-       if (mounted) setState(() => _churches = data);
+      final data = await _masterService.fetchChurches(dioceseId);
+      if (mounted) setState(() => _churches = data);
     } catch (e) {
       debugPrint("Error fetching churches: $e");
     }
@@ -77,7 +77,7 @@ class _SearchUserPageState extends State<SearchUserPage> {
   void _onCountryChanged(String? countryId) {
     setState(() {
       _selectedCountryId = countryId;
-      _selectedDioceseId = null; 
+      _selectedDioceseId = null;
       _selectedChurchId = null;
       _dioceses = [];
       _churches = [];
@@ -105,7 +105,7 @@ class _SearchUserPageState extends State<SearchUserPage> {
 
   Future<void> _searchUsers(String query) async {
     setState(() => _isLoading = true);
-    
+
     try {
       final results = await _socialService.searchUsersAdvanced(
         query: query,
@@ -113,7 +113,7 @@ class _SearchUserPageState extends State<SearchUserPage> {
         dioceseId: _selectedDioceseId,
         churchId: _selectedChurchId,
       );
-      
+
       if (mounted) {
         setState(() {
           _searchResults = results;
@@ -135,23 +135,26 @@ class _SearchUserPageState extends State<SearchUserPage> {
       if (!mounted) return;
 
       // Navigate to chat detail
-      Navigator.push( 
-        context, 
+      Navigator.push(
+        context,
         MaterialPageRoute(
           builder: (_) => SocialChatDetailPage(
-            chatId: chatId, 
+            chatId: chatId,
             opponentProfile: {
-                'id': userProfile.id,
-                'full_name': userProfile.fullName,
-                'avatar_url': userProfile.avatarUrl,
+              'id': userProfile.id,
+              'full_name': userProfile.fullName,
+              'avatar_url': userProfile.avatarUrl,
             },
             otherUserId: userProfile.id,
-          )
-        )
+          ),
+        ),
       );
-
     } catch (e) {
-      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error starting chat: $e")));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error starting chat: $e")));
+      }
     }
   }
 
@@ -160,7 +163,13 @@ class _SearchUserPageState extends State<SearchUserPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA), // Slightly off-white background
       appBar: AppBar(
-        title: Text("Cari Teman", style: GoogleFonts.outfit(color: Colors.black, fontWeight: FontWeight.bold)),
+        title: Text(
+          "Cari Teman",
+          style: GoogleFonts.outfit(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -196,10 +205,16 @@ class _SearchUserPageState extends State<SearchUserPage> {
                   decoration: InputDecoration(
                     labelText: "Cari Nama (Opsional)",
                     labelStyle: GoogleFonts.outfit(color: Colors.grey[600]),
-                    prefixIcon: const Icon(Icons.search, color: AppColors.primaryBrand),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: AppColors.primaryBrand,
+                    ),
                     filled: true,
                     fillColor: Colors.grey[50],
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(color: Colors.grey[300]!),
@@ -210,20 +225,25 @@ class _SearchUserPageState extends State<SearchUserPage> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppColors.primaryBrand),
+                      borderSide: const BorderSide(
+                        color: AppColors.primaryBrand,
+                      ),
                     ),
                   ),
                   style: GoogleFonts.outfit(),
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Country Dropdown
                 DropdownButtonFormField<String>(
                   key: ValueKey(_selectedCountryId),
                   initialValue: _selectedCountryId,
                   decoration: _inputDecoration("Pilih Negara", Icons.public),
                   items: _countries.map((c) {
-                    return DropdownMenuItem(value: c.id, child: Text(c.name, overflow: TextOverflow.ellipsis));
+                    return DropdownMenuItem(
+                      value: c.id,
+                      child: Text(c.name, overflow: TextOverflow.ellipsis),
+                    );
                   }).toList(),
                   onChanged: _onCountryChanged,
                   isExpanded: true,
@@ -235,15 +255,29 @@ class _SearchUserPageState extends State<SearchUserPage> {
                 DropdownButtonFormField<String>(
                   key: ValueKey(_selectedDioceseId),
                   initialValue: _selectedDioceseId,
-                  decoration: _inputDecoration("Pilih Keuskupan", Icons.account_balance),
+                  decoration: _inputDecoration(
+                    "Pilih Keuskupan",
+                    Icons.account_balance,
+                  ),
                   items: _dioceses.map((d) {
-                    return DropdownMenuItem(value: d.id, child: Text(d.name, overflow: TextOverflow.ellipsis));
+                    return DropdownMenuItem(
+                      value: d.id,
+                      child: Text(d.name, overflow: TextOverflow.ellipsis),
+                    );
                   }).toList(),
-                  onChanged: _selectedCountryId == null ? null : _onDioceseChanged,
+                  onChanged: _selectedCountryId == null
+                      ? null
+                      : _onDioceseChanged,
                   isExpanded: true,
                   style: GoogleFonts.outfit(color: Colors.black),
-                  hint: Text("Pilih Keuskupan", style: GoogleFonts.outfit(color: Colors.grey)),
-                  disabledHint: Text("Pilih Negara Terlebih Dahulu", style: GoogleFonts.outfit(color: Colors.grey)),
+                  hint: Text(
+                    "Pilih Keuskupan",
+                    style: GoogleFonts.outfit(color: Colors.grey),
+                  ),
+                  disabledHint: Text(
+                    "Pilih Negara Terlebih Dahulu",
+                    style: GoogleFonts.outfit(color: Colors.grey),
+                  ),
                 ),
                 const SizedBox(height: 16),
 
@@ -253,13 +287,24 @@ class _SearchUserPageState extends State<SearchUserPage> {
                   initialValue: _selectedChurchId,
                   decoration: _inputDecoration("Pilih Paroki", Icons.church),
                   items: _churches.map((c) {
-                    return DropdownMenuItem(value: c.id, child: Text(c.name, overflow: TextOverflow.ellipsis));
+                    return DropdownMenuItem(
+                      value: c.id,
+                      child: Text(c.name, overflow: TextOverflow.ellipsis),
+                    );
                   }).toList(),
-                  onChanged: _selectedDioceseId == null ? null : _onChurchChanged,
+                  onChanged: _selectedDioceseId == null
+                      ? null
+                      : _onChurchChanged,
                   isExpanded: true,
                   style: GoogleFonts.outfit(color: Colors.black),
-                  hint: Text("Pilih Paroki", style: GoogleFonts.outfit(color: Colors.grey)),
-                  disabledHint: Text("Pilih Keuskupan Terlebih Dahulu", style: GoogleFonts.outfit(color: Colors.grey)),
+                  hint: Text(
+                    "Pilih Paroki",
+                    style: GoogleFonts.outfit(color: Colors.grey),
+                  ),
+                  disabledHint: Text(
+                    "Pilih Keuskupan Terlebih Dahulu",
+                    style: GoogleFonts.outfit(color: Colors.grey),
+                  ),
                 ),
                 const SizedBox(height: 20),
 
@@ -271,12 +316,18 @@ class _SearchUserPageState extends State<SearchUserPage> {
                     onPressed: () => _searchUsers(_searchController.text),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryBrand,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       elevation: 2,
                     ),
                     child: Text(
                       "Cari Teman",
-                      style: GoogleFonts.outfit(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                      style: GoogleFonts.outfit(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -286,22 +337,49 @@ class _SearchUserPageState extends State<SearchUserPage> {
 
           // 2. RESULTS LIST
           Expanded(
-            child: _isLoading 
-            ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBrand))
-            : _searchResults.isEmpty 
-                ? Center(child: Text("Pengguna tidak ditemukan", style: GoogleFonts.outfit(color: Colors.grey)))
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.primaryBrand,
+                    ),
+                  )
+                : _searchResults.isEmpty
+                ? Center(
+                    child: Text(
+                      "Pengguna tidak ditemukan",
+                      style: GoogleFonts.outfit(color: Colors.grey),
+                    ),
+                  )
                 : ListView.separated(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     itemCount: _searchResults.length,
-                    separatorBuilder: (context, index) => const Divider(height: 1, indent: 16, endIndent: 16, color: Color(0xFFEEEEEE)),
+                    separatorBuilder: (context, index) => const Divider(
+                      height: 1,
+                      indent: 16,
+                      endIndent: 16,
+                      color: Color(0xFFEEEEEE),
+                    ),
                     itemBuilder: (context, index) {
                       final user = _searchResults[index];
-                      return ListTile( // Keep existing item builder logic but simplify call
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProfilePage(userId: user.id, isBackButtonEnabled: true))),
+                      return ListTile(
+                        // Keep existing item builder logic but simplify call
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 8,
+                        ),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ProfilePage(
+                              userId: user.id,
+                              isBackButtonEnabled: true,
+                            ),
+                          ),
+                        ),
                         leading: SafeNetworkImage(
                           imageUrl: user.avatarUrl,
-                          width: 50, height: 50,
+                          width: 50,
+                          height: 50,
                           borderRadius: BorderRadius.circular(25),
                           fit: BoxFit.cover,
                           fallbackIcon: Icons.person,
@@ -311,7 +389,11 @@ class _SearchUserPageState extends State<SearchUserPage> {
                             Flexible(
                               child: Text(
                                 user.fullName ?? "User",
-                                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 16),
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                  fontSize: 16,
+                                ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -320,12 +402,19 @@ class _SearchUserPageState extends State<SearchUserPage> {
                           ],
                         ),
                         subtitle: Text(
-                           "${user.parish ?? '-'}, ${user.diocese ?? '-'}",
-                           style: GoogleFonts.outfit(color: Colors.grey[600], fontSize: 13),
-                           maxLines: 1, overflow: TextOverflow.ellipsis,
+                          "${user.parish ?? '-'}, ${user.diocese ?? '-'}",
+                          style: GoogleFonts.outfit(
+                            color: Colors.grey[600],
+                            fontSize: 13,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         trailing: IconButton(
-                          icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.primaryBrand),
+                          icon: const Icon(
+                            Icons.chat_bubble_outline_rounded,
+                            color: AppColors.primaryBrand,
+                          ),
                           onPressed: () => _startChat(user),
                         ),
                       );
@@ -362,70 +451,86 @@ class _SearchUserPageState extends State<SearchUserPage> {
 
   Widget _buildRoleBadge(Profile user) {
     // 1. Special Roles
-    if (user.isClergy) { // Using getter from model
-       Color badgeColor = const Color(0xFF0F0C29);
-       Color textColor = Colors.white;
-       IconData icon = Icons.verified_user;
-       String label = (user.userRole.name.characters.first.toUpperCase()) + user.userRole.name.substring(1); 
-       
-       if (user.userRole == UserRole.pastor) {
-         badgeColor = const Color(0xFF003366);
-         icon = Icons.health_and_safety_rounded;
-       } else if (user.userRole == UserRole.suster) {
-         badgeColor = const Color(0xFF5D4037);
-         icon = Icons.volunteer_activism;
-       } 
+    if (user.isClergy) {
+      // Using getter from model
+      Color badgeColor = const Color(0xFF0F0C29);
+      Color textColor = Colors.white;
+      IconData icon = Icons.verified_user;
+      String label =
+          (user.userRole.name.characters.first.toUpperCase()) +
+          user.userRole.name.substring(1);
 
-       return Container(
-         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-         decoration: BoxDecoration(
-           color: badgeColor,
-           borderRadius: BorderRadius.circular(4),
-         ),
-         child: Row(
-           mainAxisSize: MainAxisSize.min,
-           children: [
-             if (user.isVerified) ...[
-                Icon(icon, color: Colors.amber, size: 10),
-                const SizedBox(width: 4),
-             ],
-             Text(
-               label.toUpperCase(), 
-               style: GoogleFonts.outfit(fontSize: 9, color: textColor, fontWeight: FontWeight.bold)
-             ),
-           ],
-         ),
-       );
+      if (user.userRole == UserRole.pastor) {
+        badgeColor = const Color(0xFF003366);
+        icon = Icons.health_and_safety_rounded;
+      } else if (user.userRole == UserRole.suster) {
+        badgeColor = const Color(0xFF5D4037);
+        icon = Icons.volunteer_activism;
+      }
+
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: badgeColor,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (user.isVerified) ...[
+              Icon(icon, color: Colors.amber, size: 10),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label.toUpperCase(),
+              style: GoogleFonts.outfit(
+                fontSize: 9,
+                color: textColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      );
     }
-    
+
     // 2. Umat (100% Katolik)
     if (user.isVerified) {
-       return Container(
-         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-         decoration: BoxDecoration(
-           color: Colors.green.withValues(alpha: 0.1),
-           borderRadius: BorderRadius.circular(4),
-         ),
-         child: Row(
-           mainAxisSize: MainAxisSize.min,
-           children: [
-             const Icon(Icons.verified, color: Colors.green, size: 10),
-             const SizedBox(width: 2),
-             Text("100% Katolik", style: GoogleFonts.outfit(fontSize: 9, color: Colors.green, fontWeight: FontWeight.bold)),
-           ],
-         ),
-       );
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.green.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.verified, color: Colors.green, size: 10),
+            const SizedBox(width: 2),
+            Text(
+              "100% Katolik",
+              style: GoogleFonts.outfit(
+                fontSize: 9,
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      );
     }
-    
+
     // 3. Unverified / Normal Umat
     return Container(
-       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-       decoration: BoxDecoration(
-         color: Colors.grey.withValues(alpha: 0.1),
-         borderRadius: BorderRadius.circular(4),
-       ),
-       child: Text("Umat", style: GoogleFonts.outfit(fontSize: 9, color: Colors.grey)),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.grey.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        "Umat",
+        style: GoogleFonts.outfit(fontSize: 9, color: Colors.grey),
+      ),
     );
   }
-
 }

@@ -30,14 +30,18 @@ class Comment {
       if (json['profiles'] is List) {
         final List list = json['profiles'];
         if (list.isNotEmpty) {
-           authorProfile = Profile.fromJson(list.first);
+          authorProfile = Profile.fromJson(list.first);
         }
-      } else if (json['profiles'] is Map<String, dynamic>) { // Strict Map check
+      } else if (json['profiles'] is Map<String, dynamic>) {
+        // Strict Map check
         authorProfile = Profile.fromJson(json['profiles']);
-      } else if (json['profiles'] is Map) { // Dynamic Map Check
+      } else if (json['profiles'] is Map) {
+        // Dynamic Map Check
         // Try strict cast
         try {
-          authorProfile = Profile.fromJson(Map<String, dynamic>.from(json['profiles']));
+          authorProfile = Profile.fromJson(
+            Map<String, dynamic>.from(json['profiles']),
+          );
         } catch (_) {}
       }
     }
@@ -53,15 +57,17 @@ class Comment {
     return Comment(
       id: json['id']?.toString() ?? '',
       userId: json['user_id']?.toString() ?? '',
-      content: json['content']?.toString() ?? '', // CRITICAL: Prevent null content crash
+      content:
+          json['content']?.toString() ??
+          '', // CRITICAL: Prevent null content crash
       createdAt: date,
       author: authorProfile,
       parentId: json['parent_id']?.toString(), // Handle null
       // replies will be populated manually later or if json has it
-      likesCount: json['likes_count'] != null 
-          ? (json['likes_count'] as num).toInt() 
-          : (json['comment_likes'] as List?)?.length ?? 0, 
-      isLikedByMe: json['is_liked_by_me'] ?? false, 
+      likesCount: json['likes_count'] != null
+          ? (json['likes_count'] as num).toInt()
+          : (json['comment_likes'] as List?)?.length ?? 0,
+      isLikedByMe: json['is_liked_by_me'] ?? false,
     );
   }
 

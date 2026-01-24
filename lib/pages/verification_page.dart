@@ -17,13 +17,13 @@ class VerificationPage extends StatefulWidget {
 
 class _VerificationPageState extends State<VerificationPage> {
   final ImagePicker _picker = ImagePicker();
-  
+
   bool _isSubmitting = false;
 
   // Track file paths: Key = DocType, Value = Supabase Path
   final Map<String, String?> _documents = {};
   final Map<String, bool> _uploading = {};
-  
+
   // Face Verification State
   String? _faceImagePath; // Stores the Supabase path
   bool _isFaceUploading = false;
@@ -62,7 +62,7 @@ class _VerificationPageState extends State<VerificationPage> {
     }
     // 2. Check Mandatory Selfie
     if (_faceImagePath == null) return false;
-    
+
     return true;
   }
 
@@ -111,7 +111,10 @@ class _VerificationPageState extends State<VerificationPage> {
 
       setState(() => _isFaceUploading = true);
 
-      final String? path = await _uploadToSupabase(File(image.path), "Face_Selfie");
+      final String? path = await _uploadToSupabase(
+        File(image.path),
+        "Face_Selfie",
+      );
 
       if (mounted) {
         setState(() {
@@ -129,7 +132,8 @@ class _VerificationPageState extends State<VerificationPage> {
 
   // Shared Upload Function
   Future<String?> _uploadToSupabase(File file, String docTag) async {
-    final String userId = Supabase.instance.client.auth.currentUser?.id ?? 'temp_user';
+    final String userId =
+        Supabase.instance.client.auth.currentUser?.id ?? 'temp_user';
     final String fileExt = file.path.split('.').last;
     final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
     final String safeTag = docTag.replaceAll(" ", "_").replaceAll("/", "");
@@ -137,8 +141,12 @@ class _VerificationPageState extends State<VerificationPage> {
 
     await Supabase.instance.client.storage
         .from('verification_docs')
-        .upload(fileName, file, fileOptions: const FileOptions(cacheControl: '3600', upsert: false));
-    
+        .upload(
+          fileName,
+          file,
+          fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
+        );
+
     return fileName;
   }
 
@@ -154,15 +162,24 @@ class _VerificationPageState extends State<VerificationPage> {
       // Prepare Update Data
       Map<String, dynamic> updates = {
         'verification_status': 'pending',
-        'selfie_url': _faceImagePath, // Assuming this column exists or user requested this logic
+        'selfie_url':
+            _faceImagePath, // Assuming this column exists or user requested this logic
         'updated_at': DateTime.now().toIso8601String(),
       };
 
       // Map dynamic docs to columns
-      if (_documents[docKtp] != null) updates['ktp_url'] = _documents[docKtp];
-      if (_documents[docBaptis] != null) updates['baptism_cert_url'] = _documents[docBaptis];
-      if (_documents[docKrisma] != null) updates['chrism_cert_url'] = _documents[docKrisma];
-      if (_documents[docTugas] != null) updates['assignment_letter_url'] = _documents[docTugas];
+      if (_documents[docKtp] != null) {
+        updates['ktp_url'] = _documents[docKtp];
+      }
+      if (_documents[docBaptis] != null) {
+        updates['baptism_cert_url'] = _documents[docBaptis];
+      }
+      if (_documents[docKrisma] != null) {
+        updates['chrism_cert_url'] = _documents[docKrisma];
+      }
+      if (_documents[docTugas] != null) {
+        updates['assignment_letter_url'] = _documents[docTugas];
+      }
 
       // Execute Update
       await client.from('profiles').update(updates).eq('id', user.id);
@@ -170,7 +187,6 @@ class _VerificationPageState extends State<VerificationPage> {
       if (mounted) {
         _showSuccessDialog();
       }
-
     } catch (e) {
       _showError("Gagal Mengajukan: $e");
       setState(() => _isSubmitting = false);
@@ -183,7 +199,13 @@ class _VerificationPageState extends State<VerificationPage> {
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
-        title: Text("Dokumen Terkirim", style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text(
+          "Dokumen Terkirim",
+          style: GoogleFonts.outfit(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         content: Text(
           "Terima kasih. Data anda telah kami terima dan sedang dalam proses verifikasi oleh Admin.",
           style: GoogleFonts.outfit(color: Colors.white70),
@@ -194,17 +216,25 @@ class _VerificationPageState extends State<VerificationPage> {
               Navigator.pop(ctx); // Close Dialog
               Navigator.pop(context); // Back to Profile
             },
-            child: Text("OK", style: GoogleFonts.outfit(color: const Color(0xFF8B5CF6), fontWeight: FontWeight.bold)),
-          )
+            child: Text(
+              "OK",
+              style: GoogleFonts.outfit(
+                color: const Color(0xFF8B5CF6),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         ],
-      )
+      ),
     );
   }
 
   void _showError(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
   }
-  
+
   void _removeDoc(String docType) => setState(() => _documents[docType] = null);
   void _removeFace() => setState(() => _faceImagePath = null);
 
@@ -212,23 +242,37 @@ class _VerificationPageState extends State<VerificationPage> {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF1E293B),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
             leading: const Icon(Icons.camera_alt, color: Colors.white),
-            title: Text("Kamera", style: GoogleFonts.outfit(color: Colors.white)),
-            onTap: () { Navigator.pop(ctx); _pickAndUploadImage(docType, ImageSource.camera); },
+            title: Text(
+              "Kamera",
+              style: GoogleFonts.outfit(color: Colors.white),
+            ),
+            onTap: () {
+              Navigator.pop(ctx);
+              _pickAndUploadImage(docType, ImageSource.camera);
+            },
           ),
           ListTile(
             leading: const Icon(Icons.photo_library, color: Colors.white),
-            title: Text("Galeri", style: GoogleFonts.outfit(color: Colors.white)),
-            onTap: () { Navigator.pop(ctx); _pickAndUploadImage(docType, ImageSource.gallery); },
+            title: Text(
+              "Galeri",
+              style: GoogleFonts.outfit(color: Colors.white),
+            ),
+            onTap: () {
+              Navigator.pop(ctx);
+              _pickAndUploadImage(docType, ImageSource.gallery);
+            },
           ),
           const SizedBox(height: 20),
         ],
-      )
+      ),
     );
   }
 
@@ -237,7 +281,13 @@ class _VerificationPageState extends State<VerificationPage> {
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
-        title: Text("Verifikasi Identitas", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
+        title: Text(
+          "Verifikasi Identitas",
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
@@ -256,7 +306,7 @@ class _VerificationPageState extends State<VerificationPage> {
               style: GoogleFonts.outfit(color: Colors.white70, fontSize: 14),
             ),
           ),
-          
+
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
@@ -267,24 +317,28 @@ class _VerificationPageState extends State<VerificationPage> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: _allDocTypes.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 20),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 20),
                     itemBuilder: (ctx, index) {
                       final docType = _allDocTypes[index];
                       // Determine if Optional
                       bool isOptional = _optionalDocs.contains(docType);
-                      return _buildDocumentCard(docType, isOptional: isOptional);
+                      return _buildDocumentCard(
+                        docType,
+                        isOptional: isOptional,
+                      );
                     },
                   ),
-                  
+
                   const SizedBox(height: 30),
-                  
+
                   // 2. Selfie Card (Mandatory)
                   _buildFaceVerificationCard(),
                 ],
               ),
             ),
           ),
-          
+
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -292,41 +346,56 @@ class _VerificationPageState extends State<VerificationPage> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: (_canSubmit && !_isSubmitting) ? _submitVerification : null,
+                  onPressed: (_canSubmit && !_isSubmitting)
+                      ? _submitVerification
+                      : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
                     shadowColor: Colors.transparent,
                     disabledBackgroundColor: Colors.white10,
                     padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                   child: Ink(
                     decoration: BoxDecoration(
-                      gradient: _canSubmit 
-                        ? const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFF6366F1)])
-                        : null,
+                      gradient: _canSubmit
+                          ? const LinearGradient(
+                              colors: [Color(0xFF8B5CF6), Color(0xFF6366F1)],
+                            )
+                          : null,
                       color: _canSubmit ? null : Colors.white10,
-                      borderRadius: BorderRadius.circular(16)
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     child: Container(
                       alignment: Alignment.center,
                       child: _isSubmitting
-                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : Text(
-                            "AJUKAN VERIFIKASI",
-                            style: GoogleFonts.outfit(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: _canSubmit ? Colors.white : Colors.white38,
-                              letterSpacing: 1.5
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(
+                              "AJUKAN VERIFIKASI",
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: _canSubmit
+                                    ? Colors.white
+                                    : Colors.white38,
+                                letterSpacing: 1.5,
+                              ),
                             ),
-                          ),
                     ),
                   ),
                 ),
               ),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -343,16 +412,30 @@ class _VerificationPageState extends State<VerificationPage> {
           children: [
             Text(
               docType.toUpperCase(),
-              style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1),
+              style: GoogleFonts.outfit(
+                color: Colors.white70,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1,
+              ),
             ),
             if (isOptional)
-              Text(" (OPSIONAL)", style: GoogleFonts.outfit(color: Colors.white30, fontSize: 10, fontWeight: FontWeight.bold)),
+              Text(
+                " (OPSIONAL)",
+                style: GoogleFonts.outfit(
+                  color: Colors.white30,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
           ],
         ),
         const SizedBox(height: 8),
-        
+
         InkWell(
-          onTap: (uploadedPath != null || isUploading) ? null : () => _showImageSourcePicker(docType),
+          onTap: (uploadedPath != null || isUploading)
+              ? null
+              : () => _showImageSourcePicker(docType),
           borderRadius: BorderRadius.circular(16),
           child: Container(
             height: 200,
@@ -361,66 +444,93 @@ class _VerificationPageState extends State<VerificationPage> {
               color: Colors.white.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: (uploadedPath != null) ? const Color(0xFF8B5CF6) : Colors.white24,
+                color: (uploadedPath != null)
+                    ? const Color(0xFF8B5CF6)
+                    : Colors.white24,
                 width: (uploadedPath != null) ? 2 : 1,
-                style: (uploadedPath != null) ? BorderStyle.solid : BorderStyle.none 
-              )
+                style: (uploadedPath != null)
+                    ? BorderStyle.solid
+                    : BorderStyle.none,
+              ),
             ),
-            child: isUploading 
-              ? const Center(child: CircularProgressIndicator(color: Color(0xFF8B5CF6)))
-              : uploadedPath != null
+            child: isUploading
+                ? const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF8B5CF6)),
+                  )
+                : uploadedPath != null
                 ? Stack(
                     fit: StackFit.expand,
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(14),
                         child: SafeNetworkImage(
-                          imageUrl: Supabase.instance.client.storage.from('verification_docs').getPublicUrl(uploadedPath),
+                          imageUrl: Supabase.instance.client.storage
+                              .from('verification_docs')
+                              .getPublicUrl(uploadedPath),
                           fit: BoxFit.cover,
                           fallbackIcon: Icons.broken_image,
                           iconColor: Colors.white24,
-                          fallbackColor: Colors.transparent, // Or keep dark theme consistent
+                          fallbackColor: Colors
+                              .transparent, // Or keep dark theme consistent
                         ),
                       ),
-                      
+
                       // Checkmark
                       Center(
                         child: Container(
                           padding: const EdgeInsets.all(12),
-                          decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
-                          child: const Icon(Icons.check, color: Colors.white, size: 30),
+                          decoration: const BoxDecoration(
+                            color: Colors.green,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 30,
+                          ),
                         ),
                       ),
 
                       Positioned(
-                        top: 8, right: 8,
-                         child: IconButton(
-                           icon: const Icon(Icons.delete, color: Colors.redAccent),
-                           onPressed: () => _removeDoc(docType),
-                         )
-                      )
+                        top: 8,
+                        right: 8,
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.delete,
+                            color: Colors.redAccent,
+                          ),
+                          onPressed: () => _removeDoc(docType),
+                        ),
+                      ),
                     ],
                   )
                 : Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                       Container(
-                         padding: const EdgeInsets.all(16),
-                         decoration: BoxDecoration(
-                           color: Colors.white.withValues(alpha: 0.05),
-                           shape: BoxShape.circle
-                         ),
-                         child: const Icon(Icons.upload_file, color: Colors.white54, size: 32),
-                       ),
-                       const SizedBox(height: 12),
-                       Text(
-                         "Tap untuk unggah",
-                         style: GoogleFonts.outfit(color: Colors.white54, fontSize: 14),
-                       )
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.05),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.upload_file,
+                          color: Colors.white54,
+                          size: 32,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        "Tap untuk unggah",
+                        style: GoogleFonts.outfit(
+                          color: Colors.white54,
+                          fontSize: 14,
+                        ),
+                      ),
                     ],
                   ),
           ),
-        )
+        ),
       ],
     );
   }
@@ -431,14 +541,30 @@ class _VerificationPageState extends State<VerificationPage> {
       children: [
         Row(
           children: [
-             const Icon(Icons.face_retouching_natural, color: Colors.white70, size: 16),
-             const SizedBox(width: 8),
-             Text(
-              "VERIFIKASI WAJAH (SELFIE)",
-              style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1),
+            const Icon(
+              Icons.face_retouching_natural,
+              color: Colors.white70,
+              size: 16,
             ),
-             const SizedBox(width: 4),
-             Text("*Wajib", style: GoogleFonts.outfit(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold)),
+            const SizedBox(width: 8),
+            Text(
+              "VERIFIKASI WAJAH (SELFIE)",
+              style: GoogleFonts.outfit(
+                color: Colors.white70,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              "*Wajib",
+              style: GoogleFonts.outfit(
+                color: Colors.redAccent,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 4),
@@ -447,9 +573,11 @@ class _VerificationPageState extends State<VerificationPage> {
           style: GoogleFonts.outfit(color: Colors.white38, fontSize: 10),
         ),
         const SizedBox(height: 12),
-        
+
         InkWell(
-          onTap: (_faceImagePath != null || _isFaceUploading) ? null : _pickAndUploadFace,
+          onTap: (_faceImagePath != null || _isFaceUploading)
+              ? null
+              : _pickAndUploadFace,
           borderRadius: BorderRadius.circular(16),
           child: Container(
             height: 200,
@@ -458,65 +586,91 @@ class _VerificationPageState extends State<VerificationPage> {
               color: Colors.white.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: (_faceImagePath != null) ? const Color(0xFF8B5CF6) : Colors.white24,
+                color: (_faceImagePath != null)
+                    ? const Color(0xFF8B5CF6)
+                    : Colors.white24,
                 width: (_faceImagePath != null) ? 2 : 1,
-                style: (_faceImagePath != null) ? BorderStyle.solid : BorderStyle.none 
-              )
+                style: (_faceImagePath != null)
+                    ? BorderStyle.solid
+                    : BorderStyle.none,
+              ),
             ),
-            child: _isFaceUploading 
-              ? const Center(child: CircularProgressIndicator(color: Color(0xFF8B5CF6)))
-              : _faceImagePath != null
+            child: _isFaceUploading
+                ? const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF8B5CF6)),
+                  )
+                : _faceImagePath != null
                 ? Stack(
                     fit: StackFit.expand,
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(14),
                         child: SafeNetworkImage(
-                          imageUrl: Supabase.instance.client.storage.from('verification_docs').getPublicUrl(_faceImagePath!),
+                          imageUrl: Supabase.instance.client.storage
+                              .from('verification_docs')
+                              .getPublicUrl(_faceImagePath!),
                           fit: BoxFit.cover,
                           fallbackIcon: Icons.broken_image,
                           iconColor: Colors.white24,
                           fallbackColor: Colors.transparent,
                         ),
                       ),
-                      
+
                       Center(
                         child: Container(
                           padding: const EdgeInsets.all(12),
-                          decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
-                          child: const Icon(Icons.check, color: Colors.white, size: 30),
+                          decoration: const BoxDecoration(
+                            color: Colors.green,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 30,
+                          ),
                         ),
                       ),
 
                       Positioned(
-                        top: 8, right: 8,
-                         child: IconButton(
-                           icon: const Icon(Icons.delete, color: Colors.redAccent),
-                           onPressed: _removeFace,
-                         )
-                      )
+                        top: 8,
+                        right: 8,
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.delete,
+                            color: Colors.redAccent,
+                          ),
+                          onPressed: _removeFace,
+                        ),
+                      ),
                     ],
                   )
                 : Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                       Container(
-                         padding: const EdgeInsets.all(16),
-                         decoration: BoxDecoration(
-                           color: Colors.white.withValues(alpha: 0.05),
-                           shape: BoxShape.circle
-                         ),
-                         child: const Icon(Icons.camera_alt, color: Colors.white54, size: 32),
-                       ),
-                       const SizedBox(height: 12),
-                       Text(
-                         "Buka Kamera",
-                         style: GoogleFonts.outfit(color: Colors.white54, fontSize: 14),
-                       )
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.05),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          color: Colors.white54,
+                          size: 32,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        "Buka Kamera",
+                        style: GoogleFonts.outfit(
+                          color: Colors.white54,
+                          fontSize: 14,
+                        ),
+                      ),
                     ],
                   ),
           ),
-        )
+        ),
       ],
     );
   }

@@ -19,7 +19,11 @@ class RadarChatPage extends StatefulWidget {
   final String chatRoomId;
   final String title;
 
-  const RadarChatPage({super.key, required this.chatRoomId, required this.title});
+  const RadarChatPage({
+    super.key,
+    required this.chatRoomId,
+    required this.title,
+  });
 
   @override
   State<RadarChatPage> createState() => _RadarChatPageState();
@@ -119,19 +123,19 @@ class _RadarChatPageState extends State<RadarChatPage>
     if (myId == null) return;
 
     try {
-      await _supabase.from('chat_members').upsert(
-        {'chat_id': widget.chatRoomId, 'user_id': myId},
-        onConflict: 'chat_id, user_id',
-      );
+      await _supabase.from('chat_members').upsert({
+        'chat_id': widget.chatRoomId,
+        'user_id': myId,
+      }, onConflict: 'chat_id, user_id');
     } catch (e, st) {
       if (kDebugMode) {
         debugPrint("[RADAR CHAT] Ensure member failed: $e\n$st");
       }
       try {
-        await _supabase.rpc('ensure_chat_member', params: {
-          'p_chat_id': widget.chatRoomId,
-          'p_user_id': myId,
-        });
+        await _supabase.rpc(
+          'ensure_chat_member',
+          params: {'p_chat_id': widget.chatRoomId, 'p_user_id': myId},
+        );
       } catch (e, st) {
         if (kDebugMode) {
           debugPrint("[RADAR CHAT] Ensure member RPC failed: $e\n$st");
@@ -183,10 +187,8 @@ class _RadarChatPageState extends State<RadarChatPage>
                     child: ListView.separated(
                       shrinkWrap: true,
                       itemCount: members.length,
-                      separatorBuilder: (_, _) => Divider(
-                        height: 1,
-                        color: Colors.grey.shade200,
-                      ),
+                      separatorBuilder: (_, _) =>
+                          Divider(height: 1, color: Colors.grey.shade200),
                       itemBuilder: (context, index) {
                         final m = members[index];
                         final profile = m['profiles'] is Map
@@ -195,10 +197,10 @@ class _RadarChatPageState extends State<RadarChatPage>
                         final userId = (m['user_id'] ?? '').toString();
                         final myId = _supabase.auth.currentUser?.id;
                         final isMe = myId != null && userId == myId;
-                        final name =
-                            (profile['full_name'] ?? 'Umat').toString();
-                        final avatarUrl =
-                            (profile['avatar_url'] ?? '').toString();
+                        final name = (profile['full_name'] ?? 'Umat')
+                            .toString();
+                        final avatarUrl = (profile['avatar_url'] ?? '')
+                            .toString();
                         final role = (m['role'] ?? '').toString();
 
                         return ListTile(
@@ -316,7 +318,8 @@ class _RadarChatPageState extends State<RadarChatPage>
       if (e is PostgrestException) {
         final message = e.message.toLowerCase();
         if (fallbackType != null && fallbackContent != null) {
-          final invalidType = message.contains('check constraint') ||
+          final invalidType =
+              message.contains('check constraint') ||
               message.contains('invalid input value') ||
               message.contains('enum');
           if (invalidType) {
@@ -392,7 +395,9 @@ class _RadarChatPageState extends State<RadarChatPage>
                     style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
                   ),
                   subtitle: Text(
-                    _memberCount > 0 ? "$_memberCount anggota" : "Lihat anggota grup",
+                    _memberCount > 0
+                        ? "$_memberCount anggota"
+                        : "Lihat anggota grup",
                     style: GoogleFonts.outfit(color: Colors.grey[700]),
                   ),
                   onTap: () {
@@ -459,8 +464,9 @@ class _RadarChatPageState extends State<RadarChatPage>
           'radar_${widget.chatRoomId}_${DateTime.now().millisecondsSinceEpoch}_$myId.$ext';
 
       await _supabase.storage.from('chat-uploads').upload(fileName, file);
-      final imageUrl =
-          _supabase.storage.from('chat-uploads').getPublicUrl(fileName);
+      final imageUrl = _supabase.storage
+          .from('chat-uploads')
+          .getPublicUrl(fileName);
 
       await _sendMessage(
         type: 'image',
@@ -527,8 +533,7 @@ class _RadarChatPageState extends State<RadarChatPage>
   }
 
   Widget _buildTextBubble(bool isMe, String content, DateTime? time) {
-    final timeText =
-        time != null ? timeago.format(time, locale: 'id') : "";
+    final timeText = time != null ? timeago.format(time, locale: 'id') : "";
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -542,8 +547,12 @@ class _RadarChatPageState extends State<RadarChatPage>
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
-            bottomLeft: isMe ? const Radius.circular(16) : const Radius.circular(4),
-            bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(16),
+            bottomLeft: isMe
+                ? const Radius.circular(16)
+                : const Radius.circular(4),
+            bottomRight: isMe
+                ? const Radius.circular(4)
+                : const Radius.circular(16),
           ),
         ),
         child: Column(
@@ -572,8 +581,7 @@ class _RadarChatPageState extends State<RadarChatPage>
   }
 
   Widget _buildBeebBubble(bool isMe, DateTime? time) {
-    final timeText =
-        time != null ? timeago.format(time, locale: 'id') : "";
+    final timeText = time != null ? timeago.format(time, locale: 'id') : "";
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -581,7 +589,10 @@ class _RadarChatPageState extends State<RadarChatPage>
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: _beebPrimary.withValues(alpha: 0.1),
-          border: Border.all(color: _beebPrimary.withValues(alpha: 0.5), width: 1),
+          border: Border.all(
+            color: _beebPrimary.withValues(alpha: 0.5),
+            width: 1,
+          ),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
@@ -613,8 +624,7 @@ class _RadarChatPageState extends State<RadarChatPage>
   }
 
   Widget _buildImageBubble(bool isMe, String imageUrl, DateTime? time) {
-    final timeText =
-        time != null ? timeago.format(time, locale: 'id') : "";
+    final timeText = time != null ? timeago.format(time, locale: 'id') : "";
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: GestureDetector(
@@ -631,7 +641,7 @@ class _RadarChatPageState extends State<RadarChatPage>
                 color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
-              )
+              ),
             ],
           ),
           child: Column(
@@ -656,7 +666,10 @@ class _RadarChatPageState extends State<RadarChatPage>
                 padding: const EdgeInsets.all(6),
                 child: Text(
                   timeText,
-                  style: GoogleFonts.outfit(color: Colors.black38, fontSize: 10),
+                  style: GoogleFonts.outfit(
+                    color: Colors.black38,
+                    fontSize: 10,
+                  ),
                 ),
               ),
             ],
@@ -685,9 +698,11 @@ class _RadarChatPageState extends State<RadarChatPage>
                 color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
-              )
+              ),
             ],
-            border: isMe ? null : Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+            border: isMe
+                ? null
+                : Border.all(color: Colors.grey.withValues(alpha: 0.2)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -699,7 +714,11 @@ class _RadarChatPageState extends State<RadarChatPage>
                   color: Colors.green.shade50,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.map_rounded, color: Colors.green, size: 28),
+                child: const Icon(
+                  Icons.map_rounded,
+                  color: Colors.green,
+                  size: 28,
+                ),
               ),
               const SizedBox(width: 10),
               Flexible(
@@ -753,7 +772,7 @@ class _RadarChatPageState extends State<RadarChatPage>
                 icon: const Icon(Icons.close, color: Colors.white, size: 30),
                 onPressed: () => Navigator.pop(context),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -769,7 +788,10 @@ class _RadarChatPageState extends State<RadarChatPage>
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.textPrimary),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: AppColors.textPrimary,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
@@ -804,107 +826,102 @@ class _RadarChatPageState extends State<RadarChatPage>
             child: StreamBuilder<List<Map<String, dynamic>>>(
               stream: _messagesStream(),
               builder: (context, snapshot) {
-                      if (snapshot.hasError) {
-                        if (kDebugMode) {
-                          debugPrint(
-                            "[RADAR CHAT] Stream error: ${snapshot.error}",
-                          );
-                        }
-                        return Center(
-                          child: Text(
-                            "Gagal memuat chat.",
-                            style: GoogleFonts.outfit(color: Colors.grey[700]),
-                          ),
-                        );
-                      }
-                      if (!snapshot.hasData) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
+                if (snapshot.hasError) {
+                  if (kDebugMode) {
+                    debugPrint("[RADAR CHAT] Stream error: ${snapshot.error}");
+                  }
+                  return Center(
+                    child: Text(
+                      "Gagal memuat chat.",
+                      style: GoogleFonts.outfit(color: Colors.grey[700]),
+                    ),
+                  );
+                }
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-                      final myId = _supabase.auth.currentUser?.id;
-                      final messages = snapshot.data!;
+                final myId = _supabase.auth.currentUser?.id;
+                final messages = snapshot.data!;
 
-                      if (messages.isNotEmpty) {
-                        final last = messages.last;
-                        final lastType = (last['type'] ?? 'text').toString();
-                        final lastId = (last['id'] ?? '').toString();
-                        final lastSenderId = (last['sender_id'] ?? '').toString();
-                        final shouldPlay =
-                            lastType == 'beeb' &&
-                            lastId.isNotEmpty &&
-                            lastId != _lastPlayedBeebId &&
-                            myId != null &&
-                            lastSenderId != myId;
+                if (messages.isNotEmpty) {
+                  final last = messages.last;
+                  final lastType = (last['type'] ?? 'text').toString();
+                  final lastId = (last['id'] ?? '').toString();
+                  final lastSenderId = (last['sender_id'] ?? '').toString();
+                  final shouldPlay =
+                      lastType == 'beeb' &&
+                      lastId.isNotEmpty &&
+                      lastId != _lastPlayedBeebId &&
+                      myId != null &&
+                      lastSenderId != myId;
 
-                        if (shouldPlay) {
-                          _lastPlayedBeebId = lastId;
-                          Future.microtask(_playBeebSound);
-                        }
-                      }
+                  if (shouldPlay) {
+                    _lastPlayedBeebId = lastId;
+                    Future.microtask(_playBeebSound);
+                  }
+                }
 
-                      final senderIds =
-                          messages
-                              .map((m) => (m['sender_id'] ?? '').toString())
-                              .where((id) => id.isNotEmpty)
-                              .toSet();
-                      if (senderIds.isNotEmpty) {
-                        Future.microtask(() => _cacheProfiles(senderIds));
-                      }
+                final senderIds = messages
+                    .map((m) => (m['sender_id'] ?? '').toString())
+                    .where((id) => id.isNotEmpty)
+                    .toSet();
+                if (senderIds.isNotEmpty) {
+                  Future.microtask(() => _cacheProfiles(senderIds));
+                }
 
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (_scrollController.hasClients) {
-                          _scrollController.animateTo(
-                            _scrollController.position.maxScrollExtent,
-                            duration: const Duration(milliseconds: 250),
-                            curve: Curves.easeOut,
-                          );
-                        }
-                      });
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (_scrollController.hasClients) {
+                    _scrollController.animateTo(
+                      _scrollController.position.maxScrollExtent,
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeOut,
+                    );
+                  }
+                });
 
-                      if (messages.isEmpty) {
-                        return Center(
-                          child: Text(
-                            "Mulai percakapan...",
-                            style: GoogleFonts.outfit(color: Colors.grey[700]),
-                          ),
-                        );
-                      }
+                if (messages.isEmpty) {
+                  return Center(
+                    child: Text(
+                      "Mulai percakapan...",
+                      style: GoogleFonts.outfit(color: Colors.grey[700]),
+                    ),
+                  );
+                }
 
-                      return ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 20,
-                        ),
-                        itemCount: messages.length,
-                        itemBuilder: (context, index) {
-                          final msg = messages[index];
-                          final senderId = (msg['sender_id'] ?? '').toString();
-                          final isMe = myId != null && senderId == myId;
-                          final type = (msg['type'] ?? 'text').toString();
-                          final content = (msg['content'] ?? '').toString();
-                          final createdAtRaw = msg['created_at'];
-                          final createdAt =
-                              createdAtRaw == null
-                                  ? null
-                                  : DateTime.tryParse(
-                                    createdAtRaw.toString(),
-                                  )?.toLocal();
+                return ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 20,
+                  ),
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    final msg = messages[index];
+                    final senderId = (msg['sender_id'] ?? '').toString();
+                    final isMe = myId != null && senderId == myId;
+                    final type = (msg['type'] ?? 'text').toString();
+                    final content = (msg['content'] ?? '').toString();
+                    final createdAtRaw = msg['created_at'];
+                    final createdAt = createdAtRaw == null
+                        ? null
+                        : DateTime.tryParse(createdAtRaw.toString())?.toLocal();
 
-                          final isBeebText = type == 'text' &&
-                              (content == '[BEEB]' || content == 'BEEB');
-                          if (type == 'beeb' || isBeebText) {
-                            return _buildBeebBubble(isMe, createdAt);
-                          }
-                          if (type == 'image') {
-                            return _buildImageBubble(isMe, content, createdAt);
-                          }
-                          if (type == 'location') {
-                            return _buildLocationBubble(isMe, content, createdAt);
-                          }
-                          return _buildTextBubble(isMe, content, createdAt);
-                        },
-                      );
+                    final isBeebText =
+                        type == 'text' &&
+                        (content == '[BEEB]' || content == 'BEEB');
+                    if (type == 'beeb' || isBeebText) {
+                      return _buildBeebBubble(isMe, createdAt);
+                    }
+                    if (type == 'image') {
+                      return _buildImageBubble(isMe, content, createdAt);
+                    }
+                    if (type == 'location') {
+                      return _buildLocationBubble(isMe, content, createdAt);
+                    }
+                    return _buildTextBubble(isMe, content, createdAt);
+                  },
+                );
               },
             ),
           ),
@@ -924,7 +941,7 @@ class _RadarChatPageState extends State<RadarChatPage>
             color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -4),
-          )
+          ),
         ],
       ),
       child: Row(
@@ -958,7 +975,10 @@ class _RadarChatPageState extends State<RadarChatPage>
           IconButton(
             icon: Transform.rotate(
               angle: -3.14 / 4,
-              child: const Icon(Icons.attach_file, color: AppColors.textSecondary),
+              child: const Icon(
+                Icons.attach_file,
+                color: AppColors.textSecondary,
+              ),
             ),
             onPressed: _showChatActionsSheet,
           ),
@@ -997,7 +1017,7 @@ class _RadarChatPageState extends State<RadarChatPage>
                     color: AppColors.primaryBrand.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
-                  )
+                  ),
                 ],
               ),
               child: const Icon(

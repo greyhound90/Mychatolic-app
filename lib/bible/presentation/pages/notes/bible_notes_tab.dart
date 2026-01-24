@@ -15,7 +15,9 @@ class BibleNotesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => BibleNotesViewModel(notesRepository: BibleModule.notesRepository)..loadAll(),
+      create: (_) =>
+          BibleNotesViewModel(notesRepository: BibleModule.notesRepository)
+            ..loadAll(),
       child: const _BibleNotesTabs(),
     );
   }
@@ -39,11 +41,7 @@ class _BibleNotesTabs extends StatelessWidget {
           ),
           Expanded(
             child: TabBarView(
-              children: [
-                _HighlightTab(),
-                _BookmarkTab(),
-                _NotesTab(),
-              ],
+              children: [_HighlightTab(), _BookmarkTab(), _NotesTab()],
             ),
           ),
         ],
@@ -76,9 +74,17 @@ class _HighlightTab extends StatelessWidget {
             final item = vm.highlights[index];
             return ListTile(
               leading: CircleAvatar(backgroundColor: _parseColor(item.color)),
-              title: Text(item.reference ?? 'Ayat', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
-              subtitle: Text(item.text ?? '', maxLines: 2, overflow: TextOverflow.ellipsis),
-              onTap: () => _openReader(context, item.bookId, item.chapter, item.verse),
+              title: Text(
+                item.reference ?? 'Ayat',
+                style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(
+                item.text ?? '',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              onTap: () =>
+                  _openReader(context, item.bookId, item.chapter, item.verse),
             );
           },
         );
@@ -111,9 +117,17 @@ class _BookmarkTab extends StatelessWidget {
             final item = vm.bookmarks[index];
             return ListTile(
               leading: const Icon(Icons.bookmark_rounded),
-              title: Text(item.reference ?? 'Ayat', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
-              subtitle: Text(item.text ?? '', maxLines: 2, overflow: TextOverflow.ellipsis),
-              onTap: () => _openReader(context, item.bookId, item.chapter, item.verse),
+              title: Text(
+                item.reference ?? 'Ayat',
+                style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(
+                item.text ?? '',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              onTap: () =>
+                  _openReader(context, item.bookId, item.chapter, item.verse),
             );
           },
         );
@@ -151,10 +165,14 @@ class _NotesTab extends StatelessWidget {
                 ? '${item.createdAt!.day}/${item.createdAt!.month}/${item.createdAt!.year}'
                 : '';
             return ListTile(
-              title: Text(title, style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
+              title: Text(
+                title,
+                style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+              ),
               subtitle: Text('${item.reference ?? ''} $date'),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => _openReader(context, item.bookId, item.chapter, item.verse),
+              onTap: () =>
+                  _openReader(context, item.bookId, item.chapter, item.verse),
             );
           },
         );
@@ -167,7 +185,8 @@ void _openReader(BuildContext context, int bookId, int chapter, int verse) {
   Navigator.push(
     context,
     MaterialPageRoute(
-      builder: (_) => BibleReaderPage(bookId: bookId, chapter: chapter, verse: verse),
+      builder: (_) =>
+          BibleReaderPage(bookId: bookId, chapter: chapter, verse: verse),
     ),
   );
 }

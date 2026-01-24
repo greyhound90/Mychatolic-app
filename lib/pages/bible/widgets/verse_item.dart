@@ -27,7 +27,8 @@ class VerseItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final highlightColor = _colorFromHex(verse.highlightColor);
-    final backgroundColor = highlightColor ?? (isSelected ? selectionColor : null);
+    final backgroundColor =
+        highlightColor ?? (isSelected ? selectionColor : null);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
@@ -67,8 +68,11 @@ class VerseItem extends StatelessWidget {
               ),
               if (verse.note != null && verse.note!.trim().isNotEmpty) ...[
                 const SizedBox(width: 8),
-                Icon(Icons.sticky_note_2_outlined,
-                    size: 16, color: secondaryTextColor),
+                Icon(
+                  Icons.sticky_note_2_outlined,
+                  size: 16,
+                  color: secondaryTextColor,
+                ),
               ],
               if (verse.isBookmarked) ...[
                 const SizedBox(width: 6),

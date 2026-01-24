@@ -34,7 +34,10 @@ class _BiblePlanDayPageState extends State<BiblePlanDayPage> {
       _error = null;
     });
     try {
-      final day = await BibleModule.readingPlanRepository.getPlanDay(widget.plan.id, widget.day);
+      final day = await BibleModule.readingPlanRepository.getPlanDay(
+        widget.plan.id,
+        widget.day,
+      );
       setState(() => _day = day);
     } catch (e) {
       setState(() => _error = e.toString());
@@ -48,67 +51,85 @@ class _BiblePlanDayPageState extends State<BiblePlanDayPage> {
       await BibleModule.readingPlanRepository.markPlanDayComplete(
         widget.plan.id,
         widget.day,
-        reflection: _reflectionController.text.trim().isEmpty ? null : _reflectionController.text.trim(),
+        reflection: _reflectionController.text.trim().isEmpty
+            ? null
+            : _reflectionController.text.trim(),
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hari ditandai selesai')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Hari ditandai selesai')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menandai: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal menandai: $e')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Hari ke-${widget.day}'),
-      ),
+      appBar: AppBar(title: Text('Hari ke-${widget.day}')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? ErrorStateView(message: _error!, onRetry: _loadDay)
-              : ListView(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  children: [
-                    Text('Bacaan Hari Ini', style: GoogleFonts.manrope(fontWeight: FontWeight.w700)),
-                    const SizedBox(height: AppSpacing.sm),
-                    Wrap(
-                      spacing: AppSpacing.sm,
-                      children: _day!.readings
-                          .map((reading) => ActionChip(
-                                label: Text(reading.reference),
-                                onPressed: () {
-                                  if (reading.bookId != null && reading.chapter != null) {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => BibleReaderPage(
-                                          bookId: reading.bookId,
-                                          chapter: reading.chapter,
-                                          verse: reading.startVerse,
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                },
-                              ))
-                          .toList(),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    ElevatedButton(onPressed: () {}, child: const Text('Baca')),
-                    const SizedBox(height: AppSpacing.sm),
-                    OutlinedButton(onPressed: _markComplete, child: const Text('Tandai Selesai')),
-                    const SizedBox(height: AppSpacing.lg),
-                    Text('Refleksi', style: GoogleFonts.manrope(fontWeight: FontWeight.w700)),
-                    const SizedBox(height: AppSpacing.sm),
-                    TextField(
-                      controller: _reflectionController,
-                      maxLines: 4,
-                      decoration: const InputDecoration(hintText: 'Apa yang Tuhan ajarkan hari ini?'),
-                    ),
-                  ],
+          ? ErrorStateView(message: _error!, onRetry: _loadDay)
+          : ListView(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              children: [
+                Text(
+                  'Bacaan Hari Ini',
+                  style: GoogleFonts.manrope(fontWeight: FontWeight.w700),
                 ),
+                const SizedBox(height: AppSpacing.sm),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  children: _day!.readings
+                      .map(
+                        (reading) => ActionChip(
+                          label: Text(reading.reference),
+                          onPressed: () {
+                            if (reading.bookId != null &&
+                                reading.chapter != null) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => BibleReaderPage(
+                                    bookId: reading.bookId,
+                                    chapter: reading.chapter,
+                                    verse: reading.startVerse,
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                      )
+                      .toList(),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                ElevatedButton(onPressed: () {}, child: const Text('Baca')),
+                const SizedBox(height: AppSpacing.sm),
+                OutlinedButton(
+                  onPressed: _markComplete,
+                  child: const Text('Tandai Selesai'),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  'Refleksi',
+                  style: GoogleFonts.manrope(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  controller: _reflectionController,
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    hintText: 'Apa yang Tuhan ajarkan hari ini?',
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }

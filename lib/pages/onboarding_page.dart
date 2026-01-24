@@ -17,19 +17,22 @@ class _OnboardingPageState extends State<OnboardingPage> {
     {
       'icon': Icons.public,
       'title': 'Satu Iman, Satu Gereja',
-      'subtitle': 'Terhubung dengan umat Katolik dari seluruh dunia, lintas negara dan paroki.',
+      'subtitle':
+          'Terhubung dengan umat Katolik dari seluruh dunia, lintas negara dan paroki.',
       'color': Color(0xFF8B5CF6), // Purple
     },
     {
       'icon': Icons.volunteer_activism,
       'title': 'Berbagi Cerita Iman',
-      'subtitle': 'Bagikan pengalaman rohani dan temukan inspirasi dari sesama.',
+      'subtitle':
+          'Bagikan pengalaman rohani dan temukan inspirasi dari sesama.',
       'color': Color(0xFFEC4899), // Pink
     },
     {
       'icon': Icons.church_rounded,
       'title': 'Cari Misa Dimanapun',
-      'subtitle': 'Temukan jadwal misa terdekat atau saat bepergian ke luar negeri.',
+      'subtitle':
+          'Temukan jadwal misa terdekat atau saat bepergian ke luar negeri.',
       'color': Color(0xFFF59E0B), // Amber
     },
   ];
@@ -42,10 +45,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
       );
     } else {
       // Navigate to Login
-       Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginPage()),
-        );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginPage()),
+      );
     }
   }
 
@@ -66,11 +69,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
           ),
         ],
       ),
-      child: Icon(
-        icon,
-        size: 120,
-        color: Colors.white,
-      ),
+      child: Icon(icon, size: 120, color: Colors.white),
     );
   }
 
@@ -137,7 +136,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     color: Colors.black26,
                     blurRadius: 20,
                     offset: Offset(0, -5),
-                  )
+                  ),
                 ],
               ),
               child: Column(
@@ -145,7 +144,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   // Indicator
                   _buildPageIndicator(),
                   const SizedBox(height: 32),
-                  
+
                   // Title
                   Text(
                     _slides[_currentPage]['title'],
@@ -157,7 +156,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Subtitle
                   Text(
                     _slides[_currentPage]['subtitle'],
@@ -168,9 +167,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       height: 1.5,
                     ),
                   ),
-                  
+
                   const Spacer(),
-                  
+
                   // Button
                   SizedBox(
                     width: double.infinity,
@@ -188,14 +187,19 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       child: Ink(
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF8B5CF6), Color(0xFF6366F1)], // Violet -> Indigo
+                            colors: [
+                              Color(0xFF8B5CF6),
+                              Color(0xFF6366F1),
+                            ], // Violet -> Indigo
                           ),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Container(
                           alignment: Alignment.center,
                           child: Text(
-                            _currentPage == _slides.length - 1 ? 'MULAI SEKARANG' : 'LANJUT',
+                            _currentPage == _slides.length - 1
+                                ? 'MULAI SEKARANG'
+                                : 'LANJUT',
                             style: GoogleFonts.outfit(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,

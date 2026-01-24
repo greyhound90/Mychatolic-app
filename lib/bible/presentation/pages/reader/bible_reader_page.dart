@@ -27,18 +27,16 @@ class BibleReaderPage extends StatelessWidget {
   final int? chapter;
   final int? verse;
 
-  const BibleReaderPage({
-    super.key,
-    this.bookId,
-    this.chapter,
-    this.verse,
-  });
+  const BibleReaderPage({super.key, this.bookId, this.chapter, this.verse});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Baca', style: GoogleFonts.manrope(fontWeight: FontWeight.w700)),
+        title: Text(
+          'Baca',
+          style: GoogleFonts.manrope(fontWeight: FontWeight.w700),
+        ),
       ),
       body: ChangeNotifierProvider.value(
         value: BibleModule.readerSettingsController,
@@ -97,7 +95,8 @@ class _BibleReaderViewState extends State<BibleReaderView> {
   @override
   void didUpdateWidget(covariant BibleReaderView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.initialVerse != null && widget.initialVerse != oldWidget.initialVerse) {
+    if (widget.initialVerse != null &&
+        widget.initialVerse != oldWidget.initialVerse) {
       _setPendingScroll(widget.initialVerse!);
     }
   }
@@ -112,34 +111,37 @@ class _BibleReaderViewState extends State<BibleReaderView> {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => BibleReaderViewModel(
-        bibleRepository: BibleModule.bibleRepository,
-        notesRepository: BibleModule.notesRepository,
-      )..init(
-          bookId: widget.initialBookId,
-          chapter: widget.initialChapter,
-          loadVerseOfDay: widget.showVerseOfDay,
-        ),
+      create: (_) =>
+          BibleReaderViewModel(
+            bibleRepository: BibleModule.bibleRepository,
+            notesRepository: BibleModule.notesRepository,
+          )..init(
+            bookId: widget.initialBookId,
+            chapter: widget.initialChapter,
+            loadVerseOfDay: widget.showVerseOfDay,
+          ),
       child: Consumer2<BibleReaderViewModel, ReaderSettingsController>(
         builder: (context, vm, settingsController, _) {
           final settings = settingsController.settings;
           final bgColor = settings.mode == 'dark'
               ? BibleColors.darkBackground
               : settings.mode == 'sepia'
-                  ? BibleColors.sepiaBackground
-                  : BibleColors.lightBackground;
+              ? BibleColors.sepiaBackground
+              : BibleColors.lightBackground;
           final textColor = settings.mode == 'dark'
               ? Colors.white
               : settings.mode == 'sepia'
-                  ? BibleColors.textSepia
-                  : BibleColors.textPrimary;
+              ? BibleColors.textSepia
+              : BibleColors.textPrimary;
 
           _syncVerseKeys(vm.verses.length);
           _captureResumeTarget(vm);
           _maybeScrollToPendingVerse(vm);
 
-          final shouldShowResume = _resumeTarget != null &&
-              (vm.selectedBook?.id != _resumeTarget!.bookId || vm.currentChapter != _resumeTarget!.chapter);
+          final shouldShowResume =
+              _resumeTarget != null &&
+              (vm.selectedBook?.id != _resumeTarget!.bookId ||
+                  vm.currentChapter != _resumeTarget!.chapter);
 
           return Stack(
             children: [
@@ -151,27 +153,43 @@ class _BibleReaderViewState extends State<BibleReaderView> {
                       duration: const Duration(milliseconds: 220),
                       curve: Curves.easeOut,
                       alignment: Alignment.topCenter,
-                      child: _showChrome ? _ReaderHeader(
-                        showVerseOfDay: widget.showVerseOfDay,
-                        verseOfDay: vm.verseOfTheDay,
-                        onReadVerseOfDay: () => _jumpToVerseOfDay(vm),
-                        onShareVerseOfDay: () => SharePlus.instance.share(
-                          ShareParams(text: '${vm.verseOfTheDay?.text ?? ''}\n\n${vm.verseOfTheDay?.reference ?? ''}'),
-                        ),
-                        onOpenSettings: () => _showSettingsSheet(context, settingsController),
-                        onOpenVersion: vm.versions.isEmpty ? null : () => _showVersionPicker(context, vm),
-                        selectedVersionLabel: vm.selectedVersion?.abbreviation ?? vm.selectedVersion?.name ?? 'Versi',
-                        testament: vm.testament,
-                        onChangeTestament: (val) => vm.changeTestament(val),
-                        showDeuterocanonical: vm.showDeuterocanonical,
-                        onToggleDeuterocanonical: vm.toggleDeuterocanonical,
-                        selectedBookLabel: vm.selectedBook?.name ?? 'Pilih Kitab',
-                        onPickBook: () => _openBookPicker(context, vm),
-                        currentChapter: vm.currentChapter,
-                        onPrevChapter: () => _changeChapter(vm, -1),
-                        onNextChapter: () => _changeChapter(vm, 1),
-                        darkMode: settings.mode == 'dark',
-                      ) : const SizedBox.shrink(),
+                      child: _showChrome
+                          ? _ReaderHeader(
+                              showVerseOfDay: widget.showVerseOfDay,
+                              verseOfDay: vm.verseOfTheDay,
+                              onReadVerseOfDay: () => _jumpToVerseOfDay(vm),
+                              onShareVerseOfDay: () => SharePlus.instance.share(
+                                ShareParams(
+                                  text:
+                                      '${vm.verseOfTheDay?.text ?? ''}\n\n${vm.verseOfTheDay?.reference ?? ''}',
+                                ),
+                              ),
+                              onOpenSettings: () => _showSettingsSheet(
+                                context,
+                                settingsController,
+                              ),
+                              onOpenVersion: vm.versions.isEmpty
+                                  ? null
+                                  : () => _showVersionPicker(context, vm),
+                              selectedVersionLabel:
+                                  vm.selectedVersion?.abbreviation ??
+                                  vm.selectedVersion?.name ??
+                                  'Versi',
+                              testament: vm.testament,
+                              onChangeTestament: (val) =>
+                                  vm.changeTestament(val),
+                              showDeuterocanonical: vm.showDeuterocanonical,
+                              onToggleDeuterocanonical:
+                                  vm.toggleDeuterocanonical,
+                              selectedBookLabel:
+                                  vm.selectedBook?.name ?? 'Pilih Kitab',
+                              onPickBook: () => _openBookPicker(context, vm),
+                              currentChapter: vm.currentChapter,
+                              onPrevChapter: () => _changeChapter(vm, -1),
+                              onNextChapter: () => _changeChapter(vm, 1),
+                              darkMode: settings.mode == 'dark',
+                            )
+                          : const SizedBox.shrink(),
                     ),
                     Expanded(
                       child: NotificationListener<UserScrollNotification>(
@@ -184,50 +202,71 @@ class _BibleReaderViewState extends State<BibleReaderView> {
                           child: vm.isLoading
                               ? const Center(child: CircularProgressIndicator())
                               : vm.errorMessage != null
-                                  ? ErrorStateView(message: vm.errorMessage!, onRetry: () => vm.loadVerses(refresh: true))
-                                  : vm.verses.isEmpty
-                                      ? const EmptyStateView(message: 'Teks untuk pasal ini sedang dalam proses input.')
-                                      : GestureDetector(
-                                          onHorizontalDragEnd: (details) {
-                                            if (details.primaryVelocity == null) return;
-                                            if (details.primaryVelocity! < -100) {
-                                              _changeChapter(vm, 1);
-                                            } else if (details.primaryVelocity! > 100) {
-                                              _changeChapter(vm, -1);
-                                            }
-                                          },
-                                          child: ListView.builder(
-                                            controller: _scrollController,
-                                            addAutomaticKeepAlives: false,
-                                            addRepaintBoundaries: true,
-                                            cacheExtent: 800,
-                                            padding: EdgeInsets.fromLTRB(
-                                              AppSpacing.xl,
-                                              _showChrome ? AppSpacing.sm : AppSpacing.lg,
-                                              AppSpacing.xl,
-                                              AppSpacing.xxl + AppSpacing.lg,
-                                            ),
-                                            itemCount: vm.verses.length,
-                                            itemBuilder: (context, index) {
-                                              final verse = vm.verses[index];
-                                              final selected = _selectedVerses.contains(verse.verse);
-                                              return VerseRow(
-                                                key: _verseKeys[index],
-                                                verse: verse,
-                                                fontSize: settings.fontSize,
-                                                lineHeight: settings.lineHeight,
-                                                textColor: textColor,
-                                                selected: selected,
-                                                flash: _flashVerse == verse.verse,
-                                                paragraphMode: settings.paragraphMode,
-                                                onTap: () => _handleVerseTap(context, vm, verse, settings),
-                                                onLongPressStart: (_) => _startRangeSelection(vm, index),
-                                                onLongPressMoveUpdate: (details) => _updateRangeSelection(vm, details.globalPosition),
-                                                onLongPressEnd: (_) => _endRangeSelection(),
-                                              );
-                                            },
-                                          ),
+                              ? ErrorStateView(
+                                  message: vm.errorMessage!,
+                                  onRetry: () => vm.loadVerses(refresh: true),
+                                )
+                              : vm.verses.isEmpty
+                              ? const EmptyStateView(
+                                  message:
+                                      'Teks untuk pasal ini sedang dalam proses input.',
+                                )
+                              : GestureDetector(
+                                  onHorizontalDragEnd: (details) {
+                                    if (details.primaryVelocity == null) return;
+                                    if (details.primaryVelocity! < -100) {
+                                      _changeChapter(vm, 1);
+                                    } else if (details.primaryVelocity! > 100) {
+                                      _changeChapter(vm, -1);
+                                    }
+                                  },
+                                  child: ListView.builder(
+                                    controller: _scrollController,
+                                    addAutomaticKeepAlives: false,
+                                    addRepaintBoundaries: true,
+                                    cacheExtent: 800,
+                                    padding: EdgeInsets.fromLTRB(
+                                      AppSpacing.xl,
+                                      _showChrome
+                                          ? AppSpacing.sm
+                                          : AppSpacing.lg,
+                                      AppSpacing.xl,
+                                      AppSpacing.xxl + AppSpacing.lg,
+                                    ),
+                                    itemCount: vm.verses.length,
+                                    itemBuilder: (context, index) {
+                                      final verse = vm.verses[index];
+                                      final selected = _selectedVerses.contains(
+                                        verse.verse,
+                                      );
+                                      return VerseRow(
+                                        key: _verseKeys[index],
+                                        verse: verse,
+                                        fontSize: settings.fontSize,
+                                        lineHeight: settings.lineHeight,
+                                        textColor: textColor,
+                                        selected: selected,
+                                        flash: _flashVerse == verse.verse,
+                                        paragraphMode: settings.paragraphMode,
+                                        onTap: () => _handleVerseTap(
+                                          context,
+                                          vm,
+                                          verse,
+                                          settings,
                                         ),
+                                        onLongPressStart: (_) =>
+                                            _startRangeSelection(vm, index),
+                                        onLongPressMoveUpdate: (details) =>
+                                            _updateRangeSelection(
+                                              vm,
+                                              details.globalPosition,
+                                            ),
+                                        onLongPressEnd: (_) =>
+                                            _endRangeSelection(),
+                                      );
+                                    },
+                                  ),
+                                ),
                         ),
                       ),
                     ),
@@ -246,7 +285,9 @@ class _BibleReaderViewState extends State<BibleReaderView> {
               if (shouldShowResume)
                 Positioned(
                   right: AppSpacing.xl,
-                  bottom: _selectionMode ? (AppSpacing.xxl + AppSpacing.sm) : AppSpacing.xl,
+                  bottom: _selectionMode
+                      ? (AppSpacing.xxl + AppSpacing.sm)
+                      : AppSpacing.xl,
                   child: AnimatedScale(
                     scale: shouldShowResume ? 1 : 0.9,
                     duration: const Duration(milliseconds: 180),
@@ -335,7 +376,8 @@ class _BibleReaderViewState extends State<BibleReaderView> {
     }
     if (notification.direction == ScrollDirection.reverse && _showChrome) {
       setState(() => _showChrome = false);
-    } else if (notification.direction == ScrollDirection.forward && !_showChrome) {
+    } else if (notification.direction == ScrollDirection.forward &&
+        !_showChrome) {
       setState(() => _showChrome = true);
     }
   }
@@ -382,7 +424,9 @@ class _BibleReaderViewState extends State<BibleReaderView> {
   }
 
   void _applyRangeSelection(BibleReaderViewModel vm, int index) {
-    if (_selectionAnchorIndex == null || index < 0 || index >= vm.verses.length) return;
+    if (_selectionAnchorIndex == null || index < 0 || index >= vm.verses.length) {
+      return;
+    }
     final start = min(_selectionAnchorIndex!, index);
     final end = max(_selectionAnchorIndex!, index);
     final selection = <int>{};
@@ -481,18 +525,22 @@ class _BibleReaderViewState extends State<BibleReaderView> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: settings.mode == 'dark' ? const Color(0xFF1D1D1D) : Colors.white,
+      backgroundColor: settings.mode == 'dark'
+          ? const Color(0xFF1D1D1D)
+          : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (_) {
-        final reference = '${vm.selectedBook?.name ?? ''} ${verse.chapter}:${verse.verse}';
+        final reference =
+            '${vm.selectedBook?.name ?? ''} ${verse.chapter}:${verse.verse}';
         return VerseActionBottomSheet(
           verse: verse,
           reference: reference,
           onCopy: () => _copyVerse(verse, reference),
           onShareText: () => _shareVerseText(verse, reference),
-          onShareImage: () => _openVerseImageBuilder(context, verse.content, reference),
+          onShareImage: () =>
+              _openVerseImageBuilder(context, verse.content, reference),
           onHighlight: (color) => vm.applyHighlight(verse, _colorToHex(color)),
           onBookmark: () => vm.toggleBookmark(verse),
           onNote: () => _showNoteDialog(context, vm, verse),
@@ -518,22 +566,30 @@ class _BibleReaderViewState extends State<BibleReaderView> {
   }
 
   Future<void> _shareVerseText(BibleVerse verse, String reference) async {
-    await SharePlus.instance.share(ShareParams(text: '${verse.content}\n\n$reference'));
+    await SharePlus.instance.share(
+      ShareParams(text: '${verse.content}\n\n$reference'),
+    );
   }
 
-  void _openVerseImageBuilder(BuildContext context, String text, String reference) {
+  void _openVerseImageBuilder(
+    BuildContext context,
+    String text,
+    String reference,
+  ) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => VerseImageBuilderPage(
-          verseText: text,
-          reference: reference,
-        ),
+        builder: (_) =>
+            VerseImageBuilderPage(verseText: text, reference: reference),
       ),
     );
   }
 
-  Future<void> _showNoteDialog(BuildContext context, BibleReaderViewModel vm, BibleVerse verse) async {
+  Future<void> _showNoteDialog(
+    BuildContext context,
+    BibleReaderViewModel vm,
+    BibleVerse verse,
+  ) async {
     final controller = TextEditingController(text: verse.note ?? '');
 
     final result = await showDialog<String?>(
@@ -544,14 +600,20 @@ class _BibleReaderViewState extends State<BibleReaderView> {
           content: TextField(
             controller: controller,
             maxLines: 4,
-            decoration: const InputDecoration(hintText: 'Tulis catatan singkat...'),
+            decoration: const InputDecoration(
+              hintText: 'Tulis catatan singkat...',
+            ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Batal')),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Batal'),
+            ),
             ElevatedButton(
-              onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+              onPressed: () =>
+                  Navigator.pop(dialogContext, controller.text.trim()),
               child: const Text('Simpan'),
-            )
+            ),
           ],
         );
       },
@@ -562,7 +624,9 @@ class _BibleReaderViewState extends State<BibleReaderView> {
   }
 
   List<BibleVerse> _selectedVersesList(BibleReaderViewModel vm) {
-    final selected = vm.verses.where((v) => _selectedVerses.contains(v.verse)).toList();
+    final selected = vm.verses
+        .where((v) => _selectedVerses.contains(v.verse))
+        .toList();
     selected.sort((a, b) => a.verse.compareTo(b.verse));
     return selected;
   }
@@ -582,7 +646,10 @@ class _BibleReaderViewState extends State<BibleReaderView> {
     return selected.map((v) => '${v.verse} ${v.content}').join('\n');
   }
 
-  Future<void> _noteSelected(BuildContext context, BibleReaderViewModel vm) async {
+  Future<void> _noteSelected(
+    BuildContext context,
+    BibleReaderViewModel vm,
+  ) async {
     final selected = _selectedVersesList(vm);
     if (selected.isEmpty) return;
     final controller = TextEditingController();
@@ -594,14 +661,20 @@ class _BibleReaderViewState extends State<BibleReaderView> {
           content: TextField(
             controller: controller,
             maxLines: 4,
-            decoration: const InputDecoration(hintText: 'Tulis catatan singkat...'),
+            decoration: const InputDecoration(
+              hintText: 'Tulis catatan singkat...',
+            ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Batal')),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Batal'),
+            ),
             ElevatedButton(
-              onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+              onPressed: () =>
+                  Navigator.pop(dialogContext, controller.text.trim()),
               child: const Text('Simpan'),
-            )
+            ),
           ],
         );
       },
@@ -632,9 +705,7 @@ class _BibleReaderViewState extends State<BibleReaderView> {
     if (selected.isEmpty) return;
     final text = _rangeText(selected);
     final reference = _rangeReference(vm, selected);
-    await SharePlus.instance.share(
-      ShareParams(text: '$text\n\n$reference'),
-    );
+    await SharePlus.instance.share(ShareParams(text: '$text\n\n$reference'));
   }
 
   Future<void> _highlightSelected(BibleReaderViewModel vm, Color color) async {
@@ -661,7 +732,10 @@ class _BibleReaderViewState extends State<BibleReaderView> {
     });
   }
 
-  void _showSettingsSheet(BuildContext context, ReaderSettingsController settingsController) {
+  void _showSettingsSheet(
+    BuildContext context,
+    ReaderSettingsController settingsController,
+  ) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -686,7 +760,10 @@ class _BibleReaderViewState extends State<BibleReaderView> {
     );
   }
 
-  Future<void> _showVersionPicker(BuildContext context, BibleReaderViewModel vm) async {
+  Future<void> _showVersionPicker(
+    BuildContext context,
+    BibleReaderViewModel vm,
+  ) async {
     final selected = await showModalBottomSheet<BibleVersion>(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -696,11 +773,15 @@ class _BibleReaderViewState extends State<BibleReaderView> {
         return ListView(
           shrinkWrap: true,
           children: vm.versions
-              .map((version) => ListTile(
-                    title: Text(version.name),
-                    subtitle: version.abbreviation == null ? null : Text(version.abbreviation!),
-                    onTap: () => Navigator.pop(context, version),
-                  ))
+              .map(
+                (version) => ListTile(
+                  title: Text(version.name),
+                  subtitle: version.abbreviation == null
+                      ? null
+                      : Text(version.abbreviation!),
+                  onTap: () => Navigator.pop(context, version),
+                ),
+              )
               .toList(),
         );
       },
@@ -711,7 +792,10 @@ class _BibleReaderViewState extends State<BibleReaderView> {
     }
   }
 
-  Future<void> _openBookPicker(BuildContext context, BibleReaderViewModel vm) async {
+  Future<void> _openBookPicker(
+    BuildContext context,
+    BibleReaderViewModel vm,
+  ) async {
     final book = await showModalBottomSheet<BibleBook>(
       context: context,
       isScrollControlled: true,
@@ -753,7 +837,9 @@ class _BibleReaderViewState extends State<BibleReaderView> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -816,7 +902,10 @@ class _ReaderHeader extends StatelessWidget {
             ),
           ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.sm,
+          ),
           child: Row(
             children: [
               OutlinedButton.icon(
@@ -836,7 +925,10 @@ class _ReaderHeader extends StatelessWidget {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.xs,
+          ),
           child: Row(
             children: [
               Expanded(
@@ -859,7 +951,10 @@ class _ReaderHeader extends StatelessWidget {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.sm,
+          ),
           child: Row(
             children: [
               Expanded(
@@ -876,7 +971,10 @@ class _ReaderHeader extends StatelessWidget {
                 onPressed: onPrevChapter,
                 icon: const Icon(Icons.chevron_left),
               ),
-              Text('Pasal $currentChapter', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
+              Text(
+                'Pasal $currentChapter',
+                style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+              ),
               IconButton(
                 onPressed: onNextChapter,
                 icon: const Icon(Icons.chevron_right),
@@ -930,7 +1028,10 @@ class _ReaderSettingsSheetState extends State<_ReaderSettingsSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Tampilan', style: GoogleFonts.manrope(fontWeight: FontWeight.bold)),
+          Text(
+            'Tampilan',
+            style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
@@ -942,7 +1043,7 @@ class _ReaderSettingsSheetState extends State<_ReaderSettingsSheet> {
                   max: 26,
                   onChanged: (v) => setState(() => _fontSize = v),
                 ),
-              )
+              ),
             ],
           ),
           Row(
@@ -955,13 +1056,15 @@ class _ReaderSettingsSheetState extends State<_ReaderSettingsSheet> {
                   max: 2.2,
                   onChanged: (v) => setState(() => _lineHeight = v),
                 ),
-              )
+              ),
             ],
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text('Mode paragraf'),
-            subtitle: const Text('Tampilkan ayat terasa seperti paragraf ebook'),
+            subtitle: const Text(
+              'Tampilkan ayat terasa seperti paragraf ebook',
+            ),
             value: _paragraphMode,
             onChanged: (val) => setState(() => _paragraphMode = val),
           ),
@@ -982,7 +1085,7 @@ class _ReaderSettingsSheetState extends State<_ReaderSettingsSheet> {
               Navigator.pop(context);
             },
             child: const Text('Terapkan'),
-          )
+          ),
         ],
       ),
     );
@@ -1022,7 +1125,10 @@ class _RangeActionSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(reference, style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+          Text(
+            reference,
+            style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             preview,
@@ -1035,11 +1141,31 @@ class _RangeActionSheet extends StatelessWidget {
             spacing: AppSpacing.md,
             runSpacing: AppSpacing.md,
             children: [
-              _RangeActionChip(icon: Icons.copy_rounded, label: 'Copy', onTap: onCopy),
-              _RangeActionChip(icon: Icons.share_rounded, label: 'Share Text', onTap: onShareText),
-              _RangeActionChip(icon: Icons.image_outlined, label: 'Bagikan sebagai gambar', onTap: onShareImage),
-              _RangeActionChip(icon: Icons.bookmark_border, label: 'Bookmark', onTap: onBookmark),
-              _RangeActionChip(icon: Icons.edit_note, label: 'Catatan', onTap: onNote),
+              _RangeActionChip(
+                icon: Icons.copy_rounded,
+                label: 'Copy',
+                onTap: onCopy,
+              ),
+              _RangeActionChip(
+                icon: Icons.share_rounded,
+                label: 'Share Text',
+                onTap: onShareText,
+              ),
+              _RangeActionChip(
+                icon: Icons.image_outlined,
+                label: 'Bagikan sebagai gambar',
+                onTap: onShareImage,
+              ),
+              _RangeActionChip(
+                icon: Icons.bookmark_border,
+                label: 'Bookmark',
+                onTap: onBookmark,
+              ),
+              _RangeActionChip(
+                icon: Icons.edit_note,
+                label: 'Catatan',
+                onTap: onNote,
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -1047,7 +1173,12 @@ class _RangeActionSheet extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: _rangeHighlightPalette
-                .map((color) => _HighlightDot(color: color, onTap: () => onHighlight(color)))
+                .map(
+                  (color) => _HighlightDot(
+                    color: color,
+                    onTap: () => onHighlight(color),
+                  ),
+                )
                 .toList(),
           ),
         ],
@@ -1061,7 +1192,11 @@ class _RangeActionChip extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
-  const _RangeActionChip({required this.icon, required this.label, required this.onTap});
+  const _RangeActionChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1111,18 +1246,27 @@ class _MultiSelectBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.md),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xl,
+        vertical: AppSpacing.md,
+      ),
       color: Colors.black.withValues(alpha: 0.9),
       child: Row(
         children: [
-          Text('$count ayat dipilih', style: const TextStyle(color: Colors.white)),
+          Text(
+            '$count ayat dipilih',
+            style: const TextStyle(color: Colors.white),
+          ),
           const Spacer(),
           TextButton.icon(
             onPressed: onActions,
             icon: const Icon(Icons.flash_on, color: Colors.white, size: 18),
             label: const Text('Aksi', style: TextStyle(color: Colors.white)),
           ),
-          IconButton(onPressed: onClear, icon: const Icon(Icons.close, color: Colors.white)),
+          IconButton(
+            onPressed: onClear,
+            icon: const Icon(Icons.close, color: Colors.white),
+          ),
         ],
       ),
     );
@@ -1130,7 +1274,11 @@ class _MultiSelectBar extends StatelessWidget {
 }
 
 String _colorToHex(Color color) {
-  final value = color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase();
+  final value = color
+      .toARGB32()
+      .toRadixString(16)
+      .padLeft(8, '0')
+      .toUpperCase();
   return '#${value.substring(2)}';
 }
 

@@ -12,6 +12,8 @@ class BibleModule {
 
   static final BibleRepository bibleRepository = BibleRepositoryImpl(_client);
   static final NotesRepository notesRepository = NotesRepositoryImpl(_client);
-  static final ReadingPlanRepository readingPlanRepository = ReadingPlanRepositoryImpl(_client);
-  static final ReaderSettingsController readerSettingsController = ReaderSettingsController();
+  static final ReadingPlanRepository readingPlanRepository =
+      ReadingPlanRepositoryImpl(_client);
+  static final ReaderSettingsController readerSettingsController =
+      ReaderSettingsController();
 }

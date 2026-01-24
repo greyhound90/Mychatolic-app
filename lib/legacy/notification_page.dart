@@ -52,7 +52,14 @@ class NotificationPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFF2C225B), // Deep Royal Purple
       appBar: AppBar(
-        title: const Text("Aktivitas Umat", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white)),
+        title: const Text(
+          "Aktivitas Umat",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: Colors.white,
+          ),
+        ),
         backgroundColor: const Color(0xFF2C225B),
         centerTitle: false,
         elevation: 0,
@@ -61,14 +68,20 @@ class NotificationPage extends StatelessWidget {
       body: ListView.separated(
         itemCount: notifications.length,
         padding: const EdgeInsets.symmetric(vertical: 10),
-        separatorBuilder: (context, index) => const Divider(color: Colors.white10, height: 1),
+        separatorBuilder: (context, index) =>
+            const Divider(color: Colors.white10, height: 1),
         itemBuilder: (context, index) {
           final item = notifications[index];
           final isLike = item['type'] == 'like';
 
           return ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            tileColor: item['isRead'] ? Colors.transparent : const Color(0xFF3D3270).withValues(alpha: 0.5),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 8,
+            ),
+            tileColor: item['isRead']
+                ? Colors.transparent
+                : const Color(0xFF3D3270).withValues(alpha: 0.5),
             leading: CircleAvatar(
               radius: 20,
               backgroundColor: const Color(0xFFFF9F1C),
@@ -77,7 +90,10 @@ class NotificationPage extends StatelessWidget {
                 backgroundColor: const Color(0xFF2C225B),
                 child: Text(
                   item['user'][0],
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
@@ -85,28 +101,44 @@ class NotificationPage extends StatelessWidget {
               text: TextSpan(
                 style: const TextStyle(fontSize: 14, color: Colors.white),
                 children: [
-                   TextSpan(text: item['user'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                   const TextSpan(text: " "),
-                   TextSpan(text: isLike ? "menyukai postinganmu" : "mengomentari: "),
-                   if (!isLike)
-                     TextSpan(
-                       text: item['message'].toString().replaceAll("Mengomentari: ", ""),
-                       style: const TextStyle(color: Colors.white70, fontStyle: FontStyle.italic)
-                     )
-                ]
-              )
+                  TextSpan(
+                    text: item['user'],
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const TextSpan(text: " "),
+                  TextSpan(
+                    text: isLike ? "menyukai postinganmu" : "mengomentari: ",
+                  ),
+                  if (!isLike)
+                    TextSpan(
+                      text: item['message'].toString().replaceAll(
+                        "Mengomentari: ",
+                        "",
+                      ),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                ],
+              ),
             ),
             trailing: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Icon(
-                  isLike ? Icons.local_fire_department_rounded : Icons.chat_bubble,
+                  isLike
+                      ? Icons.local_fire_department_rounded
+                      : Icons.chat_bubble,
                   size: 18,
                   color: isLike ? const Color(0xFFFF9F1C) : Colors.blueAccent,
                 ),
                 const SizedBox(height: 4),
-                Text(item['time'], style: const TextStyle(fontSize: 10, color: Colors.white54)),
+                Text(
+                  item['time'],
+                  style: const TextStyle(fontSize: 10, color: Colors.white54),
+                ),
               ],
             ),
           );

@@ -39,7 +39,10 @@ class BibleMeTab extends StatelessWidget {
                   verse: vm.verseOfTheDay!,
                   onRead: () => _openVerseOfDay(context, vm),
                   onShare: () => SharePlus.instance.share(
-                    ShareParams(text: '${vm.verseOfTheDay!.text}\n\n${vm.verseOfTheDay!.reference}'),
+                    ShareParams(
+                      text:
+                          '${vm.verseOfTheDay!.text}\n\n${vm.verseOfTheDay!.reference}',
+                    ),
                   ),
                   darkMode: false,
                 )
@@ -52,7 +55,9 @@ class BibleMeTab extends StatelessWidget {
                     ? 'Belum ada riwayat membaca'
                     : '${vm.lastRead!.bookName ?? 'Kitab'} ${vm.lastRead!.chapter}',
                 actionLabel: 'Lanjutkan',
-                onTap: vm.lastRead == null ? null : () => _openLastRead(context, vm),
+                onTap: vm.lastRead == null
+                    ? null
+                    : () => _openLastRead(context, vm),
               ),
               const SizedBox(height: AppSpacing.md),
               if (vm.activePlan != null)
@@ -105,7 +110,8 @@ class BibleMeTab extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => BiblePlanDayPage(plan: active, day: active.currentDay ?? 1),
+        builder: (_) =>
+            BiblePlanDayPage(plan: active, day: active.currentDay ?? 1),
       ),
     );
   }
@@ -132,7 +138,11 @@ class _SummaryCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(AppRadius.xl),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 12, offset: const Offset(0, 6)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
         ],
       ),
       child: Row(
@@ -141,9 +151,15 @@ class _SummaryCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
+                Text(
+                  title,
+                  style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: AppSpacing.sm),
-                Text(subtitle, style: GoogleFonts.manrope(color: Colors.grey[700])),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.manrope(color: Colors.grey[700]),
+                ),
               ],
             ),
           ),

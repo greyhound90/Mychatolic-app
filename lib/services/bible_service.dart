@@ -89,21 +89,27 @@ class BibleService {
 
           final interactions = interactionResponse as List<dynamic>;
           for (final row in interactions) {
-            final verseNumber =
-                int.tryParse((row['verse'] ?? row['verse_number']).toString());
+            final verseNumber = int.tryParse(
+              (row['verse'] ?? row['verse_number']).toString(),
+            );
             if (verseNumber == null) continue;
             interactionMap[verseNumber] = row as Map<String, dynamic>;
           }
         } catch (interactionError) {
-          debugPrint("BibleService getVerses interaction error: $interactionError");
+          debugPrint(
+            "BibleService getVerses interaction error: $interactionError",
+          );
         }
       }
 
-      return verseData.map((row) {
-        final verseNumber = int.tryParse(row['verse'].toString()) ?? 0;
-        final interaction = interactionMap[verseNumber];
-        return BibleVerse.fromJson(row, interaction: interaction);
-      }).where((verse) => verse.verse > 0).toList();
+      return verseData
+          .map((row) {
+            final verseNumber = int.tryParse(row['verse'].toString()) ?? 0;
+            final interaction = interactionMap[verseNumber];
+            return BibleVerse.fromJson(row, interaction: interaction);
+          })
+          .where((verse) => verse.verse > 0)
+          .toList();
     } catch (e) {
       debugPrint("BibleService getVerses error: $e");
       return [];
@@ -149,10 +155,9 @@ class BibleService {
       payload['is_bookmarked'] = isBookmarked;
     }
 
-    await _supabase.from('user_bible_interactions').upsert(
-          payload,
-          onConflict: 'user_id, book_id, chapter, verse',
-        );
+    await _supabase
+        .from('user_bible_interactions')
+        .upsert(payload, onConflict: 'user_id, book_id, chapter, verse');
   }
 
   // --- LEGACY (USED BY LITURGY SCHEDULE) ---
@@ -165,7 +170,8 @@ class BibleService {
       final parts = reference.trim().split(RegExp(r'\s+'));
       if (parts.length < 2) {
         debugPrint(
-            "BibleService Parsing Error: Reference '$reference' has too few parts.");
+          "BibleService Parsing Error: Reference '$reference' has too few parts.",
+        );
         return fallbackMessage;
       }
 
@@ -181,7 +187,8 @@ class BibleService {
       final chapterNumber = int.tryParse(numberSplits[0]);
       if (chapterNumber == null) {
         debugPrint(
-            "BibleService Parsing Error: Invalid chapter number in '$numberPart'");
+          "BibleService Parsing Error: Invalid chapter number in '$numberPart'",
+        );
         return fallbackMessage;
       }
 

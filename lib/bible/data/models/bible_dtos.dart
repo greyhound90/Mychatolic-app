@@ -12,11 +12,13 @@ class BibleVersionDto {
     return BibleVersionDto(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
-      abbreviation: json['abbreviation']?.toString() ?? json['abbr']?.toString(),
+      abbreviation:
+          json['abbreviation']?.toString() ?? json['abbr']?.toString(),
     );
   }
 
-  BibleVersion toEntity() => BibleVersion(id: id, name: name, abbreviation: abbreviation);
+  BibleVersion toEntity() =>
+      BibleVersion(id: id, name: name, abbreviation: abbreviation);
 }
 
 class BibleBookDto {
@@ -39,15 +41,26 @@ class BibleBookDto {
   });
 
   factory BibleBookDto.fromJson(Map<String, dynamic> json) {
-    final order = _toInt(json['order_number']) ?? _toInt(json['order']) ?? _toInt(json['no']) ?? _toInt(json['id']) ?? 0;
+    final order =
+        _toInt(json['order_number']) ??
+        _toInt(json['order']) ??
+        _toInt(json['no']) ??
+        _toInt(json['id']) ??
+        0;
     return BibleBookDto(
       id: _toInt(json['id']) ?? 0,
       name: json['name']?.toString() ?? '',
       category: json['category']?.toString(),
       orderNumber: order,
-      isDeuterocanonical: json['is_deuterocanonical'] == true || json['deuterocanonical'] == true,
+      isDeuterocanonical:
+          json['is_deuterocanonical'] == true ||
+          json['deuterocanonical'] == true,
       testament: json['testament']?.toString(),
-      chapterCount: _toInt(json['chapter_count']) ?? _toInt(json['chapters']) ?? _toInt(json['total_chapters']) ?? _toInt(json['total_pasal']),
+      chapterCount:
+          _toInt(json['chapter_count']) ??
+          _toInt(json['chapters']) ??
+          _toInt(json['total_chapters']) ??
+          _toInt(json['total_pasal']),
     );
   }
 
@@ -152,21 +165,24 @@ class HighlightDto {
       bookId: _toInt(json['book_id'] ?? json['bookId']) ?? 0,
       chapter: _toInt(json['chapter']) ?? 0,
       verse: _toInt(json['verse']) ?? 0,
-      color: json['color']?.toString() ?? json['highlight_color']?.toString() ?? '',
+      color:
+          json['color']?.toString() ??
+          json['highlight_color']?.toString() ??
+          '',
       text: json['text']?.toString(),
       reference: json['reference']?.toString(),
     );
   }
 
   Highlight toEntity() => Highlight(
-        id: id,
-        bookId: bookId,
-        chapter: chapter,
-        verse: verse,
-        color: color,
-        text: text,
-        reference: reference,
-      );
+    id: id,
+    bookId: bookId,
+    chapter: chapter,
+    verse: verse,
+    color: color,
+    text: text,
+    reference: reference,
+  );
 }
 
 class BookmarkDto {
@@ -198,13 +214,13 @@ class BookmarkDto {
   }
 
   Bookmark toEntity() => Bookmark(
-        id: id,
-        bookId: bookId,
-        chapter: chapter,
-        verse: verse,
-        text: text,
-        reference: reference,
-      );
+    id: id,
+    bookId: bookId,
+    chapter: chapter,
+    verse: verse,
+    text: text,
+    reference: reference,
+  );
 }
 
 class NoteDto {
@@ -242,15 +258,15 @@ class NoteDto {
   }
 
   Note toEntity() => Note(
-        id: id,
-        title: title,
-        content: content,
-        bookId: bookId,
-        chapter: chapter,
-        verse: verse,
-        reference: reference,
-        createdAt: createdAt,
-      );
+    id: id,
+    title: title,
+    content: content,
+    bookId: bookId,
+    chapter: chapter,
+    verse: verse,
+    reference: reference,
+    createdAt: createdAt,
+  );
 }
 
 class ReadingPlanDto {
@@ -288,15 +304,15 @@ class ReadingPlanDto {
   }
 
   ReadingPlan toEntity() => ReadingPlan(
-        id: id,
-        title: title,
-        durationDays: durationDays,
-        theme: theme,
-        description: description,
-        isActive: isActive,
-        currentDay: currentDay,
-        progress: progress,
-      );
+    id: id,
+    title: title,
+    durationDays: durationDays,
+    theme: theme,
+    description: description,
+    isActive: isActive,
+    currentDay: currentDay,
+    progress: progress,
+  );
 }
 
 class ReadingPlanDayDto {
@@ -326,11 +342,11 @@ class ReadingPlanDayDto {
   }
 
   ReadingPlanDay toEntity() => ReadingPlanDay(
-        day: day,
-        readings: readings.map((e) => e.toEntity()).toList(),
-        isCompleted: isCompleted,
-        reflectionPrompt: reflectionPrompt,
-      );
+    day: day,
+    readings: readings.map((e) => e.toEntity()).toList(),
+    isCompleted: isCompleted,
+    reflectionPrompt: reflectionPrompt,
+  );
 }
 
 class ReadingRefDto {
@@ -359,12 +375,12 @@ class ReadingRefDto {
   }
 
   ReadingRef toEntity() => ReadingRef(
-        reference: reference,
-        bookId: bookId,
-        chapter: chapter,
-        startVerse: startVerse,
-        endVerse: endVerse,
-      );
+    reference: reference,
+    bookId: bookId,
+    chapter: chapter,
+    startVerse: startVerse,
+    endVerse: endVerse,
+  );
 }
 
 class VerseOfTheDayDto {
@@ -396,13 +412,13 @@ class VerseOfTheDayDto {
   }
 
   VerseOfTheDay toEntity() => VerseOfTheDay(
-        reference: reference,
-        text: text,
-        bookId: bookId,
-        chapter: chapter,
-        verse: verse,
-        versionId: versionId,
-      );
+    reference: reference,
+    text: text,
+    bookId: bookId,
+    chapter: chapter,
+    verse: verse,
+    versionId: versionId,
+  );
 }
 
 class LastReadDto {
@@ -431,12 +447,12 @@ class LastReadDto {
   }
 
   LastRead toEntity() => LastRead(
-        bookId: bookId,
-        chapter: chapter,
-        verse: verse,
-        bookName: bookName,
-        updatedAt: updatedAt,
-      );
+    bookId: bookId,
+    chapter: chapter,
+    verse: verse,
+    bookName: bookName,
+    updatedAt: updatedAt,
+  );
 }
 
 class BibleSearchResultDto {
@@ -465,12 +481,12 @@ class BibleSearchResultDto {
   }
 
   BibleVerseSearchResult toEntity() => BibleVerseSearchResult(
-        reference: reference,
-        snippet: snippet,
-        bookId: bookId,
-        chapter: chapter,
-        verse: verse,
-      );
+    reference: reference,
+    snippet: snippet,
+    bookId: bookId,
+    chapter: chapter,
+    verse: verse,
+  );
 }
 
 int? _toInt(dynamic value) {

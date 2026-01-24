@@ -18,7 +18,9 @@ class ReadingPlanRepositoryImpl implements ReadingPlanRepository {
     }
     final json = await _client.get('/bible/plans');
     final list = (json as List<dynamic>? ?? [])
-        .map((e) => ReadingPlanDto.fromJson(e as Map<String, dynamic>).toEntity())
+        .map(
+          (e) => ReadingPlanDto.fromJson(e as Map<String, dynamic>).toEntity(),
+        )
         .toList();
     _plansCache = list;
     return list;
@@ -29,7 +31,9 @@ class ReadingPlanRepositoryImpl implements ReadingPlanRepository {
     if (!refresh && _activePlan != null) return _activePlan;
     final json = await _client.get('/bible/plans/active');
     if (json == null) return null;
-    _activePlan = ReadingPlanDto.fromJson(json as Map<String, dynamic>).toEntity();
+    _activePlan = ReadingPlanDto.fromJson(
+      json as Map<String, dynamic>,
+    ).toEntity();
     return _activePlan;
   }
 
@@ -46,7 +50,11 @@ class ReadingPlanRepositoryImpl implements ReadingPlanRepository {
   }
 
   @override
-  Future<void> markPlanDayComplete(String planId, int day, {String? reflection}) async {
+  Future<void> markPlanDayComplete(
+    String planId,
+    int day, {
+    String? reflection,
+  }) async {
     await _client.post('/bible/plans/$planId/day/$day/complete', {
       if (reflection != null) 'reflection': reflection,
     });

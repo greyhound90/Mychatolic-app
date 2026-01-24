@@ -57,13 +57,13 @@ class SafeNetworkImage extends StatelessWidget {
       ),
       child: Center(
         child: SizedBox(
-          width: 20, 
-          height: 20, 
+          width: 20,
+          height: 20,
           child: CircularProgressIndicator(
-            strokeWidth: 2, 
-            color: kPrimary.withValues(alpha: 0.5)
-          )
-        )
+            strokeWidth: 2,
+            color: kPrimary.withValues(alpha: 0.5),
+          ),
+        ),
       ),
     );
   }

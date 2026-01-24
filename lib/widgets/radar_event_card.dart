@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:timeago/timeago.dart' as timeago;
-
+import 'package:mychatolic_app/models/radar_event.dart';
 import 'package:mychatolic_app/widgets/safe_network_image.dart';
 
 class RadarEventCard extends StatelessWidget {
-  final Map<String, dynamic> item;
+  final RadarEvent item;
   final String currentUserId;
   final VoidCallback? onTap;
   final VoidCallback? onJoin;
@@ -21,16 +21,13 @@ class RadarEventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final creator = item['profiles'] ?? {};
-    final creatorId = (item['creator_id'] ?? '').toString();
-    final isHost = creatorId.isNotEmpty && creatorId == currentUserId;
+    final creator = item.creatorProfile;
+    final isHost = item.creatorId == currentUserId;
     final effectiveJoin = isHost ? null : onJoin;
-    final churchName = item['church_name'] ?? 'Gereja Lokal';
-    final DateTime eventTime =
-        DateTime.tryParse(item['event_time'] ?? '')?.toLocal() ??
-            DateTime.now();
-    final String title = item['title'] ?? 'Misa Bersama';
-    final String desc = item['description'] ?? '';
+    final churchName = item.churchName;
+    final DateTime eventTime = item.eventTimeLocal;
+    final String title = item.title;
+    final String desc = item.description;
 
     return Material(
       color: Colors.transparent,
@@ -60,7 +57,7 @@ class RadarEventCard extends StatelessWidget {
                   children: [
                     ClipOval(
                       child: SafeNetworkImage(
-                        imageUrl: creator['avatar_url'] ?? '',
+                        imageUrl: creator?.avatarUrl ?? '',
                         width: 32,
                         height: 32,
                         fit: BoxFit.cover,
@@ -72,7 +69,7 @@ class RadarEventCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            creator['full_name'] ?? 'Umat',
+                            creator?.fullName ?? 'Umat',
                             style: GoogleFonts.outfit(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
@@ -90,10 +87,7 @@ class RadarEventCard extends StatelessWidget {
                     ),
                     Text(
                       timeago.format(
-                        DateTime.tryParse(
-                              item['created_at'] ?? '',
-                            )?.toLocal() ??
-                            DateTime.now(),
+                        item.createdAtUtc?.toLocal() ?? DateTime.now(),
                         locale: 'en_short',
                       ),
                       style: GoogleFonts.outfit(

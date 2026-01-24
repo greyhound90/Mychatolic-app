@@ -34,7 +34,7 @@ class HomeScreenState extends State<HomeScreen> {
   List<UserPost> _posts = [];
   bool _isLoading = false;
 
-  List<Map<String, dynamic>> _publicRadars = [];
+  List<RadarEvent> _publicRadars = [];
   bool _isLoadingRadars = false;
 
   // Filter State
@@ -55,11 +55,11 @@ class HomeScreenState extends State<HomeScreen> {
       // Logic: Pass filter params if you extended fetchPosts.
       // For now, fetching all (or you can add params to fetchPosts later)
       // fetchPosts(churchId: _selectedChurch?.id, ...)
-      final List<UserPost> posts = await _socialService.fetchPosts(); 
+      final List<UserPost> posts = await _socialService.fetchPosts();
       if (mounted) {
         setState(() {
-          _posts = posts; 
-          _isLoading = false; 
+          _posts = posts;
+          _isLoading = false;
         });
       }
     } catch (e) {
@@ -87,12 +87,12 @@ class HomeScreenState extends State<HomeScreen> {
     await Future.wait([refreshPublicRadars(), refreshPosts()]);
   }
 
-  Future<void> _openRadarDetail(Map<String, dynamic> radar) async {
-    final event = RadarEvent.fromJson(radar);
+  Future<void> _openRadarDetail(RadarEvent event) async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => RadarDetailPage(event: event, radarData: radar),
+        builder: (_) =>
+            RadarDetailPage(event: event, radarData: event.toJson()),
       ),
     );
     if (!mounted) return;
@@ -101,9 +101,9 @@ class HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _handleJoin(Map<String, dynamic> radar) async {
-    final radarId = (radar['id'] ?? '').toString();
-    final title = (radar['title'] ?? 'Grup Radar').toString();
+  Future<void> _handleJoin(RadarEvent event) async {
+    final radarId = event.id;
+    final title = event.title;
 
     if (radarId.trim().isEmpty) {
       ScaffoldMessenger.of(
@@ -134,7 +134,8 @@ class HomeScreenState extends State<HomeScreen> {
       }
 
       final chatRoomId =
-          outcome.chatRoomId ?? await _radarService.prepareChatForRadar(radarId);
+          outcome.chatRoomId ??
+          await _radarService.prepareChatForRadar(radarId);
       if (!mounted) return;
 
       if (chatRoomId != null && chatRoomId.trim().isNotEmpty) {
@@ -146,7 +147,9 @@ class HomeScreenState extends State<HomeScreen> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Berhasil bergabung. Grup chat belum siap.")),
+          const SnackBar(
+            content: Text("Berhasil bergabung. Grup chat belum siap."),
+          ),
         );
       }
 
@@ -166,34 +169,160 @@ class HomeScreenState extends State<HomeScreen> {
 
   void _showLocationFilter() {
     showModalBottomSheet(
-      context: context, 
-      isScrollControlled: true, 
+      context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => StatefulBuilder(builder: (context, setModalState) {
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
           return Container(
-            padding: const EdgeInsets.all(24), 
+            padding: const EdgeInsets.all(24),
             height: MediaQuery.of(context).size.height * 0.8,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text("Filter Lokasi", style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Filter Lokasi",
+                  style: GoogleFonts.outfit(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 20),
-                _buildFilterItem<Country>("Negara", _selectedCountry?.name, () => _showSelectionSheet<Country>(context, "Pilih Negara", () => _masterService.fetchCountries(), (item) => item.name, (item) => null, (selected) { setModalState(() { _selectedCountry = selected; _selectedDiocese = null; _selectedChurch = null; }); })),
-                _buildFilterItem<Diocese>("Keuskupan", _selectedDiocese?.name, () { if (_selectedCountry == null) return; _showSelectionSheet<Diocese>(context, "Pilih Keuskupan", () => _masterService.fetchDioceses(_selectedCountry!.id), (item) => item.name, (item) => null, (selected) { setModalState(() { _selectedDiocese = selected; _selectedChurch = null; }); }); }),
-                _buildFilterItem<Church>("Gereja", _selectedChurch?.name, () { if (_selectedDiocese == null) return; _showSelectionSheet<Church>(context, "Pilih Gereja", () => _masterService.fetchChurches(_selectedDiocese!.id), (item) => item.name, (item) => item.address, (selected) { setModalState(() { _selectedChurch = selected; }); }); }),
+                _buildFilterItem<Country>(
+                  "Negara",
+                  _selectedCountry?.name,
+                  () => _showSelectionSheet<Country>(
+                    context,
+                    "Pilih Negara",
+                    () => _masterService.fetchCountries(),
+                    (item) => item.name,
+                    (item) => null,
+                    (selected) {
+                      setModalState(() {
+                        _selectedCountry = selected;
+                        _selectedDiocese = null;
+                        _selectedChurch = null;
+                      });
+                    },
+                  ),
+                ),
+                _buildFilterItem<Diocese>(
+                  "Keuskupan",
+                  _selectedDiocese?.name,
+                  () {
+                    if (_selectedCountry == null) return;
+                    _showSelectionSheet<Diocese>(
+                      context,
+                      "Pilih Keuskupan",
+                      () => _masterService.fetchDioceses(_selectedCountry!.id),
+                      (item) => item.name,
+                      (item) => null,
+                      (selected) {
+                        setModalState(() {
+                          _selectedDiocese = selected;
+                          _selectedChurch = null;
+                        });
+                      },
+                    );
+                  },
+                ),
+                _buildFilterItem<Church>("Gereja", _selectedChurch?.name, () {
+                  if (_selectedDiocese == null) return;
+                  _showSelectionSheet<Church>(
+                    context,
+                    "Pilih Gereja",
+                    () => _masterService.fetchChurches(_selectedDiocese!.id),
+                    (item) => item.name,
+                    (item) => item.address,
+                    (selected) {
+                      setModalState(() {
+                        _selectedChurch = selected;
+                      });
+                    },
+                  );
+                }),
                 const Spacer(),
-                SizedBox(width: double.infinity, height: 50, child: ElevatedButton(onPressed: () { Navigator.pop(context); refreshHome(); }, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0088CC), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), child: const Text("Terapkan", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))))
-            ]),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      refreshHome();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0088CC),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      "Terapkan",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           );
-      }),
+        },
+      ),
     );
   }
 
   Widget _buildFilterItem<T>(String label, String? value, VoidCallback onTap) {
-    return Padding(padding: const EdgeInsets.only(bottom: 16), child: InkWell(onTap: onTap, borderRadius: BorderRadius.circular(12), child: Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14), decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(12)), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(value ?? "Pilih $label", style: GoogleFonts.outfit(color: value != null ? Colors.black : Colors.grey)), const Icon(Icons.arrow_drop_down, color: Colors.grey)]))));
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                value ?? "Pilih $label",
+                style: GoogleFonts.outfit(
+                  color: value != null ? Colors.black : Colors.grey,
+                ),
+              ),
+              const Icon(Icons.arrow_drop_down, color: Colors.grey),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
-  void _showSelectionSheet<T>(BuildContext context, String title, Future<List<T>> Function() fetch, String Function(T) getName, String? Function(T) getSubtitle, Function(T) onSelect) {
-    showModalBottomSheet(context: context, builder: (ctx) => _SearchableSelectionSheet<T>(title: title, fetch: fetch, getName: getName, getSubtitle: getSubtitle, onSelect: onSelect));
+  void _showSelectionSheet<T>(
+    BuildContext context,
+    String title,
+    Future<List<T>> Function() fetch,
+    String Function(T) getName,
+    String? Function(T) getSubtitle,
+    Function(T) onSelect,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => _SearchableSelectionSheet<T>(
+        title: title,
+        fetch: fetch,
+        getName: getName,
+        getSubtitle: getSubtitle,
+        onSelect: onSelect,
+      ),
+    );
   }
 
   @override
@@ -205,8 +334,13 @@ class HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         centerTitle: false,
         title: Text(
-          "MyCatholic", 
-          style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.5)
+          "MyCatholic",
+          style: GoogleFonts.outfit(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+            letterSpacing: -0.5,
+          ),
         ),
         actions: [
           // Filter Icon
@@ -217,18 +351,29 @@ class HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: IconButton(
-              icon: const Icon(Icons.tune_rounded, color: Colors.white, size: 20),
+              icon: const Icon(
+                Icons.tune_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
               tooltip: "Filter Lokasi",
               onPressed: _showLocationFilter,
             ),
           ),
-          
+
           // Notifications
           IconButton(
-            icon: const Icon(Icons.local_fire_department_rounded, color: Colors.white, size: 28),
+            icon: const Icon(
+              Icons.local_fire_department_rounded,
+              color: Colors.white,
+              size: 28,
+            ),
             tooltip: "Notifikasi",
             onPressed: () {
-               Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationScreen()));
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NotificationScreen()),
+              );
             },
           ),
           const SizedBox(width: 8),
@@ -302,38 +447,52 @@ class HomeScreenState extends State<HomeScreen> {
               )
             else
               SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final item = _publicRadars[index];
-                    return RadarEventCard(
-                      item: item,
-                      currentUserId: _myUserId,
-                      onTap: () => _openRadarDetail(item),
-                      onJoin: () => _handleJoin(item),
-                    );
-                  },
-                  childCount: _publicRadars.length,
-                ),
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final item = _publicRadars[index];
+                  return RadarEventCard(
+                    item: item,
+                    currentUserId: _myUserId,
+                    onTap: () => _openRadarDetail(item),
+                    onJoin: () => _handleJoin(item),
+                  );
+                }, childCount: _publicRadars.length),
               ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
             // Post Stream
             if (_isLoading)
-               const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(30), child: Center(child: CircularProgressIndicator())))
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.all(30),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              )
             else if (_posts.isEmpty)
-               const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(50), child: Center(child: Text("Belum ada postingan.", style: TextStyle(color: Colors.grey)))))
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.all(50),
+                  child: Center(
+                    child: Text(
+                      "Belum ada postingan.",
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                ),
+              )
             else
               SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    return PostCard(post: _posts[index], socialService: _socialService);
-                  },
-                  childCount: _posts.length,
-                ),
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  return PostCard(
+                    post: _posts[index],
+                    socialService: _socialService,
+                  );
+                }, childCount: _posts.length),
               ),
-              
-             const SliverToBoxAdapter(child: SizedBox(height: 80)), // Bottom padding
+
+            const SliverToBoxAdapter(
+              child: SizedBox(height: 80),
+            ), // Bottom padding
           ],
         ),
       ),
@@ -362,13 +521,109 @@ class _SearchableSelectionSheet<T> extends StatefulWidget {
   final String Function(T) getName;
   final String? Function(T) getSubtitle;
   final Function(T) onSelect;
-  const _SearchableSelectionSheet({required this.title, required this.fetch, required this.getName, required this.getSubtitle, required this.onSelect});
-  @override State<_SearchableSelectionSheet<T>> createState() => _SearchableSelectionSheetState<T>();
+  const _SearchableSelectionSheet({
+    required this.title,
+    required this.fetch,
+    required this.getName,
+    required this.getSubtitle,
+    required this.onSelect,
+  });
+  @override
+  State<_SearchableSelectionSheet<T>> createState() =>
+      _SearchableSelectionSheetState<T>();
 }
-class _SearchableSelectionSheetState<T> extends State<_SearchableSelectionSheet<T>> {
-  List<T> _items = []; List<T> _filteredItems = []; bool _loading = true;
-  @override void initState() { super.initState(); _loadData(); }
-  void _loadData() async { try { final data = await widget.fetch(); if (mounted) setState(() { _items = data; _filteredItems = data; _loading = false; }); } catch (e) { if (mounted) setState(() => _loading = false); } }
-  void _filter(String q) { setState(() { _filteredItems = q.isEmpty ? _items : _items.where((i) => widget.getName(i).toLowerCase().contains(q.toLowerCase())).toList(); }); }
-  @override Widget build(BuildContext context) { return Container(height: MediaQuery.of(context).size.height * 0.7, padding: const EdgeInsets.all(16), child: Column(children: [Text(widget.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)), const SizedBox(height: 16), TextField(onChanged: _filter, decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: "Cari...", filled: true, fillColor: Colors.grey[100], border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))), const SizedBox(height: 12), Expanded(child: _loading ? const Center(child: CircularProgressIndicator()) : ListView.builder(itemCount: _filteredItems.length, itemBuilder: (ctx, i) { final item = _filteredItems[i]; final sub = widget.getSubtitle(item); return ListTile(title: Text(widget.getName(item)), subtitle: sub != null ? Text(sub, style: const TextStyle(color: Colors.grey)) : null, onTap: () { widget.onSelect(item); Navigator.pop(context); }); }))])); }
+
+class _SearchableSelectionSheetState<T>
+    extends State<_SearchableSelectionSheet<T>> {
+  List<T> _items = [];
+  List<T> _filteredItems = [];
+  bool _loading = true;
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  void _loadData() async {
+    try {
+      final data = await widget.fetch();
+      if (mounted) {
+        setState(() {
+          _items = data;
+          _filteredItems = data;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _filter(String q) {
+    setState(() {
+      _filteredItems = q.isEmpty
+          ? _items
+          : _items
+                .where(
+                  (i) =>
+                      widget.getName(i).toLowerCase().contains(q.toLowerCase()),
+                )
+                .toList();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.7,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Text(
+            widget.title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            onChanged: _filter,
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search),
+              hintText: "Cari...",
+              filled: true,
+              fillColor: Colors.grey[100],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    itemCount: _filteredItems.length,
+                    itemBuilder: (ctx, i) {
+                      final item = _filteredItems[i];
+                      final sub = widget.getSubtitle(item);
+                      return ListTile(
+                        title: Text(widget.getName(item)),
+                        subtitle: sub != null
+                            ? Text(
+                                sub,
+                                style: const TextStyle(color: Colors.grey),
+                              )
+                            : null,
+                        onTap: () {
+                          widget.onSelect(item);
+                          Navigator.pop(context);
+                        },
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
 }

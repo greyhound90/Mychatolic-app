@@ -20,11 +20,9 @@ class StoryService {
     final fileName = '${user.id}/${const Uuid().v4()}.$ext';
 
     // 1. Upload File to Storage
-    await _supabase.storage.from('stories').upload(
-      fileName,
-      file,
-      fileOptions: const FileOptions(upsert: true),
-    );
+    await _supabase.storage
+        .from('stories')
+        .upload(fileName, file, fileOptions: const FileOptions(upsert: true));
 
     final mediaUrl = _supabase.storage.from('stories').getPublicUrl(fileName);
 
@@ -53,7 +51,9 @@ class StoryService {
           .order('created_at', ascending: true);
 
       final List<dynamic> data = response as List<dynamic>;
-      final List<Story> allStories = data.map((json) => Story.fromJson(json)).toList();
+      final List<Story> allStories = data
+          .map((json) => Story.fromJson(json))
+          .toList();
 
       // Group by User ID
       final Map<String, List<Story>> grouped = {};
@@ -70,7 +70,7 @@ class StoryService {
       return grouped.entries.map((entry) {
         final stories = entry.value;
         final first = stories.first; // Use first story to get user info
-        
+
         return UserStoryGroup(
           userId: entry.key,
           userName: first.authorName ?? "Unknown User",
@@ -78,7 +78,6 @@ class StoryService {
           stories: stories,
         );
       }).toList();
-
     } catch (e) {
       debugPrint("Error fetching stories: $e");
       return [];
@@ -99,13 +98,15 @@ class StoryService {
     } catch (e) {
       // Ignore unique violation (already viewed)
       // Postgres error code 23505 is unique_violation, but Supabase SDK throws PlatformException or PostgrestException
-      if (e.toString().contains("duplicate key") || e.toString().contains("23505")) {
+      if (e.toString().contains("duplicate key") ||
+          e.toString().contains("23505")) {
         // already viewed, safe to ignore
       } else {
         debugPrint("Error viewing story: $e");
       }
     }
   }
+
   /// Fetches active stories for a specific user
   Future<List<Story>> fetchUserStories(String userId) async {
     try {
@@ -138,7 +139,7 @@ class StoryService {
           .eq('story_id', storyId)
           .eq('user_id', user.id)
           .maybeSingle();
-      
+
       return response != null;
     } catch (e) {
       return false;
@@ -146,7 +147,11 @@ class StoryService {
   }
 
   /// Like a story
-  Future<void> likeStory(String storyId, String ownerId, String? mediaUrl) async {
+  Future<void> likeStory(
+    String storyId,
+    String ownerId,
+    String? mediaUrl,
+  ) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return;
 
@@ -162,7 +167,7 @@ class StoryService {
       if (user.id != ownerId) {
         // Find or Create Chat
         final chatId = await _getOrCreateChatId(user.id, ownerId);
-        
+
         // Send "Story Like" Message
         // Special type: story_like. Content: mediaUrl (thumbnail)
         await _supabase.from('social_messages').insert({
@@ -171,14 +176,16 @@ class StoryService {
           'content': mediaUrl ?? '',
           'type': 'story_like',
         });
-        
-        // Update summary
-        await _supabase.from('social_chats').update({
-          'updated_at': DateTime.now().toIso8601String(),
-          'last_message': '🔥 Menyukai story',
-        }).eq('id', chatId);
-      }
 
+        // Update summary
+        await _supabase
+            .from('social_chats')
+            .update({
+              'updated_at': DateTime.now().toIso8601String(),
+              'last_message': '🔥 Menyukai story',
+            })
+            .eq('id', chatId);
+      }
     } catch (e) {
       debugPrint("Error liking story: $e");
     }
@@ -201,17 +208,22 @@ class StoryService {
   }
 
   /// Reply to a story
-  Future<void> replyToStory(String storyId, String ownerId, String message, String mediaUrl) async {
+  Future<void> replyToStory(
+    String storyId,
+    String ownerId,
+    String message,
+    String mediaUrl,
+  ) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return;
-    
+
     // Prevent replying to self? Maybe allowed for testing.
     // if (user.id == ownerId) return;
 
     try {
       // 1. Find or Create Chat
       final chatId = await _getOrCreateChatId(user.id, ownerId);
-      
+
       // 2. Prepare content: mediaUrl|||message
       // Using '|||' as separator as observed in SocialChatDetailPage
       final content = '$mediaUrl|||$message';
@@ -225,11 +237,13 @@ class StoryService {
       });
 
       // 4. Update Chat Summary
-      await _supabase.from('social_chats').update({
-        'updated_at': DateTime.now().toIso8601String(),
-        'last_message': '💬 Membalas story',
-      }).eq('id', chatId);
-
+      await _supabase
+          .from('social_chats')
+          .update({
+            'updated_at': DateTime.now().toIso8601String(),
+            'last_message': '💬 Membalas story',
+          })
+          .eq('id', chatId);
     } catch (e) {
       debugPrint("Error replying to story: $e");
       rethrow;
@@ -241,76 +255,76 @@ class StoryService {
     // 1. Check existing chats where I am a participant
     // Using a simpler client-side check for robustness without complex RPC
     try {
-        final myChats = await _supabase
-            .from('social_chats')
-            .select()
-            .contains('participants', [myId]);
-        
-        for (var chat in myChats) {
-          final participants = List<dynamic>.from(chat['participants']);
-          if (participants.contains(targetId)) {
-            return chat['id'];
-          }
+      final myChats = await _supabase.from('social_chats').select().contains(
+        'participants',
+        [myId],
+      );
+
+      for (var chat in myChats) {
+        final participants = List<dynamic>.from(chat['participants']);
+        if (participants.contains(targetId)) {
+          return chat['id'];
         }
-        
-        // 2. Create new chat if not found
-        final res = await _supabase
-            .from('social_chats')
-            .insert({
-              'participants': [myId, targetId],
-              'last_message': 'Started a conversation',
-              'updated_at': DateTime.now().toIso8601String(),
-            })
-            .select()
-            .single();
-        
-        return res['id'];
+      }
+
+      // 2. Create new chat if not found
+      final res = await _supabase
+          .from('social_chats')
+          .insert({
+            'participants': [myId, targetId],
+            'last_message': 'Started a conversation',
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .select()
+          .single();
+
+      return res['id'];
     } catch (e) {
       throw Exception("Failed to get or create chat: $e");
     }
   }
+
   /// Delete a story
   Future<void> deleteStory(String storyId) async {
-     try {
-       final user = _supabase.auth.currentUser;
-       if (user == null) return;
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) return;
 
-       // RLS policy usually handles auth check, but explicit check is good
-       await _supabase
-           .from('stories')
-           .delete()
-           .eq('id', storyId)
-           .eq('user_id', user.id);
-     } catch (e) {
-       debugPrint("Error deleting story: $e");
-       rethrow;
-     }
+      // RLS policy usually handles auth check, but explicit check is good
+      await _supabase
+          .from('stories')
+          .delete()
+          .eq('id', storyId)
+          .eq('user_id', user.id);
+    } catch (e) {
+      debugPrint("Error deleting story: $e");
+      rethrow;
+    }
   }
 
   /// Fetch users who viewed a story
   Future<List<Map<String, dynamic>>> fetchStoryViewers(String storyId) async {
-     try {
-       // Query story_views joined with profiles
-       final response = await _supabase
-           .from('story_views')
-           .select('viewed_at, profiles:viewer_id(full_name, avatar_url)')
-           .eq('story_id', storyId)
-           .order('viewed_at', ascending: false);
-       
-       // Transform to list of clean maps
-       final List<dynamic> data = response as List<dynamic>;
-       return data.map((item) {
-          final profile = item['profiles'] ?? {};
-          return {
-            'full_name': profile['full_name'] ?? 'Unknown',
-            'avatar_url': profile['avatar_url'],
-            'viewed_at': item['viewed_at'],
-          };
-       }).toList();
+    try {
+      // Query story_views joined with profiles
+      final response = await _supabase
+          .from('story_views')
+          .select('viewed_at, profiles:viewer_id(full_name, avatar_url)')
+          .eq('story_id', storyId)
+          .order('viewed_at', ascending: false);
 
-     } catch (e) {
-       debugPrint("Error fetching view stats: $e");
-       return [];
-     }
+      // Transform to list of clean maps
+      final List<dynamic> data = response as List<dynamic>;
+      return data.map((item) {
+        final profile = item['profiles'] ?? {};
+        return {
+          'full_name': profile['full_name'] ?? 'Unknown',
+          'avatar_url': profile['avatar_url'],
+          'viewed_at': item['viewed_at'],
+        };
+      }).toList();
+    } catch (e) {
+      debugPrint("Error fetching view stats: $e");
+      return [];
+    }
   }
 }

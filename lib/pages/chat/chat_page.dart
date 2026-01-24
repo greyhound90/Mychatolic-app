@@ -16,9 +16,6 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   // --- DESIGN SYSTEM CONSTANTS (White UI) ---
 
-
-
-
   static const Color kTextTitle = Color(0xFF0F172A); // Navy 900
   static const Color kTextBody = Color(0xFF334155); // Slate 700
   static const Color kTextMeta = Color(0xFF64748B); // Slate 500
@@ -57,7 +54,7 @@ class _ChatPageState extends State<ChatPage> {
       "message": "Stefanus: Jangan lupa latihan koor nanti malam!",
       "time": "Kemarin",
       "unread": 5,
-      "avatar_url": "", 
+      "avatar_url": "",
     },
     {
       "id": 4,
@@ -92,7 +89,7 @@ class _ChatPageState extends State<ChatPage> {
           .select('id, full_name, avatar_url')
           .neq('id', _supabase.auth.currentUser?.id ?? '')
           .limit(10);
-      
+
       if (mounted) {
         setState(() {
           _storyProfiles = List<Map<String, dynamic>>.from(res);
@@ -115,13 +112,13 @@ class _ChatPageState extends State<ChatPage> {
         backgroundColor: kBackground.withValues(alpha: 0.8),
         elevation: 0,
         title: Text(
-          "Pesan", 
+          "Pesan",
           style: GoogleFonts.outfit(
-            fontWeight: FontWeight.w900, 
-            fontSize: 28, 
+            fontWeight: FontWeight.w900,
+            fontSize: 28,
             color: kTextTitle,
-            letterSpacing: 0.5
-          )
+            letterSpacing: 0.5,
+          ),
         ),
         flexibleSpace: ClipRect(
           child: BackdropFilter(
@@ -135,7 +132,7 @@ class _ChatPageState extends State<ChatPage> {
             decoration: BoxDecoration(
               color: kCardColor,
               shape: BoxShape.circle,
-        // border: Border.all(color: kBorder),
+              // border: Border.all(color: kBorder),
             ),
             child: IconButton(
               onPressed: () {},
@@ -143,7 +140,7 @@ class _ChatPageState extends State<ChatPage> {
               tooltip: "Cari Pesan",
             ),
           ),
-          
+
           // NEW CHAT ACTION (Correctly Placed)
           Container(
             margin: const EdgeInsets.only(right: 16),
@@ -151,17 +148,24 @@ class _ChatPageState extends State<ChatPage> {
               gradient: const LinearGradient(colors: [kSecondary, kPrimary]),
               shape: BoxShape.circle,
               boxShadow: [
-                BoxShadow(color: kSecondary.withValues(alpha: 0.4), blurRadius: 8, offset: const Offset(0, 2))
-              ]
+                BoxShadow(
+                  color: kSecondary.withValues(alpha: 0.4),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: IconButton(
               onPressed: () {
                 // Future: Open New Chat Dialog
               },
-              icon: const Icon(Icons.add_circle_outline_rounded, color: Colors.white),
+              icon: const Icon(
+                Icons.add_circle_outline_rounded,
+                color: Colors.white,
+              ),
               tooltip: "Pesan Baru",
             ),
-          )
+          ),
         ],
       ),
       body: Column(
@@ -169,7 +173,7 @@ class _ChatPageState extends State<ChatPage> {
           // --- SECTION 1: STORY BAR ---
           // Fixed Height to 125.0 to prevent pixel overflow
           Container(
-            height: 125.0, 
+            height: 125.0,
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -179,7 +183,7 @@ class _ChatPageState extends State<ChatPage> {
               separatorBuilder: (_, _) => const SizedBox(width: 16),
               itemBuilder: (context, index) {
                 if (index == 0) return _buildMyStory();
-                
+
                 if (_isLoadingStories) return _buildSkeletonStory();
 
                 final profile = _storyProfiles[index - 1]; // Offset index
@@ -191,7 +195,10 @@ class _ChatPageState extends State<ChatPage> {
           // --- SECTION 2: CHAT LIST ---
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.only(top: 8, bottom: 100), // Padding ensures last item visible
+              padding: const EdgeInsets.only(
+                top: 8,
+                bottom: 100,
+              ), // Padding ensures last item visible
               itemCount: _dummyChats.length,
               itemBuilder: (context, index) {
                 final chat = _dummyChats[index];
@@ -220,7 +227,10 @@ class _ChatPageState extends State<ChatPage> {
               padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: kPrimary.withValues(alpha: 0.5), width: 2), 
+                border: Border.all(
+                  color: kPrimary.withValues(alpha: 0.5),
+                  width: 2,
+                ),
               ),
               child: CircleAvatar(
                 radius: 28,
@@ -249,17 +259,18 @@ class _ChatPageState extends State<ChatPage> {
               ),
             ),
             Positioned(
-              bottom: 0, right: 0,
+              bottom: 0,
+              right: 0,
               child: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   color: kPrimary,
                   shape: BoxShape.circle,
-                  border: Border.all(color: kBackground, width: 2)
+                  border: Border.all(color: kBackground, width: 2),
                 ),
                 child: const Icon(Icons.add, color: Colors.white, size: 12),
               ),
-            )
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -284,14 +295,17 @@ class _ChatPageState extends State<ChatPage> {
             shape: BoxShape.circle,
             // Gradient Ring for "Story"
             gradient: LinearGradient(
-              colors: [kSecondary, kPrimary], 
+              colors: [kSecondary, kPrimary],
               begin: Alignment.bottomLeft,
               end: Alignment.topRight,
             ),
           ),
           child: Container(
             padding: const EdgeInsets.all(2), // Gap
-            decoration: const BoxDecoration(color: kBackground, shape: BoxShape.circle),
+            decoration: const BoxDecoration(
+              color: kBackground,
+              shape: BoxShape.circle,
+            ),
             child: CircleAvatar(
               radius: 28,
               backgroundColor: kCardColor,
@@ -332,12 +346,23 @@ class _ChatPageState extends State<ChatPage> {
   Widget _buildSkeletonStory() {
     return Column(
       children: [
-         Container(
-           width: 64, height: 64,
-           decoration: const BoxDecoration(color: kCardColor, shape: BoxShape.circle),
-         ),
-         const SizedBox(height: 8),
-         Container(width: 40, height: 8, decoration: BoxDecoration(color: kCardColor, borderRadius: BorderRadius.circular(4)))
+        Container(
+          width: 64,
+          height: 64,
+          decoration: const BoxDecoration(
+            color: kCardColor,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: 40,
+          height: 8,
+          decoration: BoxDecoration(
+            color: kCardColor,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
       ],
     );
   }
@@ -359,9 +384,11 @@ class _ChatPageState extends State<ChatPage> {
         child: InkWell(
           onTap: () {
             Navigator.push(
-              context, 
+              context,
               // Passing chat ID and Name to detail page
-              MaterialPageRoute(builder: (_) => ChatDetailPage(chatId: chat['id'], name: name))
+              MaterialPageRoute(
+                builder: (_) => ChatDetailPage(chatId: chat['id'], name: name),
+              ),
             );
           },
           borderRadius: BorderRadius.circular(20),
@@ -376,30 +403,36 @@ class _ChatPageState extends State<ChatPage> {
                   children: [
                     CircleAvatar(
                       radius: 28,
-                      backgroundColor: isUnread ? kPrimary.withValues(alpha: 0.1) : kCardColor,
+                      backgroundColor: isUnread
+                          ? kPrimary.withValues(alpha: 0.1)
+                          : kCardColor,
                       child: SafeNetworkImage(
                         imageUrl: avatarUrl,
                         width: 56,
                         height: 56,
                         borderRadius: BorderRadius.circular(28),
                         fit: BoxFit.cover,
-                        fallbackColor: isUnread ? kPrimary.withValues(alpha: 0.1) : kCardColor,
+                        fallbackColor: isUnread
+                            ? kPrimary.withValues(alpha: 0.1)
+                            : kCardColor,
                         fallbackIcon: Icons.person,
                         iconColor: kTextTitle,
                       ),
                     ),
                     if (isUnread)
-                       Positioned(
-                        right: 0, bottom: 0,
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
                         child: Container(
-                          width: 14, height: 14,
+                          width: 14,
+                          height: 14,
                           decoration: BoxDecoration(
                             color: const Color(0xFF10B981), // Online Green
                             shape: BoxShape.circle,
-                            border: Border.all(color: kBackground, width: 2)
+                            border: Border.all(color: kBackground, width: 2),
                           ),
                         ),
-                      )
+                      ),
                   ],
                 ),
                 const SizedBox(width: 16),
@@ -414,22 +447,27 @@ class _ChatPageState extends State<ChatPage> {
                         children: [
                           Expanded(
                             child: Text(
-                              name, 
+                              name,
                               style: GoogleFonts.outfit(
-                                color: kTextTitle, 
-                                fontWeight: isUnread ? FontWeight.w800 : FontWeight.w600, 
-                                fontSize: 16
+                                color: kTextTitle,
+                                fontWeight: isUnread
+                                    ? FontWeight.w800
+                                    : FontWeight.w600,
+                                fontSize: 16,
                               ),
-                              maxLines: 1, overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           Text(
-                            chat['time'], 
+                            chat['time'],
                             style: GoogleFonts.outfit(
-                              color: isUnread ? kPrimary : kTextMeta, 
+                              color: isUnread ? kPrimary : kTextMeta,
                               fontSize: 12,
-                              fontWeight: isUnread ? FontWeight.bold : FontWeight.normal
-                            )
+                              fontWeight: isUnread
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
                           ),
                         ],
                       ),
@@ -438,11 +476,13 @@ class _ChatPageState extends State<ChatPage> {
                         children: [
                           Expanded(
                             child: Text(
-                              chat['message'], 
+                              chat['message'],
                               style: GoogleFonts.outfit(
-                                color: isUnread ? kTextTitle : kTextBody, 
+                                color: isUnread ? kTextTitle : kTextBody,
                                 fontSize: 13,
-                                fontWeight: isUnread ? FontWeight.w500 : FontWeight.normal
+                                fontWeight: isUnread
+                                    ? FontWeight.w500
+                                    : FontWeight.normal,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -451,22 +491,27 @@ class _ChatPageState extends State<ChatPage> {
                           if (isUnread)
                             Container(
                               margin: const EdgeInsets.only(left: 8),
-                              width: 20, height: 20,
+                              width: 20,
+                              height: 20,
                               alignment: Alignment.center,
                               decoration: const BoxDecoration(
-                                color: kPrimary, 
-                                shape: BoxShape.circle
+                                color: kPrimary,
+                                shape: BoxShape.circle,
                               ),
                               child: Text(
                                 chat['unread'].toString(),
-                                style: GoogleFonts.outfit(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                style: GoogleFonts.outfit(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            )
+                            ),
                         ],
-                      )
+                      ),
                     ],
                   ),
-                )
+                ),
               ],
             ),
           ),

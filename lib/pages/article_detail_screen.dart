@@ -24,11 +24,19 @@ class ArticleDetailScreen extends StatelessWidget {
             foregroundColor: Colors.white,
             flexibleSpace: FlexibleSpaceBar(
               background: article.imageUrl != null
-                  ? SafeNetworkImage(imageUrl: article.imageUrl!, fit: BoxFit.cover)
+                  ? SafeNetworkImage(
+                      imageUrl: article.imageUrl!,
+                      fit: BoxFit.cover,
+                    )
                   : Container(
                       color: kPrimary,
                       child: const Center(
-                          child: Icon(Icons.church, size: 64, color: Colors.white30)),
+                        child: Icon(
+                          Icons.church,
+                          size: 64,
+                          color: Colors.white30,
+                        ),
+                      ),
                     ),
             ),
           ),
@@ -43,12 +51,17 @@ class ArticleDetailScreen extends StatelessWidget {
                   // Category Badge
                   if (article.category != null)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
                         color: kSecondary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: kSecondary.withValues(alpha: 0.2)),
+                        border: Border.all(
+                          color: kSecondary.withValues(alpha: 0.2),
+                        ),
                       ),
                       child: Text(
                         article.category!.toUpperCase(),

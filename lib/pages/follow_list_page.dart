@@ -19,7 +19,7 @@ class FollowListPage extends StatefulWidget {
 
 class _FollowListPageState extends State<FollowListPage> {
   final _supabase = Supabase.instance.client;
-  
+
   bool _isLoading = true;
   List<Map<String, dynamic>> _userList = [];
   Set<String> _myFollowingIds = {}; // IDs that the CURRENT user follows
@@ -60,16 +60,20 @@ class _FollowListPageState extends State<FollowListPage> {
             .from('follows')
             .select('follower_id')
             .eq('following_id', widget.targetUserId);
-        
-        relatedUserIds = relationData.map((e) => e['follower_id'] as String).toList();
+
+        relatedUserIds = relationData
+            .map((e) => e['follower_id'] as String)
+            .toList();
       } else {
         // Who does targetUserId follow?
         relationData = await _supabase
             .from('follows')
             .select('following_id')
             .eq('follower_id', widget.targetUserId);
-            
-        relatedUserIds = relationData.map((e) => e['following_id'] as String).toList();
+
+        relatedUserIds = relationData
+            .map((e) => e['following_id'] as String)
+            .toList();
       }
 
       if (relatedUserIds.isEmpty) {
@@ -83,7 +87,7 @@ class _FollowListPageState extends State<FollowListPage> {
       // 2. Fetch Profile Details for those IDs
       final profilesData = await _supabase
           .from('profiles')
-          .select('id, full_name, avatar_url, role') 
+          .select('id, full_name, avatar_url, role')
           .inFilter('id', relatedUserIds);
 
       // 3. Check which of THESE users *I* (CurrentUser) am following
@@ -93,19 +97,22 @@ class _FollowListPageState extends State<FollowListPage> {
             .select('following_id')
             .eq('follower_id', _currentUserId!)
             .inFilter('following_id', relatedUserIds);
-            
-        _myFollowingIds = myFollowsData.map((e) => e['following_id'] as String).toSet();
+
+        _myFollowingIds = myFollowsData
+            .map((e) => e['following_id'] as String)
+            .toSet();
       }
 
       setState(() {
         _userList = List<Map<String, dynamic>>.from(profilesData);
         _isLoading = false;
       });
-
     } catch (e) {
       debugPrint("Error fetching follow list: $e");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error load: $e")));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error load: $e")));
       }
       setState(() => _isLoading = false);
     }
@@ -139,7 +146,7 @@ class _FollowListPageState extends State<FollowListPage> {
         await _supabase.from('follows').insert({
           'follower_id': _currentUserId,
           'following_id': userId,
-          'created_at': DateTime.now().toIso8601String()
+          'created_at': DateTime.now().toIso8601String(),
         });
       }
     } catch (e) {
@@ -151,7 +158,11 @@ class _FollowListPageState extends State<FollowListPage> {
           _myFollowingIds.remove(userId);
         }
       });
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal update follow: $e")));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Gagal update follow: $e")));
+      }
     }
   }
 
@@ -162,7 +173,13 @@ class _FollowListPageState extends State<FollowListPage> {
     return Scaffold(
       backgroundColor: bgNavy,
       appBar: AppBar(
-        title: Text(title, style: GoogleFonts.outfit(color: textWhite, fontWeight: FontWeight.bold)),
+        title: Text(
+          title,
+          style: GoogleFonts.outfit(
+            color: textWhite,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         backgroundColor: bgNavy,
         elevation: 0,
         leading: IconButton(
@@ -177,15 +194,15 @@ class _FollowListPageState extends State<FollowListPage> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: accentIndigo))
           : _userList.isEmpty
-              ? _buildEmptyState()
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  itemCount: _userList.length,
-                  itemBuilder: (context, index) {
-                    final user = _userList[index];
-                    return _buildUserItem(user);
-                  },
-                ),
+          ? _buildEmptyState()
+          : ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              itemCount: _userList.length,
+              itemBuilder: (context, index) {
+                final user = _userList[index];
+                return _buildUserItem(user);
+              },
+            ),
     );
   }
 
@@ -195,14 +212,22 @@ class _FollowListPageState extends State<FollowListPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            widget.isFollowersList ? Icons.group_off_outlined : Icons.person_off_outlined,
-            color: Colors.white24, 
-            size: 64
+            widget.isFollowersList
+                ? Icons.group_off_outlined
+                : Icons.person_off_outlined,
+            color: Colors.white24,
+            size: 64,
           ),
           const SizedBox(height: 16),
           Text(
-            widget.isFollowersList ? "Belum ada pengikut" : "Belum mengikuti siapapun",
-            style: GoogleFonts.outfit(color: textGrey, fontSize: 16, fontWeight: FontWeight.w500),
+            widget.isFollowersList
+                ? "Belum ada pengikut"
+                : "Belum mengikuti siapapun",
+            style: GoogleFonts.outfit(
+              color: textGrey,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
@@ -213,7 +238,7 @@ class _FollowListPageState extends State<FollowListPage> {
     final String userId = user['id'];
     final String fullName = user['full_name'] ?? "User";
     final String? avatarUrl = user['avatar_url'];
-    
+
     final bool isMe = userId == _currentUserId;
     final bool amIFollowing = _myFollowingIds.contains(userId);
 
@@ -239,7 +264,8 @@ class _FollowListPageState extends State<FollowListPage> {
               backgroundColor: bgNavy,
               child: SafeNetworkImage(
                 imageUrl: avatarUrl,
-                width: 40, height: 40,
+                width: 40,
+                height: 40,
                 borderRadius: BorderRadius.circular(20),
                 fit: BoxFit.cover,
                 fallbackIcon: Icons.person,
@@ -249,21 +275,25 @@ class _FollowListPageState extends State<FollowListPage> {
             ),
           ),
           const SizedBox(width: 12),
-          
+
           // 2. Info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  fullName, 
-                  style: GoogleFonts.outfit(color: textWhite, fontWeight: FontWeight.bold, fontSize: 14),
+                  fullName,
+                  style: GoogleFonts.outfit(
+                    color: textWhite,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  "User", 
+                  "User",
                   style: GoogleFonts.outfit(color: textGrey, fontSize: 12),
-                ), 
+                ),
               ],
             ),
           ),
@@ -273,33 +303,50 @@ class _FollowListPageState extends State<FollowListPage> {
             SizedBox(
               height: 32,
               child: amIFollowing
-                ? OutlinedButton(
-                    onPressed: () => _toggleFollow(userId),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.white30),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      foregroundColor: textWhite,
-                    ),
-                    child: Text("Following", style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w600)),
-                  )
-                : Container(
-                    decoration: BoxDecoration(
-                      gradient: primaryGradient,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: ElevatedButton(
+                  ? OutlinedButton(
                       onPressed: () => _toggleFollow(userId),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.white30),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                         padding: const EdgeInsets.symmetric(horizontal: 16),
+                        foregroundColor: textWhite,
                       ),
-                      child: Text("Follow", style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: textWhite)),
+                      child: Text(
+                        "Following",
+                        style: GoogleFonts.outfit(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    )
+                  : Container(
+                      decoration: BoxDecoration(
+                        gradient: primaryGradient,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: ElevatedButton(
+                        onPressed: () => _toggleFollow(userId),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                        ),
+                        child: Text(
+                          "Follow",
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: textWhite,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-            )
+            ),
         ],
       ),
     );

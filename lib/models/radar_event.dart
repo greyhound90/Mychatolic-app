@@ -1,3 +1,5 @@
+import 'package:mychatolic_app/models/profile.dart';
+
 enum RadarParticipantRole { host, member, unknown }
 
 extension RadarParticipantRoleX on RadarParticipantRole {
@@ -98,11 +100,16 @@ class RadarEvent {
   final DateTime eventTimeUtc;
   final String creatorId;
   final String visibility; // PUBLIC / PRIVATE
+
   final String status; // e.g. PUBLISHED / DRAFT / CANCELLED
 
   final int maxParticipants;
   final bool allowMemberInvite;
   final bool requireHostApproval;
+
+  // Joins / Computed
+  final int participantCount;
+  final Profile? creatorProfile;
 
   final String? chatRoomId;
   final DateTime? createdAtUtc;
@@ -121,6 +128,8 @@ class RadarEvent {
     required this.maxParticipants,
     required this.allowMemberInvite,
     required this.requireHostApproval,
+    this.participantCount = 0,
+    this.creatorProfile,
     this.chatRoomId,
     this.createdAtUtc,
     this.updatedAtUtc,
@@ -178,6 +187,14 @@ class RadarEvent {
       chatRoomId: (json['chat_room_id'] ?? json['chatRoomId'])?.toString(),
       createdAtUtc: parseUtc(json['created_at'] ?? json['createdAt']),
       updatedAtUtc: parseUtc(json['updated_at'] ?? json['updatedAt']),
+
+      // Handle joins
+      participantCount: parseInt(
+        json['participant_count'] ?? json['participantCount'],
+      ),
+      creatorProfile: json['profiles'] != null
+          ? Profile.fromJson(json['profiles'])
+          : null,
     );
   }
 
@@ -214,6 +231,8 @@ class RadarEvent {
     int? maxParticipants,
     bool? allowMemberInvite,
     bool? requireHostApproval,
+    int? participantCount,
+    Profile? creatorProfile,
     String? chatRoomId,
     DateTime? createdAtUtc,
     DateTime? updatedAtUtc,
@@ -230,7 +249,10 @@ class RadarEvent {
       status: status ?? this.status,
       maxParticipants: maxParticipants ?? this.maxParticipants,
       allowMemberInvite: allowMemberInvite ?? this.allowMemberInvite,
+
       requireHostApproval: requireHostApproval ?? this.requireHostApproval,
+      participantCount: participantCount ?? this.participantCount,
+      creatorProfile: creatorProfile ?? this.creatorProfile,
       chatRoomId: chatRoomId ?? this.chatRoomId,
       createdAtUtc: createdAtUtc ?? this.createdAtUtc,
       updatedAtUtc: updatedAtUtc ?? this.updatedAtUtc,

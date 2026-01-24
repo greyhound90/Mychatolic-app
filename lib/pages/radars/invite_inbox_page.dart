@@ -46,7 +46,9 @@ class _InviteInboxPageState extends State<InviteInboxPage> {
       await _radarService.respondToInvite(inviteId: inviteId, accept: accept);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(accept ? "Undangan diterima" : "Undangan ditolak")),
+        SnackBar(
+          content: Text(accept ? "Undangan diterima" : "Undangan ditolak"),
+        ),
       );
       if (accept) {
         final event = invite['event'] is Map
@@ -57,7 +59,8 @@ class _InviteInboxPageState extends State<InviteInboxPage> {
           await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => RadarDetailPage(event: radarEvent, radarData: event),
+              builder: (_) =>
+                  RadarDetailPage(event: radarEvent, radarData: event),
             ),
           );
         }
@@ -68,9 +71,9 @@ class _InviteInboxPageState extends State<InviteInboxPage> {
         debugPrint("[RADAR INVITE INBOX] respond failed: $e\n$st");
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Gagal memproses undangan")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Gagal memproses undangan")));
     } finally {
       if (mounted) setState(() => _processing.remove(inviteId));
     }
@@ -97,161 +100,157 @@ class _InviteInboxPageState extends State<InviteInboxPage> {
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _invites.isEmpty
-                ? ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: [
-                      const SizedBox(height: 80),
-                      Center(
-                        child: Text(
-                          "Tidak ada undangan baru",
-                          style: GoogleFonts.outfit(color: Colors.grey[700]),
-                        ),
-                      ),
-                    ],
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _invites.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final invite = _invites[index];
-                      final inviter = invite['profiles'] is Map
-                          ? Map<String, dynamic>.from(invite['profiles'] as Map)
-                          : const <String, dynamic>{};
-                      final event = invite['event'] is Map
-                          ? Map<String, dynamic>.from(invite['event'] as Map)
-                          : const <String, dynamic>{};
+            ? ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
+                  const SizedBox(height: 80),
+                  Center(
+                    child: Text(
+                      "Tidak ada undangan baru",
+                      style: GoogleFonts.outfit(color: Colors.grey[700]),
+                    ),
+                  ),
+                ],
+              )
+            : ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: _invites.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final invite = _invites[index];
+                  final inviter = invite['profiles'] is Map
+                      ? Map<String, dynamic>.from(invite['profiles'] as Map)
+                      : const <String, dynamic>{};
+                  final event = invite['event'] is Map
+                      ? Map<String, dynamic>.from(invite['event'] as Map)
+                      : const <String, dynamic>{};
 
-                      final inviterName =
-                          (inviter['full_name'] ?? 'Seseorang').toString();
-                      final inviterAvatar =
-                          (inviter['avatar_url'] ?? '').toString();
-                      final title =
-                          (event['title'] ?? 'Radar Misa').toString();
-                      final whenRaw = (event['event_time'] ?? '').toString();
-                      final when =
-                          DateTime.tryParse(whenRaw)?.toLocal();
-                      final whenText = when != null
-                          ? DateFormat('EEE, dd MMM • HH:mm').format(when)
-                          : "-";
+                  final inviterName = (inviter['full_name'] ?? 'Seseorang')
+                      .toString();
+                  final inviterAvatar = (inviter['avatar_url'] ?? '')
+                      .toString();
+                  final title = (event['title'] ?? 'Radar Misa').toString();
+                  final whenRaw = (event['event_time'] ?? '').toString();
+                  final when = DateTime.tryParse(whenRaw)?.toLocal();
+                  final whenText = when != null
+                      ? DateFormat('EEE, dd MMM • HH:mm').format(when)
+                      : "-";
 
-                      final inviteId = (invite['id'] ?? '').toString();
-                      final isProcessing = _processing.contains(inviteId);
+                  final inviteId = (invite['id'] ?? '').toString();
+                  final isProcessing = _processing.contains(inviteId);
 
-                      return Card(
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(14),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                  return Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              Row(
-                                children: [
-                                  CircleAvatar(
-                                    backgroundColor: Colors.grey.shade200,
-                                    child: ClipOval(
-                                      child: SafeNetworkImage(
-                                        imageUrl: inviterAvatar,
-                                        width: 40,
-                                        height: 40,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
+                              CircleAvatar(
+                                backgroundColor: Colors.grey.shade200,
+                                child: ClipOval(
+                                  child: SafeNetworkImage(
+                                    imageUrl: inviterAvatar,
+                                    width: 40,
+                                    height: 40,
+                                    fit: BoxFit.cover,
                                   ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      inviterName,
-                                      style: GoogleFonts.outfit(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                title,
-                                style: GoogleFonts.outfit(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16,
                                 ),
                               ),
-                              const SizedBox(height: 6),
-                              Text(
-                                whenText,
-                                style: GoogleFonts.outfit(
-                                  color: Colors.grey[700],
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  inviterName,
+                                  style: GoogleFonts.outfit(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: OutlinedButton(
-                                      onPressed: isProcessing
-                                          ? null
-                                          : () => _respond(invite, false),
-                                      style: OutlinedButton.styleFrom(
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(10),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 12,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        "Tolak",
-                                        style: GoogleFonts.outfit(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: ElevatedButton(
-                                      onPressed: isProcessing
-                                          ? null
-                                          : () => _respond(invite, true),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF0088CC),
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(10),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 12,
-                                        ),
-                                      ),
-                                      child: isProcessing
-                                          ? const SizedBox(
-                                              width: 18,
-                                              height: 18,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                              ),
-                                            )
-                                          : Text(
-                                              "Terima",
-                                              style: GoogleFonts.outfit(
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                    ),
-                                  ),
-                                ],
                               ),
                             ],
                           ),
-                        ),
-                      );
-                    },
-                  ),
+                          const SizedBox(height: 10),
+                          Text(
+                            title,
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            whenText,
+                            style: GoogleFonts.outfit(color: Colors.grey[700]),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: isProcessing
+                                      ? null
+                                      : () => _respond(invite, false),
+                                  style: OutlinedButton.styleFrom(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    "Tolak",
+                                    style: GoogleFonts.outfit(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: isProcessing
+                                      ? null
+                                      : () => _respond(invite, true),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF0088CC),
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                  child: isProcessing
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : Text(
+                                          "Terima",
+                                          style: GoogleFonts.outfit(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
       ),
     );
   }

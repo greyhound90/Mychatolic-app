@@ -14,23 +14,20 @@ import 'package:mychatolic_app/pages/post_detail_screen.dart';
 import 'package:mychatolic_app/pages/settings_page.dart';
 import 'package:mychatolic_app/pages/social_chat_detail_page.dart';
 import 'package:mychatolic_app/pages/story/story_view_page.dart';
-import 'package:mychatolic_app/edit_profile_page.dart';
+import 'package:mychatolic_app/pages/profile/edit_profile_page.dart';
 
 class ProfilePage extends StatefulWidget {
   final String? userId; // If null, shows current user's profile
   final bool isBackButtonEnabled; // For navigation from other pages
 
-  const ProfilePage({
-    super.key, 
-    this.userId,
-    this.isBackButtonEnabled = false,
-  });
+  const ProfilePage({super.key, this.userId, this.isBackButtonEnabled = false});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStateMixin {
+class _ProfilePageState extends State<ProfilePage>
+    with SingleTickerProviderStateMixin {
   final ProfileService _profileService = ProfileService();
   final StoryService _storyService = StoryService();
   final ChatService _chatService = ChatService();
@@ -39,20 +36,20 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
 
   late TabController _tabController;
   final ScrollController _scrollController = ScrollController();
-  
+
   // State Variables
   bool _isLoading = true;
   String? _error;
-  
+
   Profile? _profile;
   Map<String, int> _stats = {'followers': 0, 'following': 0, 'posts': 0};
   bool _isFollowing = false;
   bool _isMe = false;
-  
+
   // Post Lists (Pagination State)
   List<UserPost> _photoPosts = [];
   List<UserPost> _textPosts = [];
-  
+
   bool _isFirstLoadRunning = true;
   bool _isLoadMoreRunning = false;
   bool _hasNextPage = true;
@@ -68,10 +65,11 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     _tabController = TabController(length: 2, vsync: this);
     _checkIsMe();
     _loadProfileData();
-    
+
     // Listener untuk Pagination
     _scrollController.addListener(() {
-      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200 &&
+      if (_scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent - 200 &&
           !_isFirstLoadRunning &&
           !_isLoadMoreRunning &&
           _hasNextPage) {
@@ -128,7 +126,6 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
 
       // 4. Fetch Initial Posts
       _loadInitialPosts(targetUserId);
-
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -172,7 +169,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
         setState(() {
           _separatePosts(posts);
           _isFirstLoadRunning = false;
-          
+
           if (posts.length < _limit) {
             _hasNextPage = false;
           }
@@ -205,7 +202,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
             _separatePosts(posts);
             _currentPage = nextPage;
           }
-          
+
           if (posts.length < _limit) {
             _hasNextPage = false;
           }
@@ -224,7 +221,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
 
   Future<void> _handleFollowToggle() async {
     if (_profile == null) return;
-    
+
     final bool previousState = _isFollowing;
     final int previousCount = _stats['followers'] ?? 0;
 
@@ -250,70 +247,81 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
           _isFollowing = previousState;
           _stats['followers'] = previousCount;
         });
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal: $e")));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Gagal: $e")));
       }
     }
   }
 
   Future<void> _navigateToChat() async {
-     if (_profile != null) {
-        try {
-          final chatId = await _chatService.getOrCreatePrivateChat(_profile!.id);
-          
-          if (!mounted) return;
+    if (_profile != null) {
+      try {
+        final chatId = await _chatService.getOrCreatePrivateChat(_profile!.id);
 
-          final Map<String, dynamic> opponentProfileMap = {
-            'id': _profile!.id,
-            'full_name': _profile!.fullName ?? "User",
-            'avatar_url': _profile!.avatarUrl,
-            'role': _profile!.role,
-          };
+        if (!mounted) return;
 
-          Navigator.push(context, MaterialPageRoute(builder: (_) => SocialChatDetailPage(
-            chatId: chatId, 
-            opponentProfile: opponentProfileMap,
-          )));
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
-          }
+        final Map<String, dynamic> opponentProfileMap = {
+          'id': _profile!.id,
+          'full_name': _profile!.fullName ?? "User",
+          'avatar_url': _profile!.avatarUrl,
+          'role': _profile!.role,
+        };
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SocialChatDetailPage(
+              chatId: chatId,
+              opponentProfile: opponentProfileMap,
+            ),
+          ),
+        );
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("Error: $e")));
         }
-     }
+      }
+    }
   }
-  
+
   Future<void> _handleEditProfile() async {
     final bool? result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const EditProfilePage()),
     );
     if (result == true) {
-      _loadProfileData(); 
+      _loadProfileData();
     }
   }
 
   Future<void> _openSettings() async {
     await Navigator.push(
-      context, 
-      MaterialPageRoute(builder: (_) => const SettingsPage())
+      context,
+      MaterialPageRoute(builder: (_) => const SettingsPage()),
     );
     if (mounted) {
-      _loadProfileData(); 
+      _loadProfileData();
     }
   }
 
   void _handleAvatarTap() {
     if (_userStories.isNotEmpty) {
       Navigator.push(
-        context, 
-        MaterialPageRoute(builder: (_) => StoryViewPage(
-          stories: _userStories, 
-          userProfile: {
-             'full_name': _profile?.fullName,
-             'avatar_url': _profile?.avatarUrl,
-          },
-        )),
+        context,
+        MaterialPageRoute(
+          builder: (_) => StoryViewPage(
+            stories: _userStories,
+            userProfile: {
+              'full_name': _profile?.fullName,
+              'avatar_url': _profile?.avatarUrl,
+            },
+          ),
+        ),
       ).then((_) {
-         _loadProfileData(); 
+        _loadProfileData();
       });
     }
   }
@@ -321,7 +329,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
   @override
   Widget build(BuildContext context) {
     const primaryBlue = Color(0xFF0088CC);
-    
+
     if (_isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator(color: primaryBlue)),
@@ -335,12 +343,14 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
       );
     }
 
-    if (_profile == null) return const Scaffold(body: Center(child: Text("User not found")));
+    if (_profile == null) {
+      return const Scaffold(body: Center(child: Text("User not found")));
+    }
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: NestedScrollView(
-        controller: _scrollController, 
+        controller: _scrollController,
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
             SliverAppBar(
@@ -349,17 +359,24 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
               pinned: true,
               backgroundColor: primaryBlue,
               elevation: 0,
-              leading: widget.isBackButtonEnabled ? IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
-              ) : null,
+              leading: widget.isBackButtonEnabled
+                  ? IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                    )
+                  : null,
               title: Text(
-                _profile!.fullName ?? "Profile", 
-                style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)
+                _profile!.fullName ?? "Profile",
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               centerTitle: true,
               shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(20),
+                ),
               ),
               actions: [
                 if (_isMe)
@@ -371,14 +388,17 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                   PopupMenuButton<String>(
                     icon: const Icon(Icons.more_vert, color: Colors.white),
                     onSelected: (val) {
-                       if (val == 'report') {
-                         _showReportDialog(context);
-                       }
+                      if (val == 'report') {
+                        _showReportDialog(context);
+                      }
                     },
                     itemBuilder: (context) => [
-                      const PopupMenuItem(value: 'report', child: Text("Report User")),
+                      const PopupMenuItem(
+                        value: 'report',
+                        child: Text("Report User"),
+                      ),
                     ],
-                  )
+                  ),
               ],
             ),
 
@@ -395,7 +415,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                 onAvatarTap: _handleAvatarTap,
               ),
             ),
-            
+
             SliverPersistentHeader(
               delegate: _SliverTabBarDelegate(
                 TabBar(
@@ -407,7 +427,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                     Tab(icon: Icon(Icons.grid_on_rounded)),
                     Tab(icon: Icon(Icons.list_rounded)),
                   ],
-                )
+                ),
               ),
               pinned: true,
             ),
@@ -415,104 +435,101 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
         },
         body: TabBarView(
           controller: _tabController,
-          children: [
-            _buildGridPosts(),
-            _buildListPosts(),
-          ],
+          children: [_buildGridPosts(), _buildListPosts()],
         ),
       ),
     );
   }
 
   Widget _buildGridPosts() {
-     if (_isFirstLoadRunning) return const Center(child: CircularProgressIndicator());
-     
-     if (_photoPosts.isEmpty && !_isLoadMoreRunning) {
-       return _buildEmptyState("Belum ada foto");
-     }
+    if (_isFirstLoadRunning) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-     return CustomScrollView(
-       key: const PageStorageKey<String>('grid'),
-       slivers: [
-         SliverPadding(
-           padding: const EdgeInsets.all(2),
-           sliver: SliverGrid(
-             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-               crossAxisCount: 3, 
-               childAspectRatio: 0.8,
-               crossAxisSpacing: 2, 
-               mainAxisSpacing: 2
-             ),
-             delegate: SliverChildBuilderDelegate(
-               (context, index) {
-                 final post = _photoPosts[index];
-                 return GestureDetector(
-                   onTap: () {
-                     Navigator.push(
-                       context,
-                       MaterialPageRoute(builder: (_) => PostDetailScreen(post: post))
-                     );
-                   },
-                   child: SafeNetworkImage(
-                     imageUrl: post.imageUrl ?? "",
-                     fit: BoxFit.cover,
-                   ),
-                 );
-               },
-               childCount: _photoPosts.length,
-             ),
-           ),
-         ),
-         if (_isLoadMoreRunning)
-           const SliverToBoxAdapter(
-             child: Padding(
-               padding: EdgeInsets.all(10),
-               child: Center(child: CircularProgressIndicator()),
-             ),
-           )
-       ],
-     );
+    if (_photoPosts.isEmpty && !_isLoadMoreRunning) {
+      return _buildEmptyState("Belum ada foto");
+    }
+
+    return CustomScrollView(
+      key: const PageStorageKey<String>('grid'),
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.all(2),
+          sliver: SliverGrid(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              childAspectRatio: 0.8,
+              crossAxisSpacing: 2,
+              mainAxisSpacing: 2,
+            ),
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final post = _photoPosts[index];
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PostDetailScreen(post: post),
+                    ),
+                  );
+                },
+                child: SafeNetworkImage(
+                  imageUrl: post.imageUrl ?? "",
+                  fit: BoxFit.cover,
+                ),
+              );
+            }, childCount: _photoPosts.length),
+          ),
+        ),
+        if (_isLoadMoreRunning)
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.all(10),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          ),
+      ],
+    );
   }
 
   Widget _buildListPosts() {
-    if (_isFirstLoadRunning) return const Center(child: CircularProgressIndicator());
+    if (_isFirstLoadRunning) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
     if (_textPosts.isEmpty && !_isLoadMoreRunning) {
-       return _buildEmptyState("Belum ada postingan teks");
-     }
+      return _buildEmptyState("Belum ada postingan teks");
+    }
 
     return CustomScrollView(
       key: const PageStorageKey<String>('list'),
       slivers: [
         SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              final post = _textPosts[index];
-              return Column(
-                children: [
-                   PostCard(
-                      post: post, 
-                      socialService: _socialService,
-                      onPostUpdated: (updatedPost) {
-                        setState(() {
-                          _textPosts[index] = updatedPost;
-                        });
-                      },
-                   ),
-                   Container(height: 8, color: Colors.grey[100]),
-                ],
-              );
-            },
-            childCount: _textPosts.length,
-          ),
+          delegate: SliverChildBuilderDelegate((context, index) {
+            final post = _textPosts[index];
+            return Column(
+              children: [
+                PostCard(
+                  post: post,
+                  socialService: _socialService,
+                  onPostUpdated: (updatedPost) {
+                    setState(() {
+                      _textPosts[index] = updatedPost;
+                    });
+                  },
+                ),
+                Container(height: 8, color: Colors.grey[100]),
+              ],
+            );
+          }, childCount: _textPosts.length),
         ),
         if (_isLoadMoreRunning)
-           const SliverToBoxAdapter(
-             child: Padding(
-               padding: EdgeInsets.all(20),
-               child: Center(child: CircularProgressIndicator()),
-             ),
-           )
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          ),
       ],
     );
   }
@@ -533,7 +550,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
   Future<void> _showReportDialog(BuildContext context) async {
     String selectedReason = 'Konten tidak pantas';
     final TextEditingController descController = TextEditingController();
-    
+
     final List<String> reasons = [
       'Konten tidak pantas',
       'Pelecehan',
@@ -548,60 +565,86 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return AlertDialog(
-              title: Text("Laporkan User", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+              title: Text(
+                "Laporkan User",
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+              ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                   Text("Alasan:", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-                   DropdownButton<String>(
-                     value: selectedReason,
-                     isExpanded: true,
-                     items: reasons.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(), 
-                     onChanged: (val) {
-                       if (val != null) setStateDialog(() => selectedReason = val);
-                     },
-                   ),
-                   const SizedBox(height: 12),
-                   Text("Keterangan Tambahan:", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-                   const SizedBox(height: 4),
-                   TextField(
-                     controller: descController,
-                     decoration: const InputDecoration(
-                       hintText: "Jelaskan detail laporan...",
-                       border: OutlineInputBorder(),
-                       isDense: true,
-                     ),
-                     maxLines: 3,
-                   )
+                  Text(
+                    "Alasan:",
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                  ),
+                  DropdownButton<String>(
+                    value: selectedReason,
+                    isExpanded: true,
+                    items: reasons
+                        .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                        .toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setStateDialog(() => selectedReason = val);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    "Keterangan Tambahan:",
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: descController,
+                    decoration: const InputDecoration(
+                      hintText: "Jelaskan detail laporan...",
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    maxLines: 3,
+                  ),
                 ],
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(ctx), 
-                  child: const Text("Batal")
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text("Batal"),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                   onPressed: () async {
                     final messenger = ScaffoldMessenger.of(context);
-                    Navigator.pop(ctx); 
-                    messenger.showSnackBar(const SnackBar(content: Text("Mengirim laporan...")));
+                    Navigator.pop(ctx);
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text("Mengirim laporan...")),
+                    );
                     try {
                       await _profileService.reportUser(
-                        _profile!.id, 
-                        selectedReason, 
-                        descController.text.trim()
+                        _profile!.id,
+                        selectedReason,
+                        descController.text.trim(),
                       );
                       if (!mounted) return;
-                      messenger.showSnackBar(const SnackBar(content: Text("Laporan diterima dan akan ditinjau Admin")));
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            "Laporan diterima dan akan ditinjau Admin",
+                          ),
+                        ),
+                      );
                     } catch (e) {
                       if (!mounted) return;
-                      messenger.showSnackBar(SnackBar(content: Text("Gagal lapor: $e")));
+                      messenger.showSnackBar(
+                        SnackBar(content: Text("Gagal lapor: $e")),
+                      );
                     }
-                  }, 
-                  child: const Text("Kirim Laporan", style: TextStyle(color: Colors.white)),
-                )
+                  },
+                  child: const Text(
+                    "Kirim Laporan",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
               ],
             );
           },
@@ -625,11 +668,12 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => _tabBar.preferredSize.height;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      color: Colors.white, 
-      child: _tabBar,
-    );
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(color: Colors.white, child: _tabBar);
   }
 
   @override
@@ -673,28 +717,28 @@ class ProfileHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               GestureDetector(
-                 onTap: onAvatarTap,
-                 child: Container(
-                   padding: const EdgeInsets.all(3),
-                   decoration: BoxDecoration(
-                     shape: BoxShape.circle,
-                     gradient: hasStories 
+                onTap: onAvatarTap,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: hasStories
                         ? const LinearGradient(
                             colors: [Colors.purple, Colors.orange],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           )
-                        : null, 
-                   ),
-                   child: Container(
-                     padding: const EdgeInsets.all(2),
-                     decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                     ),
-                     child: _buildAvatar(),
-                   ),
-                 ),
+                        : null,
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                    ),
+                    child: _buildAvatar(),
+                  ),
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -709,12 +753,12 @@ class ProfileHeader extends StatelessWidget {
                     ],
                   ),
                 ),
-              )
+              ),
             ],
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           Align(
             alignment: Alignment.centerLeft,
             child: Column(
@@ -725,48 +769,66 @@ class ProfileHeader extends StatelessWidget {
                   spacing: 6,
                   children: [
                     Text(
-                      (profile.fullName == null || profile.fullName!.isEmpty) 
-                          ? "Umat MyCatholic" 
+                      (profile.fullName == null || profile.fullName!.isEmpty)
+                          ? "Umat MyCatholic"
                           : profile.fullName!,
-                      style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: GoogleFonts.outfit(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     _buildVerificationBadge(),
                   ],
                 ),
-                
+
                 if (profile.bio != null && profile.bio!.isNotEmpty)
                   Text(
-                    profile.bio!, 
-                    style: GoogleFonts.outfit(fontSize: 14, color: Colors.black87),
+                    profile.bio!,
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      color: Colors.black87,
+                    ),
                   )
-                else 
-                   Text(
-                    "Umat Katolik yang aktif.", 
-                    style: GoogleFonts.outfit(fontSize: 14, color: Colors.grey[600], fontStyle: FontStyle.italic),
+                else
+                  Text(
+                    "Umat Katolik yang aktif.",
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
 
-                 Padding(
-                   padding: const EdgeInsets.only(top: 8),
-                   child: Row(
-                     children: [
-                       const Icon(Icons.location_on, size: 13, color: Colors.grey),
-                       const SizedBox(width: 4),
-                       Expanded(
-                         child: Text(
-                           "📍 ${profile.parish ?? '-'}, ${profile.diocese ?? '-'}, ${profile.country ?? 'Indonesia'}",
-                           style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey[600]), 
-                           maxLines: 2, overflow: TextOverflow.ellipsis,
-                         ),
-                       ),
-                     ],
-                   ),
-                 ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.location_on,
+                        size: 13,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          "📍 ${profile.parish ?? '-'}, ${profile.diocese ?? '-'}, ${profile.country ?? 'Indonesia'}",
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           SizedBox(
             height: 40,
             child: Row(
@@ -777,9 +839,14 @@ class ProfileHeader extends StatelessWidget {
                       onPressed: onEditTap,
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(color: Colors.grey.shade300),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                      child: Text("Edit Profile", style: GoogleFonts.outfit(color: Colors.black)),
+                      child: Text(
+                        "Edit Profile",
+                        style: GoogleFonts.outfit(color: Colors.black),
+                      ),
                     ),
                   )
                 else ...[
@@ -788,19 +855,26 @@ class ProfileHeader extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: onFollowToggle,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: isFollowing ? Colors.grey[200] : const Color(0xFF0088CC),
+                        backgroundColor: isFollowing
+                            ? Colors.grey[200]
+                            : const Color(0xFF0088CC),
                         elevation: 0,
                         padding: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                       child: Text(
-                        isFollowing ? "Mengikuti" : "Ikuti", 
-                        style: GoogleFonts.outfit(color: isFollowing ? Colors.black : Colors.white, fontWeight: FontWeight.bold),
+                        isFollowing ? "Mengikuti" : "Ikuti",
+                        style: GoogleFonts.outfit(
+                          color: isFollowing ? Colors.black : Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  
+
                   Expanded(
                     flex: 2,
                     child: OutlinedButton(
@@ -808,13 +882,17 @@ class ProfileHeader extends StatelessWidget {
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(color: Colors.grey.shade300),
                         padding: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                      child: Text("Message", style: GoogleFonts.outfit(color: Colors.black)),
+                      child: Text(
+                        "Message",
+                        style: GoogleFonts.outfit(color: Colors.black),
+                      ),
                     ),
                   ),
-                  
-                ]
+                ],
               ],
             ),
           ),
@@ -835,45 +913,56 @@ class ProfileHeader extends StatelessWidget {
         ),
         child: Text(
           profile.roleLabel.toUpperCase(),
-          style: GoogleFonts.outfit(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+          style: GoogleFonts.outfit(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       );
     }
-    
+
     if (profile.isVerified) {
-       return const Padding(
-         padding: EdgeInsets.only(left: 6),
-         child: Icon(Icons.verified, color: Colors.green, size: 18),
-       );
+      return const Padding(
+        padding: EdgeInsets.only(left: 6),
+        child: Icon(Icons.verified, color: Colors.green, size: 18),
+      );
     }
-    
+
     return const SizedBox.shrink();
   }
 
   Widget _buildStat(String value, String label) {
     return Column(
       children: [
-        Text(value, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
-        Text(label, style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey)),
+        Text(
+          value,
+          style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey),
+        ),
       ],
     );
   }
 
   Widget _buildAvatar() {
-     if (profile.avatarUrl == null || profile.avatarUrl!.isEmpty) {
-        return const CircleAvatar(
-          radius: 40,
-          backgroundColor: Color(0xFFEEEEEE),
-          child: Icon(Icons.person, color: Colors.grey, size: 40),
-        );
-     }
-     return ClipRRect(
-       borderRadius: BorderRadius.circular(40),
-       child: SafeNetworkImage(
-         imageUrl: profile.avatarUrl!,
-         width: 80, height: 80,
-         fit: BoxFit.cover,
-       ),
-     );
+    if (profile.avatarUrl == null || profile.avatarUrl!.isEmpty) {
+      return const CircleAvatar(
+        radius: 40,
+        backgroundColor: Color(0xFFEEEEEE),
+        child: Icon(Icons.person, color: Colors.grey, size: 40),
+      );
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(40),
+      child: SafeNetworkImage(
+        imageUrl: profile.avatarUrl!,
+        width: 80,
+        height: 80,
+        fit: BoxFit.cover,
+      ),
+    );
   }
 }

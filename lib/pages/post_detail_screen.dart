@@ -21,17 +21,17 @@ class PostDetailScreen extends StatefulWidget {
 class _PostDetailScreenState extends State<PostDetailScreen> {
   final SocialService _socialService = SocialService();
   final TextEditingController _commentController = TextEditingController();
-  
+
   List<Comment> _comments = [];
   bool _isLoading = true;
   bool _isSending = false;
   late UserPost _post;
-  
+
   // Reply State
   String? _replyToId;
   String? _replyToName;
   final FocusNode _focusNode = FocusNode();
-  
+
   RealtimeChannel? _subscription;
 
   @override
@@ -69,14 +69,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         value: widget.post.id.toString(),
       ),
       callback: (payload) {
-         debugPrint("🔔 Realtime COMMENT Update: $payload");
-         
-         if (payload.eventType == PostgresChangeEvent.insert) {
-            _handleOptimisticCommentInsert(payload);
-         }
-         // Always fetch latest to be sure
-         _fetchComments();
-      }
+        debugPrint("🔔 Realtime COMMENT Update: $payload");
+
+        if (payload.eventType == PostgresChangeEvent.insert) {
+          _handleOptimisticCommentInsert(payload);
+        }
+        // Always fetch latest to be sure
+        _fetchComments();
+      },
     );
 
     // 2. Listen to POST LIKES (Insert/Delete) for Realtime Like Count
@@ -94,32 +94,32 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         final myId = _socialService.currentUser?.id;
 
         if (payload.eventType == PostgresChangeEvent.insert) {
-           final newRecord = payload.newRecord;
-           final userId = newRecord['user_id'];
-           
-           // Only update if it's NOT ME (I already did optimistic update)
-           if (userId != myId) {
-             _updateLikeCount(1);
-           }
+          final newRecord = payload.newRecord;
+          final userId = newRecord['user_id'];
+
+          // Only update if it's NOT ME (I already did optimistic update)
+          if (userId != myId) {
+            _updateLikeCount(1);
+          }
         } else if (payload.eventType == PostgresChangeEvent.delete) {
-           final oldRecord = payload.oldRecord;
-           final userId = oldRecord['user_id'];
-           
-           if (userId != myId) {
-             _updateLikeCount(-1);
-           }
+          final oldRecord = payload.oldRecord;
+          final userId = oldRecord['user_id'];
+
+          if (userId != myId) {
+            _updateLikeCount(-1);
+          }
         }
-      }
+      },
     );
 
     _subscription!.subscribe((status, error) {
-       if (status == RealtimeSubscribeStatus.subscribed) {
-         debugPrint("✅ REALTIME CONNECTED: $channelName");
-       } else if (status == RealtimeSubscribeStatus.closed) {
-         debugPrint("❌ REALTIME CLOSED");
-       } else {
-         debugPrint("ℹ️ REALTIME STATUS: $status ${error ?? ''}");
-       }
+      if (status == RealtimeSubscribeStatus.subscribed) {
+        debugPrint("✅ REALTIME CONNECTED: $channelName");
+      } else if (status == RealtimeSubscribeStatus.closed) {
+        debugPrint("❌ REALTIME CLOSED");
+      } else {
+        debugPrint("ℹ️ REALTIME STATUS: $status ${error ?? ''}");
+      }
     });
   }
 
@@ -133,39 +133,47 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   void _handleOptimisticCommentInsert(PostgresChangePayload payload) {
-      try {
-        final json = payload.newRecord;
-        final currentUser = _socialService.currentUser;
-        final isMyComment = currentUser != null && json['user_id'] == currentUser.id;
-        
-        // Only if NOT my comment (since I added mine optimistically or want to see others instantly)
-        // Wait, current logic adds placeholder but list fetch overwrites.
-        // Let's just create a dummy for visual feedback
-        
-        if (isMyComment) return; // Assume local add handled it? No, explicit add is better.
+    try {
+      final json = payload.newRecord;
+      final currentUser = _socialService.currentUser;
+      final isMyComment =
+          currentUser != null && json['user_id'] == currentUser.id;
 
-        final dummyProfile = Profile(id: json['user_id'].toString(), fullName: "User Baru", userRole: UserRole.umat);
-        final newItem = Comment(
-          id: json['id'].toString(),
-          userId: json['user_id'].toString(),
-          content: json['content'] ?? '',
-          createdAt: DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now(),
-          author: dummyProfile,
-          parentId: json['parent_id']?.toString(),
-          likesCount: 0,
-          isLikedByMe: false,
-        );
+      // Only if NOT my comment (since I added mine optimistically or want to see others instantly)
+      // Wait, current logic adds placeholder but list fetch overwrites.
+      // Let's just create a dummy for visual feedback
 
-        if (mounted) {
-           setState(() {
-             _comments.add(newItem);
-             _post = _post.copyWith(commentsCount: _post.commentsCount + 1);
-           });
-           SocialService.broadcastPostUpdate(_post);
-        }
-      } catch (e) {
-        debugPrint("Optimistic insert error: $e");
+      if (isMyComment) {
+        return; // Assume local add handled it? No, explicit add is better.
       }
+
+      final dummyProfile = Profile(
+        id: json['user_id'].toString(),
+        fullName: "User Baru",
+        userRole: UserRole.umat,
+      );
+      final newItem = Comment(
+        id: json['id'].toString(),
+        userId: json['user_id'].toString(),
+        content: json['content'] ?? '',
+        createdAt:
+            DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now(),
+        author: dummyProfile,
+        parentId: json['parent_id']?.toString(),
+        likesCount: 0,
+        isLikedByMe: false,
+      );
+
+      if (mounted) {
+        setState(() {
+          _comments.add(newItem);
+          _post = _post.copyWith(commentsCount: _post.commentsCount + 1);
+        });
+        SocialService.broadcastPostUpdate(_post);
+      }
+    } catch (e) {
+      debugPrint("Optimistic insert error: $e");
+    }
   }
 
   @override
@@ -193,14 +201,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   Future<void> _sendComment() async {
     final content = _commentController.text.trim();
     if (content.isEmpty) return;
-    
+
     _commentController.clear();
     _focusNode.unfocus();
 
     setState(() => _isSending = true);
     final originalText = content;
     final replyToId = _replyToId;
-    
+
     setState(() {
       _replyToId = null;
       _replyToName = null;
@@ -208,15 +216,17 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
     try {
       await _socialService.addComment(
-        widget.post.id, 
-        content, 
-        parentId: replyToId
+        widget.post.id,
+        content,
+        parentId: replyToId,
       );
       // Wait for Realtime or Fetch
     } catch (e) {
       if (mounted) {
         _commentController.text = originalText;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal: $e")));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Gagal: $e")));
       }
     } finally {
       if (mounted) setState(() => _isSending = false);
@@ -246,26 +256,34 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       context: context,
       builder: (context) => SimpleDialog(
         title: const Text("Laporkan Komentar"),
-        children: reasons.map((r) => SimpleDialogOption(
-          onPressed: () async {
-            Navigator.pop(context);
-            try {
-              await _socialService.reportComment(comment.id, r);
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Laporan terkirim")));
-              }
-            } catch (e) {
-              if (context.mounted) {
-                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal: $e")));
-              }
-            }
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(r),
-          ),
-        )).toList(),
-      )
+        children: reasons
+            .map(
+              (r) => SimpleDialogOption(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  try {
+                    await _socialService.reportComment(comment.id, r);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Laporan terkirim")),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text("Gagal: $e")));
+                    }
+                  }
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(r),
+                ),
+              ),
+            )
+            .toList(),
+      ),
     );
   }
 
@@ -280,7 +298,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
-          title: Text("Postingan", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: kTextTitle)),
+          title: Text(
+            "Postingan",
+            style: GoogleFonts.outfit(
+              fontWeight: FontWeight.bold,
+              color: kTextTitle,
+            ),
+          ),
           elevation: 0,
           backgroundColor: Colors.white,
           leading: IconButton(
@@ -297,11 +321,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   children: [
                     // 1. Post Content
                     PostCard(
-                      post: _post, 
+                      post: _post,
                       socialService: _socialService,
                       onTap: () {}, // Disable navigation to self
                       onPostUpdated: (updated) {
-                         // Update local _post state immediately when child PostCard changes (e.g. Like)
+                        // Update local _post state immediately when child PostCard changes (e.g. Like)
                         setState(() {
                           _post = updated;
                         });
@@ -310,9 +334,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       },
                       heroTagPrefix: 'detail',
                     ),
-                    
-                    const Divider(thickness: 1, color: Color(0xFFF3F4F6), height: 1),
-                    
+
+                    const Divider(
+                      thickness: 1,
+                      color: Color(0xFFF3F4F6),
+                      height: 1,
+                    ),
+
                     // 2. Comments List (Using Tree Renderer)
                     ListView.builder(
                       shrinkWrap: true,
@@ -323,29 +351,43 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         return _buildCommentTree(_comments[index]);
                       },
                     ),
-                    
+
                     if (_isLoading)
-                       const Padding(padding: EdgeInsets.all(20.0), child: Center(child: CircularProgressIndicator())),
-                    
+                      const Padding(
+                        padding: EdgeInsets.all(20.0),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+
                     if (!_isLoading && _comments.isEmpty)
-                       Padding(
-                         padding: const EdgeInsets.all(40.0), 
-                         child: Center(child: Text("Belum ada komentar.", style: GoogleFonts.outfit(color: kTextMeta)))
-                       ),
-  
+                      Padding(
+                        padding: const EdgeInsets.all(40.0),
+                        child: Center(
+                          child: Text(
+                            "Belum ada komentar.",
+                            style: GoogleFonts.outfit(color: kTextMeta),
+                          ),
+                        ),
+                      ),
+
                     const SizedBox(height: 80), // Space for bottom input
                   ],
                 ),
               ),
             ),
-            
+
             // 3. Sticky Bottom Input
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border(top: BorderSide(color: Colors.grey[200]!)),
-                boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, -2))],
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    offset: Offset(0, -2),
+                  ),
+                ],
               ),
               child: SafeArea(
                 child: Column(
@@ -358,40 +400,65 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text("Membalas $_replyToName", style: const TextStyle(fontSize: 12, color: Colors.blue)),
+                            Text(
+                              "Membalas $_replyToName",
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.blue,
+                              ),
+                            ),
                             const SizedBox(width: 8),
                             GestureDetector(
-                              onTap: () => setState(() { _replyToId = null; _replyToName = null; }),
-                              child: const Icon(Icons.close, size: 14, color: Colors.grey),
-                            )
+                              onTap: () => setState(() {
+                                _replyToId = null;
+                                _replyToName = null;
+                              }),
+                              child: const Icon(
+                                Icons.close,
+                                size: 14,
+                                color: Colors.grey,
+                              ),
+                            ),
                           ],
                         ),
                       ),
                     Row(
                       children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _commentController,
-                        decoration: InputDecoration(
-                          hintText: "Tulis komentar anda...", 
-                          hintStyle: GoogleFonts.outfit(color: kTextMeta),
-                          filled: true,
-                          fillColor: const Color(0xFFF3F4F6),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        Expanded(
+                          child: TextField(
+                            controller: _commentController,
+                            decoration: InputDecoration(
+                              hintText: "Tulis komentar anda...",
+                              hintStyle: GoogleFonts.outfit(color: kTextMeta),
+                              filled: true,
+                              fillColor: const Color(0xFFF3F4F6),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 10,
+                              ),
+                            ),
+                            focusNode: _focusNode,
+                          ),
                         ),
-                        focusNode: _focusNode,
-                      ),
+                        const SizedBox(width: 12),
+                        IconButton(
+                          onPressed: _isSending ? null : _sendComment,
+                          icon: _isSending
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.send_rounded, color: kPrimary),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    IconButton(
-                      onPressed: _isSending ? null : _sendComment,
-                      icon: _isSending 
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) 
-                          : const Icon(Icons.send_rounded, color: kPrimary),
-                    )
-                  ],
-                ),
                   ],
                 ),
               ),
@@ -405,19 +472,23 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   Widget _buildCommentTree(Comment comment) {
     // Determine if this is a reply (depth > 0) based on parentId check or context
     final bool isReply = comment.parentId != null;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Parent Comment
         _buildCommentItem(comment, isReply: isReply),
-        
+
         // Replies (Indented recursively)
         if (comment.replies.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(left: 40.0), // Indentation using standard 40.0
+            padding: const EdgeInsets.only(
+              left: 40.0,
+            ), // Indentation using standard 40.0
             child: Column(
-              children: comment.replies.map((reply) => _buildCommentTree(reply)).toList(),
+              children: comment.replies
+                  .map((reply) => _buildCommentTree(reply))
+                  .toList(),
             ),
           ),
       ],
@@ -433,11 +504,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         children: [
           // Avatar
           Container(
-            width: isReply ? 28 : 36, height: isReply ? 28 : 36,
+            width: isReply ? 28 : 36,
+            height: isReply ? 28 : 36,
             decoration: const BoxDecoration(shape: BoxShape.circle),
             child: SafeNetworkImage(
               imageUrl: author?.avatarUrl,
-              width: isReply ? 28 : 36, 
+              width: isReply ? 28 : 36,
               height: isReply ? 28 : 36,
               borderRadius: BorderRadius.circular(isReply ? 14 : 18),
               fit: BoxFit.cover,
@@ -447,82 +519,108 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             ),
           ),
           const SizedBox(width: 10),
-          
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                 Container(
-                   decoration: BoxDecoration(
-                     color: const Color(0xFFF3F4F6),
-                     borderRadius: BorderRadius.circular(12),
-                   ),
-                   padding: const EdgeInsets.all(10),
-                   child: Column(
-                     crossAxisAlignment: CrossAxisAlignment.start,
-                     children: [
-                        Text(
-                          author?.fullName ?? "User",
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13, color: kTextTitle),
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        author?.fullName ?? "User",
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: kTextTitle,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          comment.content,
-                          style: GoogleFonts.outfit(color: kTextBody, fontSize: 14),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        comment.content,
+                        style: GoogleFonts.outfit(
+                          color: kTextBody,
+                          fontSize: 14,
                         ),
-                     ],
-                   ),
-                 ),
-                 
-                 const SizedBox(height: 4),
-                 
-                 // Actions Row
-                 Row(
-                   children: [
-                     Text(
-                       timeago.format(comment.createdAt, locale: 'en_short'),
-                       style: GoogleFonts.outfit(color: kTextMeta, fontSize: 11),
-                     ),
-                     const SizedBox(width: 16),
-                     
-                     // Reply Button
-                     GestureDetector(
-                       onTap: () => _handleReply(comment),
-                       child: Text("Balas", style: GoogleFonts.outfit(color: kTextMeta, fontWeight: FontWeight.bold, fontSize: 11)),
-                     ),
-                     
-                     const Spacer(),
-                     
-                     // Like Button
-                     GestureDetector(
-                       onTap: () => _handleLikeComment(comment),
-                       child: Row(
-                         children: [
-                           Icon(
-                             Icons.local_fire_department_rounded,
-                             size: 16, 
-                             color: comment.isLikedByMe ? Colors.deepOrange : Colors.grey,
-                           ),
-                           if (comment.likesCount > 0) ...[
-                             const SizedBox(width: 4),
-                             Text("${comment.likesCount}", style: GoogleFonts.outfit(fontSize: 11, color: kTextMeta)),
-                           ]
-                         ],
-                       ),
-                     ),
+                      ),
+                    ],
+                  ),
+                ),
 
-                     const SizedBox(width: 16),
+                const SizedBox(height: 4),
 
-                     // More / Report
-                     GestureDetector(
-                       onTap: () => _handleReportComment(comment),
-                       child: const Icon(Icons.more_horiz, size: 16, color: Colors.grey),
-                     ),
-                   ],
-                 )
+                // Actions Row
+                Row(
+                  children: [
+                    Text(
+                      timeago.format(comment.createdAt, locale: 'en_short'),
+                      style: GoogleFonts.outfit(color: kTextMeta, fontSize: 11),
+                    ),
+                    const SizedBox(width: 16),
+
+                    // Reply Button
+                    GestureDetector(
+                      onTap: () => _handleReply(comment),
+                      child: Text(
+                        "Balas",
+                        style: GoogleFonts.outfit(
+                          color: kTextMeta,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+
+                    const Spacer(),
+
+                    // Like Button
+                    GestureDetector(
+                      onTap: () => _handleLikeComment(comment),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.local_fire_department_rounded,
+                            size: 16,
+                            color: comment.isLikedByMe
+                                ? Colors.deepOrange
+                                : Colors.grey,
+                          ),
+                          if (comment.likesCount > 0) ...[
+                            const SizedBox(width: 4),
+                            Text(
+                              "${comment.likesCount}",
+                              style: GoogleFonts.outfit(
+                                fontSize: 11,
+                                color: kTextMeta,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(width: 16),
+
+                    // More / Report
+                    GestureDetector(
+                      onTap: () => _handleReportComment(comment),
+                      child: const Icon(
+                        Icons.more_horiz,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );

@@ -3,11 +3,7 @@ class ApiException implements Exception {
   final int? statusCode;
   final String? details;
 
-  ApiException({
-    required this.message,
-    this.statusCode,
-    this.details,
-  });
+  ApiException({required this.message, this.statusCode, this.details});
 
   @override
   String toString() => 'ApiException($statusCode): $message';

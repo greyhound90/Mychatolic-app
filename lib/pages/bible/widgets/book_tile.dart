@@ -6,11 +6,7 @@ class BookTile extends StatelessWidget {
   final BibleBook book;
   final VoidCallback onTap;
 
-  const BookTile({
-    super.key,
-    required this.book,
-    required this.onTap,
-  });
+  const BookTile({super.key, required this.book, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +67,9 @@ class _DeuterocanonicalBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.primary.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.4)),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.4),
+        ),
       ),
       child: Text(
         'Deut',

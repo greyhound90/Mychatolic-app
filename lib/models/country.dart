@@ -3,11 +3,7 @@ class Country {
   final String name;
   final String? flagEmoji;
 
-  Country({
-    required this.id,
-    required this.name,
-    this.flagEmoji,
-  });
+  Country({required this.id, required this.name, this.flagEmoji});
 
   factory Country.fromJson(Map<String, dynamic> json) {
     return Country(
@@ -18,10 +14,6 @@ class Country {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'flag_emoji': flagEmoji,
-    };
+    return {'id': id, 'name': name, 'flag_emoji': flagEmoji};
   }
 }

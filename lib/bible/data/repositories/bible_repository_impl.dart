@@ -11,7 +11,9 @@ class BibleRepositoryImpl implements BibleRepository {
 
   final Map<String, List<BibleVersion>> _versionsCache = {};
   final Map<String, List<BibleBook>> _booksCache = {};
-  final LruCache<String, List<BibleVerse>> _versesCache = LruCache(maxEntries: 60);
+  final LruCache<String, List<BibleVerse>> _versesCache = LruCache(
+    maxEntries: 60,
+  );
 
   VerseOfTheDay? _verseOfTheDay;
   DateTime? _verseOfTheDayDate;
@@ -25,7 +27,10 @@ class BibleRepositoryImpl implements BibleRepository {
     try {
       final json = await _client.get('/bible/versions');
       final list = (json as List<dynamic>? ?? [])
-          .map((e) => BibleVersionDto.fromJson(e as Map<String, dynamic>).toEntity())
+          .map(
+            (e) =>
+                BibleVersionDto.fromJson(e as Map<String, dynamic>).toEntity(),
+          )
           .toList();
       _versionsCache['all'] = list;
       return list;
@@ -37,17 +42,23 @@ class BibleRepositoryImpl implements BibleRepository {
   }
 
   @override
-  Future<List<BibleBook>> getBooks({String? canonType, bool refresh = false}) async {
+  Future<List<BibleBook>> getBooks({
+    String? canonType,
+    bool refresh = false,
+  }) async {
     final key = canonType ?? 'all';
     if (!refresh && _booksCache.containsKey(key)) {
       return _booksCache[key]!;
     }
     try {
-      final json = await _client.get('/bible/books', query: {
-        if (canonType != null) 'canon_type': canonType,
-      });
+      final json = await _client.get(
+        '/bible/books',
+        query: {if (canonType != null) 'canon_type': canonType},
+      );
       final list = (json as List<dynamic>? ?? [])
-          .map((e) => BibleBookDto.fromJson(e as Map<String, dynamic>).toEntity())
+          .map(
+            (e) => BibleBookDto.fromJson(e as Map<String, dynamic>).toEntity(),
+          )
           .toList();
       _booksCache[key] = list;
       return list;
@@ -70,13 +81,18 @@ class BibleRepositoryImpl implements BibleRepository {
     if (cached != null) return cached;
     final fallback = _versesCache.peek(cacheKey);
     try {
-      final json = await _client.get('/bible/verses', query: {
-        'book_id': bookId,
-        'chapter': chapter,
-        if (versionId != null) 'version_id': versionId,
-      });
+      final json = await _client.get(
+        '/bible/verses',
+        query: {
+          'book_id': bookId,
+          'chapter': chapter,
+          if (versionId != null) 'version_id': versionId,
+        },
+      );
       final list = (json as List<dynamic>? ?? [])
-          .map((e) => BibleVerseDto.fromJson(e as Map<String, dynamic>).toEntity())
+          .map(
+            (e) => BibleVerseDto.fromJson(e as Map<String, dynamic>).toEntity(),
+          )
           .toList();
       _versesCache.set(cacheKey, list);
       return list;
@@ -87,35 +103,56 @@ class BibleRepositoryImpl implements BibleRepository {
   }
 
   @override
-  Future<List<BibleVerseSearchResult>> searchVerses({required String query, String? versionId}) async {
-    final json = await _client.get('/bible/search', query: {
-      'query': query,
-      if (versionId != null) 'version_id': versionId,
-    });
+  Future<List<BibleVerseSearchResult>> searchVerses({
+    required String query,
+    String? versionId,
+  }) async {
+    final json = await _client.get(
+      '/bible/search',
+      query: {'query': query, if (versionId != null) 'version_id': versionId},
+    );
     return (json as List<dynamic>? ?? [])
-        .map((e) => BibleSearchResultDto.fromJson(e as Map<String, dynamic>).toEntity())
+        .map(
+          (e) => BibleSearchResultDto.fromJson(
+            e as Map<String, dynamic>,
+          ).toEntity(),
+        )
         .toList();
   }
 
   @override
-  Future<List<BibleVerseSearchResult>> lookupReference({required String reference, String? versionId}) async {
-    final json = await _client.get('/bible/lookup', query: {
-      'ref': reference,
-      if (versionId != null) 'version_id': versionId,
-    });
+  Future<List<BibleVerseSearchResult>> lookupReference({
+    required String reference,
+    String? versionId,
+  }) async {
+    final json = await _client.get(
+      '/bible/lookup',
+      query: {'ref': reference, if (versionId != null) 'version_id': versionId},
+    );
     return (json as List<dynamic>? ?? [])
-        .map((e) => BibleSearchResultDto.fromJson(e as Map<String, dynamic>).toEntity())
+        .map(
+          (e) => BibleSearchResultDto.fromJson(
+            e as Map<String, dynamic>,
+          ).toEntity(),
+        )
         .toList();
   }
 
   @override
-  Future<List<BibleVerseSearchResult>> searchByTheme({required String theme, String? versionId}) async {
-    final json = await _client.get('/bible/theme', query: {
-      'theme': theme,
-      if (versionId != null) 'version_id': versionId,
-    });
+  Future<List<BibleVerseSearchResult>> searchByTheme({
+    required String theme,
+    String? versionId,
+  }) async {
+    final json = await _client.get(
+      '/bible/theme',
+      query: {'theme': theme, if (versionId != null) 'version_id': versionId},
+    );
     return (json as List<dynamic>? ?? [])
-        .map((e) => BibleSearchResultDto.fromJson(e as Map<String, dynamic>).toEntity())
+        .map(
+          (e) => BibleSearchResultDto.fromJson(
+            e as Map<String, dynamic>,
+          ).toEntity(),
+        )
         .toList();
   }
 
@@ -123,14 +160,18 @@ class BibleRepositoryImpl implements BibleRepository {
   Future<VerseOfTheDay?> getVerseOfTheDay({bool refresh = false}) async {
     final now = DateTime.now();
     if (!refresh && _verseOfTheDay != null && _verseOfTheDayDate != null) {
-      if (_verseOfTheDayDate!.year == now.year && _verseOfTheDayDate!.month == now.month && _verseOfTheDayDate!.day == now.day) {
+      if (_verseOfTheDayDate!.year == now.year &&
+          _verseOfTheDayDate!.month == now.month &&
+          _verseOfTheDayDate!.day == now.day) {
         return _verseOfTheDay;
       }
     }
     try {
       final json = await _client.get('/bible/verse-of-the-day');
       if (json == null) return null;
-      final verse = VerseOfTheDayDto.fromJson(json as Map<String, dynamic>).toEntity();
+      final verse = VerseOfTheDayDto.fromJson(
+        json as Map<String, dynamic>,
+      ).toEntity();
       _verseOfTheDay = verse;
       _verseOfTheDayDate = now;
       return verse;
@@ -155,7 +196,12 @@ class BibleRepositoryImpl implements BibleRepository {
   }
 
   @override
-  Future<void> updateLastRead({required int bookId, required int chapter, int? verse, String? versionId}) async {
+  Future<void> updateLastRead({
+    required int bookId,
+    required int chapter,
+    int? verse,
+    String? versionId,
+  }) async {
     await _client.post('/bible/last-read', {
       'book_id': bookId,
       'chapter': chapter,

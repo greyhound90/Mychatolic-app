@@ -15,7 +15,7 @@ class FinalPhotoCaptionPage extends StatefulWidget {
 class _FinalPhotoCaptionPageState extends State<FinalPhotoCaptionPage> {
   final TextEditingController _captionController = TextEditingController();
   bool _isUploading = false;
-  
+
   // Design Constants
   static const Color bgNavy = Color(0xFF0B1121);
   static const Color accentIndigo = Color(0xFF6366F1);
@@ -29,7 +29,11 @@ class _FinalPhotoCaptionPageState extends State<FinalPhotoCaptionPage> {
   Future<void> _sharePost() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Not logged in")));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Not logged in")));
+      }
       return;
     }
 
@@ -37,7 +41,8 @@ class _FinalPhotoCaptionPageState extends State<FinalPhotoCaptionPage> {
 
     try {
       // 1. Upload Image
-      final String fileName = '${user.id}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final String fileName =
+          '${user.id}/${DateTime.now().millisecondsSinceEpoch}.jpg';
       await Supabase.instance.client.storage
           .from('post_images')
           .upload(fileName, widget.imageFile);
@@ -57,13 +62,19 @@ class _FinalPhotoCaptionPageState extends State<FinalPhotoCaptionPage> {
       if (mounted) {
         Navigator.pop(context, true); // Return success
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Post shared successfully!"), backgroundColor: Colors.green)
+          const SnackBar(
+            content: Text("Post shared successfully!"),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(content: Text("Upload failed: $e"), backgroundColor: Colors.red)
+          SnackBar(
+            content: Text("Upload failed: $e"),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -82,13 +93,33 @@ class _FinalPhotoCaptionPageState extends State<FinalPhotoCaptionPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text("New Post", style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text(
+          "New Post",
+          style: GoogleFonts.outfit(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: _isUploading ? null : _sharePost,
-            child: _isUploading 
-              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: accentIndigo))
-              : Text("Share", style: GoogleFonts.outfit(color: accentIndigo, fontWeight: FontWeight.bold, fontSize: 16)),
+            child: _isUploading
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: accentIndigo,
+                    ),
+                  )
+                : Text(
+                    "Share",
+                    style: GoogleFonts.outfit(
+                      color: accentIndigo,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
           ),
           const SizedBox(width: 8),
         ],
@@ -100,7 +131,7 @@ class _FinalPhotoCaptionPageState extends State<FinalPhotoCaptionPage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.white12))
+                border: Border(bottom: BorderSide(color: Colors.white12)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,8 +142,11 @@ class _FinalPhotoCaptionPageState extends State<FinalPhotoCaptionPage> {
                     height: 87.5, // 70 * 1.25
                     decoration: BoxDecoration(
                       color: Colors.black26,
-                      image: DecorationImage(image: FileImage(widget.imageFile), fit: BoxFit.cover),
-                      borderRadius: BorderRadius.circular(4)
+                      image: DecorationImage(
+                        image: FileImage(widget.imageFile),
+                        fit: BoxFit.cover,
+                      ),
+                      borderRadius: BorderRadius.circular(4),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -120,7 +154,10 @@ class _FinalPhotoCaptionPageState extends State<FinalPhotoCaptionPage> {
                   Expanded(
                     child: TextField(
                       controller: _captionController,
-                      style: GoogleFonts.outfit(color: Colors.white, fontSize: 16),
+                      style: GoogleFonts.outfit(
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
                       maxLines: 5,
                       minLines: 1,
                       decoration: InputDecoration(
@@ -129,25 +166,25 @@ class _FinalPhotoCaptionPageState extends State<FinalPhotoCaptionPage> {
                         border: InputBorder.none,
                       ),
                     ),
-                  )
+                  ),
                 ],
               ),
             ),
-            
+
             // Additional settings (Tag People, Add Location, etc. - Visual Only for now)
             _buildSettingItem(Icons.person_outline, "Tag People"),
             _buildSettingItem(Icons.location_on_outlined, "Add Location"),
             _buildSettingItem(Icons.music_note_outlined, "Add Music"),
-            
+
             // Footer Info
             Padding(
               padding: const EdgeInsets.all(24),
               child: Text(
-                "Your post will be shared to your followers and on the main feed.", 
+                "Your post will be shared to your followers and on the main feed.",
                 style: GoogleFonts.outfit(color: Colors.white24, fontSize: 12),
                 textAlign: TextAlign.center,
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -158,15 +195,18 @@ class _FinalPhotoCaptionPageState extends State<FinalPhotoCaptionPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.white12))
+        border: Border(bottom: BorderSide(color: Colors.white12)),
       ),
       child: Row(
         children: [
           Icon(icon, color: Colors.white70, size: 24),
           const SizedBox(width: 12),
-          Text(label, style: GoogleFonts.outfit(color: Colors.white, fontSize: 16)),
+          Text(
+            label,
+            style: GoogleFonts.outfit(color: Colors.white, fontSize: 16),
+          ),
           const Spacer(),
-          const Icon(Icons.chevron_right, color: Colors.white24)
+          const Icon(Icons.chevron_right, color: Colors.white24),
         ],
       ),
     );

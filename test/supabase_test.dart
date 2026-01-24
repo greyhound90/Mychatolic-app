@@ -10,10 +10,7 @@ void main() {
     const supabaseUrl = 'https://prmfmmrzhnlltzyxxyhw.supabase.co';
     const supabaseAnonKey = 'sb_publishable_wchTSXIbemCJJgXVebW1VA_rR_WAqPe';
 
-    await Supabase.initialize(
-      url: supabaseUrl,
-      anonKey: supabaseAnonKey,
-    );
+    await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
 
     final supabase = Supabase.instance.client;
     final data = await supabase.from('posts').select();

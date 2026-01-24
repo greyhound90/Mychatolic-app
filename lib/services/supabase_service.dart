@@ -4,16 +4,10 @@ import 'package:flutter/foundation.dart';
 class SupabaseService {
   final _supabase = Supabase.instance.client;
 
-
-
   // --- AUTH ---
   User? get currentUser => _supabase.auth.currentUser;
 
-// Master Data has been moved to master_data_service.dart
-
-
-
-
+  // Master Data has been moved to master_data_service.dart
 
   // 9. Fetch Notifications
   Future<List<Map<String, dynamic>>> fetchNotifications() async {
@@ -28,9 +22,7 @@ class SupabaseService {
     }
   }
 
-// Search Locations moved to master_data_service.dart
-
-
+  // Search Locations moved to master_data_service.dart
 
   // 13. Start Chat
   Future<String> startChat(String otherUserId) async {
@@ -52,19 +44,19 @@ class SupabaseService {
     }
 
     try {
-      final newChat = await _supabase.from('social_chats').insert({
-        'participants': [myId, otherUserId],
-        'last_message': "Memulai percakapan",
-        'updated_at': DateTime.now().toIso8601String(),
-      }).select().single();
-      
+      final newChat = await _supabase
+          .from('social_chats')
+          .insert({
+            'participants': [myId, otherUserId],
+            'last_message': "Memulai percakapan",
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .select()
+          .single();
+
       return newChat['id'] as String;
     } catch (e) {
       throw Exception("Failed to start chat: $e");
     }
   }
-
-
-
-
 }

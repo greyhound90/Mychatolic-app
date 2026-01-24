@@ -28,12 +28,12 @@ class ThemeProvider extends ChangeNotifier {
   void setThemeMode(ThemeMode mode) async {
     _themeMode = mode;
     notifyListeners();
-    
+
     final prefs = await SharedPreferences.getInstance();
     String value = 'system';
     if (mode == ThemeMode.light) value = 'light';
     if (mode == ThemeMode.dark) value = 'dark';
-    
+
     await prefs.setString('themeMode', value);
   }
 }

@@ -37,7 +37,8 @@ class NotesRepositoryImpl implements NotesRepository {
   }
 
   @override
-  Future<void> deleteHighlight(String id) => _client.delete('/bible/highlights/$id');
+  Future<void> deleteHighlight(String id) =>
+      _client.delete('/bible/highlights/$id');
 
   @override
   Future<List<Bookmark>> getBookmarks() async {
@@ -66,7 +67,8 @@ class NotesRepositoryImpl implements NotesRepository {
   }
 
   @override
-  Future<void> deleteBookmark(String id) => _client.delete('/bible/bookmarks/$id');
+  Future<void> deleteBookmark(String id) =>
+      _client.delete('/bible/bookmarks/$id');
 
   @override
   Future<List<Note>> getNotes() async {

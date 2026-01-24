@@ -28,14 +28,22 @@ class _ChurchDetailScreenState extends State<ChurchDetailScreen> {
   // Convert int day to String name
   String _getDayName(int day) {
     switch (day) {
-      case 0: return "MINGGU";
-      case 1: return "SENIN";
-      case 2: return "SELASA";
-      case 3: return "RABU";
-      case 4: return "KAMIS";
-      case 5: return "JUMAT";
-      case 6: return "SABTU";
-      default: return "HARI LAIN";
+      case 0:
+        return "MINGGU";
+      case 1:
+        return "SENIN";
+      case 2:
+        return "SELASA";
+      case 3:
+        return "RABU";
+      case 4:
+        return "KAMIS";
+      case 5:
+        return "JUMAT";
+      case 6:
+        return "SABTU";
+      default:
+        return "HARI LAIN";
     }
   }
 
@@ -68,7 +76,10 @@ class _ChurchDetailScreenState extends State<ChurchDetailScreen> {
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
                 widget.church.name,
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
               background: Stack(
                 fit: StackFit.expand,
@@ -83,7 +94,11 @@ class _ChurchDetailScreenState extends State<ChurchDetailScreen> {
                         )
                       : Container(
                           color: kPrimary,
-                          child: const Icon(Icons.church_outlined, size: 80, color: Colors.white30),
+                          child: const Icon(
+                            Icons.church_outlined,
+                            size: 80,
+                            color: Colors.white30,
+                          ),
                         ),
                   // Gradient Overlay for Readability
                   Container(
@@ -93,7 +108,7 @@ class _ChurchDetailScreenState extends State<ChurchDetailScreen> {
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.transparent,
-                          Colors.black.withValues(alpha: 0.7)
+                          Colors.black.withValues(alpha: 0.7),
                         ],
                         stops: const [0.6, 1.0],
                       ),
@@ -111,17 +126,32 @@ class _ChurchDetailScreenState extends State<ChurchDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Jadwal Misa", style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: kTextTitle)),
+                  Text(
+                    "Jadwal Misa",
+                    style: GoogleFonts.outfit(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: kTextTitle,
+                    ),
+                  ),
                   const SizedBox(height: 16),
-                  
+
                   FutureBuilder<List<Schedule>>(
                     future: _schedulesFuture,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(20),
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
                       }
                       if (snapshot.hasError) {
-                        return Text("Gagal memuat jadwal: ${snapshot.error}", style: const TextStyle(color: Colors.red));
+                        return Text(
+                          "Gagal memuat jadwal: ${snapshot.error}",
+                          style: const TextStyle(color: Colors.red),
+                        );
                       }
 
                       final schedules = snapshot.data ?? [];
@@ -129,8 +159,13 @@ class _ChurchDetailScreenState extends State<ChurchDetailScreen> {
                         return Container(
                           padding: const EdgeInsets.all(24),
                           width: double.infinity,
-                          decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
-                          child: const Center(child: Text("Belum ada jadwal tersedia.")),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Center(
+                            child: Text("Belum ada jadwal tersedia."),
+                          ),
                         );
                       }
 
@@ -140,7 +175,8 @@ class _ChurchDetailScreenState extends State<ChurchDetailScreen> {
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: grouped.keys.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 24),
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 24),
                         itemBuilder: (context, index) {
                           final dayKey = grouped.keys.elementAt(index);
                           final daySchedules = grouped[dayKey]!;
@@ -152,17 +188,23 @@ class _ChurchDetailScreenState extends State<ChurchDetailScreen> {
                               // Day Header
                               Container(
                                 margin: const EdgeInsets.only(bottom: 12),
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
                                 decoration: BoxDecoration(
                                   color: kPrimary.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
                                   dayName,
-                                  style: GoogleFonts.outfit(color: kPrimary, fontWeight: FontWeight.bold),
+                                  style: GoogleFonts.outfit(
+                                    color: kPrimary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
-                              
+
                               // List of Masses
                               ...daySchedules.map((schedule) {
                                 return Container(
@@ -172,34 +214,62 @@ class _ChurchDetailScreenState extends State<ChurchDetailScreen> {
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(12),
                                     boxShadow: [
-                                      BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0,2))
+                                      BoxShadow(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.03,
+                                        ),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
                                     ],
                                     border: Border.all(color: kBorder),
                                   ),
                                   child: Row(
                                     children: [
-                                      Icon(Icons.access_time_filled, color: kSecondary, size: 20),
+                                      Icon(
+                                        Icons.access_time_filled,
+                                        color: kSecondary,
+                                        size: 20,
+                                      ),
                                       const SizedBox(width: 12),
                                       Text(
                                         schedule.timeStart, // e.g. "08:00"
-                                        style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: kTextTitle),
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: kTextTitle,
+                                        ),
                                       ),
                                       const SizedBox(width: 16),
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
-                                            if (schedule.label != null && schedule.label!.isNotEmpty)
-                                              Text(schedule.label!, style: GoogleFonts.outfit(fontWeight: FontWeight.w600, color: kTextBody)),
+                                            if (schedule.label != null &&
+                                                schedule.label!.isNotEmpty)
+                                              Text(
+                                                schedule.label!,
+                                                style: GoogleFonts.outfit(
+                                                  fontWeight: FontWeight.w600,
+                                                  color: kTextBody,
+                                                ),
+                                              ),
                                             if (schedule.language != null)
-                                              Text(schedule.language!, style: GoogleFonts.outfit(fontSize: 12, color: kTextMeta)),
+                                              Text(
+                                                schedule.language!,
+                                                style: GoogleFonts.outfit(
+                                                  fontSize: 12,
+                                                  color: kTextMeta,
+                                                ),
+                                              ),
                                           ],
                                         ),
-                                      )
+                                      ),
                                     ],
                                   ),
                                 );
-                              }), 
+                              }),
                             ],
                           );
                         },
@@ -209,7 +279,7 @@ class _ChurchDetailScreenState extends State<ChurchDetailScreen> {
                 ],
               ),
             ),
-          )
+          ),
         ],
       ),
     );

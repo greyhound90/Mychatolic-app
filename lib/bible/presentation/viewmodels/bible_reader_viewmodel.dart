@@ -55,9 +55,15 @@ class BibleReaderViewModel extends ChangeNotifier {
     if (books.isEmpty) return;
     BibleBook initial;
     if (bookId != null) {
-      initial = books.firstWhere((b) => b.id == bookId, orElse: () => books.first);
+      initial = books.firstWhere(
+        (b) => b.id == bookId,
+        orElse: () => books.first,
+      );
     } else if (lastRead != null) {
-      initial = books.firstWhere((b) => b.id == lastRead!.bookId, orElse: () => books.first);
+      initial = books.firstWhere(
+        (b) => b.id == lastRead!.bookId,
+        orElse: () => books.first,
+      );
     } else {
       initial = books.first;
     }
@@ -95,12 +101,13 @@ class BibleReaderViewModel extends ChangeNotifier {
   void changeTestament(String value) {
     testament = value;
     final available = books.where((book) {
-      final matchesTestament = value == 'ot' ? book.isOldTestament : !book.isOldTestament;
+      final matchesTestament = value == 'ot'
+          ? book.isOldTestament
+          : !book.isOldTestament;
       if (!matchesTestament) return false;
       if (!showDeuterocanonical && book.isDeuterocanonical) return false;
       return true;
-    }).toList()
-      ..sort((a, b) => a.orderNumber.compareTo(b.orderNumber));
+    }).toList()..sort((a, b) => a.orderNumber.compareTo(b.orderNumber));
     if (available.isNotEmpty) {
       selectedBook = available.first;
       currentChapter = 1;
@@ -113,12 +120,13 @@ class BibleReaderViewModel extends ChangeNotifier {
     showDeuterocanonical = value;
     if (!value && selectedBook?.isDeuterocanonical == true) {
       final available = books.where((book) {
-        final matchesTestament = testament == 'ot' ? book.isOldTestament : !book.isOldTestament;
+        final matchesTestament = testament == 'ot'
+            ? book.isOldTestament
+            : !book.isOldTestament;
         if (!matchesTestament) return false;
         if (book.isDeuterocanonical) return false;
         return true;
-      }).toList()
-        ..sort((a, b) => a.orderNumber.compareTo(b.orderNumber));
+      }).toList()..sort((a, b) => a.orderNumber.compareTo(b.orderNumber));
       if (available.isNotEmpty) {
         selectedBook = available.first;
         currentChapter = 1;
@@ -198,7 +206,10 @@ class BibleReaderViewModel extends ChangeNotifier {
   Future<void> saveNote(BibleVerse verse, String content) async {
     try {
       if (verse.noteId != null) {
-        final note = await notesRepository.updateNote(verse.noteId!, content: content);
+        final note = await notesRepository.updateNote(
+          verse.noteId!,
+          content: content,
+        );
         _updateVerse(verse, note: note.content, noteId: note.id);
         return;
       }

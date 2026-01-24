@@ -31,11 +31,18 @@ class VerseOfDayCard extends StatelessWidget {
         children: [
           Text('Ayat Hari Ini', style: AppTypography.subtitle(textColor)),
           const SizedBox(height: AppSpacing.sm),
-          Text(verse.reference, style: AppTypography.small(textColor.withValues(alpha: 0.7))),
+          Text(
+            verse.reference,
+            style: AppTypography.small(textColor.withValues(alpha: 0.7)),
+          ),
           const SizedBox(height: AppSpacing.md),
           Text(
             verse.text,
-            style: GoogleFonts.sourceSerif4(fontSize: 18, height: 1.5, color: textColor),
+            style: GoogleFonts.sourceSerif4(
+              fontSize: 18,
+              height: 1.5,
+              color: textColor,
+            ),
           ),
           const SizedBox(height: AppSpacing.lg),
           Row(
@@ -44,7 +51,7 @@ class VerseOfDayCard extends StatelessWidget {
               const SizedBox(width: AppSpacing.md),
               SecondaryButton(label: 'Bagikan', onPressed: onShare),
             ],
-          )
+          ),
         ],
       ),
     );

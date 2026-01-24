@@ -32,9 +32,7 @@ class MyCatholicAppBar extends StatelessWidget implements PreferredSizeWidget {
       actions: actions,
       bottom: bottom,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       // Ensure status bar icons are white
       systemOverlayStyle: SystemUiOverlayStyle.light,
@@ -48,12 +46,12 @@ class MyCatholicAppBar extends StatelessWidget implements PreferredSizeWidget {
     // If bottom widget exists, add its preferred height plus some extra if needed for the shape visual.
     // Standard AppBar implementation handles bottom height automatically in preferredSize getter if we extend AppBar,
     // but since we are wrapping it, we must calculate.
-    
+
     double height = kToolbarHeight;
     if (bottom != null) {
       height += bottom!.preferredSize.height;
     }
-    
+
     return Size.fromHeight(height);
   }
 }

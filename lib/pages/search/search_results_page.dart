@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'other_user_profile_page.dart';
+import 'package:mychatolic_app/pages/profile/other_user_profile_page.dart';
 
 class SearchResultsPage extends StatelessWidget {
   final Map<String, dynamic> filters;
@@ -45,7 +45,7 @@ class SearchResultsPage extends StatelessWidget {
         "avatar": null,
         "isFriend": false,
       },
-       {
+      {
         "name": "Bernadette",
         "age": 21,
         "parish": "Paroki Alam Sutera",
@@ -57,7 +57,14 @@ class SearchResultsPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFF2C225B), // Deep Royal Purple
       appBar: AppBar(
-        title: const Text("Hasil Pencarian", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white)),
+        title: const Text(
+          "Hasil Pencarian",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: Colors.white,
+          ),
+        ),
         backgroundColor: const Color(0xFF2C225B),
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
@@ -70,7 +77,12 @@ class SearchResultsPage extends StatelessWidget {
           final user = dummyUsers[index];
           return GestureDetector(
             onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => OtherUserProfilePage(userData: user)));
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => OtherUserProfilePage(userData: user),
+                ),
+              );
             },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -78,7 +90,13 @@ class SearchResultsPage extends StatelessWidget {
                 color: const Color(0xFF3D3270), // Soft Purple Card
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.white10),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4, offset:const Offset(0, 2))]
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
@@ -91,34 +109,49 @@ class SearchResultsPage extends StatelessWidget {
                       backgroundColor: const Color(0xFF2C225B),
                       child: Text(
                         user['name'][0],
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontSize: 18,
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 16),
-                  
+
                   // Info
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "${user['name']} - ${user['age']} th", 
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)
+                          "${user['name']} - ${user['age']} th",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.white,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           user['parish'],
-                          style: const TextStyle(fontSize: 13, color: Colors.white70),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.white70,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
-  
+
                   // Action Button
                   if (user['isFriend'])
-                     const Icon(Icons.check_circle, color: Color(0xFFA3B18A), size: 28) // Already Friend
+                    const Icon(
+                      Icons.check_circle,
+                      color: Color(0xFFA3B18A),
+                      size: 28,
+                    ) // Already Friend
                   else
                     Container(
                       decoration: BoxDecoration(
@@ -128,12 +161,21 @@ class SearchResultsPage extends StatelessWidget {
                       child: IconButton(
                         onPressed: () {
                           // TODO: Implement Add Friend Logic
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Permintan pertemanan dikirim ke ${user['name']}")));
-                        }, 
-                        icon: const Icon(Icons.person_add_rounded, color: Color(0xFFFF9F1C)),
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                "Permintan pertemanan dikirim ke ${user['name']}",
+                              ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(
+                          Icons.person_add_rounded,
+                          color: Color(0xFFFF9F1C),
+                        ),
                         tooltip: "Tambah Teman",
                       ),
-                    )
+                    ),
                 ],
               ),
             ),

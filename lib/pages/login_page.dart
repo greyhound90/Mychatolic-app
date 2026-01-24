@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mychatolic_app/pages/register_page.dart';
-import 'package:mychatolic_app/home_page.dart';
+import 'package:mychatolic_app/pages/main_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,7 +15,7 @@ class _LoginPageState extends State<LoginPage> {
   // Controllers
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  
+
   // State Variables
   bool _obscurePassword = true;
   bool _isLoading = false;
@@ -27,16 +27,24 @@ class _LoginPageState extends State<LoginPage> {
     // 1. Basic Empty Validation
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Email dan Password tidak boleh kosong"), backgroundColor: Colors.orange),
+        const SnackBar(
+          content: Text("Email dan Password tidak boleh kosong"),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
     }
 
     // 2. Strict Regex Validation
-    final emailRegex = RegExp(r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+");
+    final emailRegex = RegExp(
+      r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+",
+    );
     if (!emailRegex.hasMatch(email)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Format email tidak valid"), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text("Format email tidak valid"),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
@@ -52,14 +60,14 @@ class _LoginPageState extends State<LoginPage> {
       if (response.user != null) {
         if (mounted) {
           Navigator.pushReplacement(
-            context, 
-            MaterialPageRoute(builder: (_) => const HomePage())
+            context,
+            MaterialPageRoute(builder: (_) => const HomePage()),
           );
         }
       }
     } on AuthException catch (e) {
       if (!mounted) return;
-      
+
       String message = e.message;
       // Humanize Supabase Auth Errors
       if (message.toLowerCase().contains("invalid login credentials")) {
@@ -79,8 +87,9 @@ class _LoginPageState extends State<LoginPage> {
 
       String message = "Terjadi kesalahan sistem.";
       final errorStr = e.toString().toLowerCase();
-      
-      if (errorStr.contains("socketexception") || errorStr.contains("network")) {
+
+      if (errorStr.contains("socketexception") ||
+          errorStr.contains("network")) {
         message = "Periksa koneksi internet Anda.";
       } else if (errorStr.contains("timeout")) {
         message = "Koneksi waktu habis. Coba lagi.";
@@ -124,13 +133,13 @@ class _LoginPageState extends State<LoginPage> {
         children: [
           // 1. Premium Gradient Background
           Container(
-            decoration: BoxDecoration( 
-              gradient: LinearGradient( 
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  theme.scaffoldBackgroundColor, 
-                  isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0), 
+                  theme.scaffoldBackgroundColor,
+                  isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
                 ],
               ),
             ),
@@ -144,7 +153,7 @@ class _LoginPageState extends State<LoginPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 40),
-                  
+
                   // LOGO SECTION
                   Center(
                     child: Column(
@@ -154,10 +163,17 @@ class _LoginPageState extends State<LoginPage> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             boxShadow: [
-                              BoxShadow(color: primaryColor.withValues(alpha: 0.2), blurRadius: 40)
-                            ]
+                              BoxShadow(
+                                color: primaryColor.withValues(alpha: 0.2),
+                                blurRadius: 40,
+                              ),
+                            ],
                           ),
-                          child: Icon(Icons.church_rounded, size: 64, color: primaryColor),
+                          child: Icon(
+                            Icons.church_rounded,
+                            size: 64,
+                            color: primaryColor,
+                          ),
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -166,7 +182,7 @@ class _LoginPageState extends State<LoginPage> {
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
                             color: textColor,
-                            letterSpacing: 1.2
+                            letterSpacing: 1.2,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -174,9 +190,9 @@ class _LoginPageState extends State<LoginPage> {
                           "Selamat Datang Kembali",
                           style: GoogleFonts.outfit(
                             fontSize: 16,
-                            color: theme.textTheme.bodyMedium?.color
+                            color: theme.textTheme.bodyMedium?.color,
                           ),
-                        )
+                        ),
                       ],
                     ),
                   ),
@@ -184,29 +200,66 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 60),
 
                   // INPUT FORMS
-                  Text("EMAIL", style: GoogleFonts.outfit(color: metaColor, fontSize: 12, fontWeight: FontWeight.bold)),
+                  Text(
+                    "EMAIL",
+                    style: GoogleFonts.outfit(
+                      color: metaColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
-                    style: GoogleFonts.outfit(color: textColor, fontWeight: FontWeight.w600),
-                    decoration: _buildInputDecoration("Masukkan email anda", Icons.email_outlined, theme),
+                    style: GoogleFonts.outfit(
+                      color: textColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    decoration: _buildInputDecoration(
+                      "Masukkan email anda",
+                      Icons.email_outlined,
+                      theme,
+                    ),
                   ),
 
                   const SizedBox(height: 24),
 
-                  Text("PASSWORD", style: GoogleFonts.outfit(color: metaColor, fontSize: 12, fontWeight: FontWeight.bold)),
+                  Text(
+                    "PASSWORD",
+                    style: GoogleFonts.outfit(
+                      color: metaColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
-                    style: GoogleFonts.outfit(color: textColor, fontWeight: FontWeight.w600),
-                    decoration: _buildInputDecoration("Masukkan password", Icons.lock_outline, theme).copyWith(
-                      suffixIcon: IconButton(
-                        icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: metaColor, size: 20),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                      )
+                    style: GoogleFonts.outfit(
+                      color: textColor,
+                      fontWeight: FontWeight.w600,
                     ),
+                    decoration:
+                        _buildInputDecoration(
+                          "Masukkan password",
+                          Icons.lock_outline,
+                          theme,
+                        ).copyWith(
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                              color: metaColor,
+                              size: 20,
+                            ),
+                            onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            ),
+                          ),
+                        ),
                   ),
 
                   const SizedBox(height: 12),
@@ -215,7 +268,13 @@ class _LoginPageState extends State<LoginPage> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () {},
-                      child: Text("Lupa Password?", style: GoogleFonts.outfit(color: primaryColor, fontWeight: FontWeight.bold)),
+                      child: Text(
+                        "Lupa Password?",
+                        style: GoogleFonts.outfit(
+                          color: primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
 
@@ -231,18 +290,37 @@ class _LoginPageState extends State<LoginPage> {
                         backgroundColor: Colors.transparent,
                         shadowColor: Colors.transparent,
                         padding: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                       child: Ink(
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(colors: [secondaryColor, primaryColor]),
-                          borderRadius: BorderRadius.circular(16)
+                          gradient: LinearGradient(
+                            colors: [secondaryColor, primaryColor],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
                         ),
                         child: Container(
                           alignment: Alignment.center,
-                          child: _isLoading 
-                             ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                             : Text("MASUK", style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1.5)),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Text(
+                                  "MASUK",
+                                  style: GoogleFonts.outfit(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    letterSpacing: 1.5,
+                                  ),
+                                ),
                         ),
                       ),
                     ),
@@ -256,7 +334,13 @@ class _LoginPageState extends State<LoginPage> {
                       Expanded(child: Divider(color: borderColor)),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text("Atau masuk dengan", style: GoogleFonts.outfit(color: metaColor, fontSize: 13)),
+                        child: Text(
+                          "Atau masuk dengan",
+                          style: GoogleFonts.outfit(
+                            color: metaColor,
+                            fontSize: 13,
+                          ),
+                        ),
                       ),
                       Expanded(child: Divider(color: borderColor)),
                     ],
@@ -268,9 +352,9 @@ class _LoginPageState extends State<LoginPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                       _buildSocialButton(Icons.g_mobiledata_rounded, theme),
-                       const SizedBox(width: 16),
-                       _buildSocialButton(Icons.apple, theme),
+                      _buildSocialButton(Icons.g_mobiledata_rounded, theme),
+                      const SizedBox(width: 16),
+                      _buildSocialButton(Icons.apple, theme),
                     ],
                   ),
 
@@ -280,17 +364,33 @@ class _LoginPageState extends State<LoginPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text("Belum punya akun? ", style: GoogleFonts.outfit(color: theme.textTheme.bodyMedium?.color)),
+                      Text(
+                        "Belum punya akun? ",
+                        style: GoogleFonts.outfit(
+                          color: theme.textTheme.bodyMedium?.color,
+                        ),
+                      ),
                       GestureDetector(
-                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterPage())),
-                        child: Text("DAFTAR", style: GoogleFonts.outfit(color: primaryColor, fontWeight: FontWeight.bold)),
-                      )
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const RegisterPage(),
+                          ),
+                        ),
+                        child: Text(
+                          "DAFTAR",
+                          style: GoogleFonts.outfit(
+                            color: primaryColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ],
-                  )
+                  ),
                 ],
               ),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -298,39 +398,58 @@ class _LoginPageState extends State<LoginPage> {
 
   Widget _buildSocialButton(IconData icon, ThemeData theme) {
     return Container(
-      width: 60, height: 60,
+      width: 60,
+      height: 60,
       decoration: BoxDecoration(
-        color: theme.cardColor, 
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.dividerColor)
+        border: Border.all(color: theme.dividerColor),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: (){},
-          child: Center(child: Icon(icon, color: theme.textTheme.bodyLarge?.color, size: 28)),
+          onTap: () {},
+          child: Center(
+            child: Icon(
+              icon,
+              color: theme.textTheme.bodyLarge?.color,
+              size: 28,
+            ),
+          ),
         ),
       ),
     );
   }
 
-  InputDecoration _buildInputDecoration(String hint, IconData prefixIcon, ThemeData theme) {
+  InputDecoration _buildInputDecoration(
+    String hint,
+    IconData prefixIcon,
+    ThemeData theme,
+  ) {
     return InputDecoration(
       filled: true,
-      fillColor: theme.cardColor, 
+      fillColor: theme.cardColor,
       contentPadding: const EdgeInsets.all(16),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: theme.dividerColor)
+        borderSide: BorderSide(color: theme.dividerColor),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: theme.primaryColor)
+        borderSide: BorderSide(color: theme.primaryColor),
       ),
       hintText: hint,
-      hintStyle: GoogleFonts.outfit(color: (theme.textTheme.bodySmall?.color ?? Colors.grey).withValues(alpha: 0.5)),
-      prefixIcon: Icon(prefixIcon, color: theme.textTheme.bodySmall?.color, size: 20),
+      hintStyle: GoogleFonts.outfit(
+        color: (theme.textTheme.bodySmall?.color ?? Colors.grey).withValues(
+          alpha: 0.5,
+        ),
+      ),
+      prefixIcon: Icon(
+        prefixIcon,
+        color: theme.textTheme.bodySmall?.color,
+        size: 20,
+      ),
     );
   }
 }

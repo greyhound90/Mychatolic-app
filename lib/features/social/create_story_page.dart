@@ -7,10 +7,7 @@ import 'package:mychatolic_app/core/app_colors.dart';
 class CreateStoryPage extends StatefulWidget {
   final File imageFile;
 
-  const CreateStoryPage({
-    super.key,
-    required this.imageFile,
-  });
+  const CreateStoryPage({super.key, required this.imageFile});
 
   @override
   State<CreateStoryPage> createState() => _CreateStoryPageState();
@@ -18,9 +15,9 @@ class CreateStoryPage extends StatefulWidget {
 
 class _CreateStoryPageState extends State<CreateStoryPage> {
   final _supabase = Supabase.instance.client;
-  
+
   bool _isUploading = false;
-  
+
   // UX State
   String _text = '';
   Offset _textPos = const Offset(50, 200);
@@ -60,7 +57,9 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.$fileExt';
       final path = '$myId/$fileName';
 
-      await _supabase.storage.from('stories').upload(
+      await _supabase.storage
+          .from('stories')
+          .upload(
             path,
             widget.imageFile,
             fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
@@ -69,10 +68,10 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
       final imageUrl = _supabase.storage.from('stories').getPublicUrl(path);
 
       // 2. Insert DB Record
-      // Determine if we need to save caption. 
+      // Determine if we need to save caption.
       // User hasn't explicitly asked to change schema, but wants the text on the image.
       // Usually "caption" is enough.
-      
+
       final payload = {
         'user_id': myId,
         'media_url': imageUrl,
@@ -93,9 +92,9 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
       if (mounted) {
         setState(() => _isUploading = false);
         debugPrint("Upload Error: $e");
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Gagal upload: $e")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Gagal upload: $e")));
       }
     }
   }
@@ -104,7 +103,8 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      resizeToAvoidBottomInset: false, // Prevent image resize when keyboard opens
+      resizeToAvoidBottomInset:
+          false, // Prevent image resize when keyboard opens
       body: Stack(
         children: [
           // LAYER 1: Interactive Image
@@ -113,10 +113,7 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
               minScale: 0.5,
               maxScale: 4.0,
               child: Center(
-                child: Image.file(
-                  widget.imageFile,
-                  fit: BoxFit.contain,
-                ),
+                child: Image.file(widget.imageFile, fit: BoxFit.contain),
               ),
             ),
           ),
@@ -134,7 +131,9 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
                 },
                 onTap: _startEditing,
                 child: Container(
-                  constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width - 40),
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width - 40,
+                  ),
                   child: Text(
                     _text,
                     textAlign: TextAlign.center,
@@ -165,14 +164,16 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
                   alignment: Alignment.center,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                    child: IntrinsicWidth( // Just to keep width reasonable
+                    child: IntrinsicWidth(
+                      // Just to keep width reasonable
                       child: TextField(
                         controller: _textController,
                         autofocus: true,
                         textAlign: TextAlign.center,
                         style: GoogleFonts.outfit(
                           color: Colors.white,
-                          fontSize: _fontSize + 4, // Slightly larger when editing
+                          fontSize:
+                              _fontSize + 4, // Slightly larger when editing
                           fontWeight: FontWeight.bold,
                         ),
                         maxLines: null,
@@ -219,7 +220,11 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
                     color: Colors.black45,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.text_fields_rounded, color: Colors.white, size: 28),
+                  child: const Icon(
+                    Icons.text_fields_rounded,
+                    color: Colors.white,
+                    size: 28,
+                  ),
                 ),
               ),
             ),

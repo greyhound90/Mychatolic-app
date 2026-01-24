@@ -4,7 +4,7 @@ class Schedule {
   final int dayOfWeek; // 0=Minggu, 1=Senin...
   final String timeStart; // "HH:MM:SS"
   final String? language;
-  final String? label; 
+  final String? label;
 
   Schedule({
     required this.id,
@@ -27,14 +27,16 @@ class Schedule {
     if (rawDay == null) {
       throw FormatException('Missing required field: day_of_week');
     }
-    
+
     int dayOfWeek;
     if (rawDay is int) {
       dayOfWeek = rawDay;
     } else if (rawDay is String) {
       dayOfWeek = int.parse(rawDay); // Throws FormatException if invalid
     } else {
-      throw FormatException('Invalid day_of_week format: ${rawDay.runtimeType}');
+      throw FormatException(
+        'Invalid day_of_week format: ${rawDay.runtimeType}',
+      );
     }
 
     // 3. Mandatory Field: time_start
@@ -57,9 +59,17 @@ class Schedule {
 
   // Getter for Display
   String get dayName {
-     const days = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-     if (dayOfWeek >= 0 && dayOfWeek < days.length) return days[dayOfWeek];
-     return "Minggu";
+    const days = [
+      "Minggu",
+      "Senin",
+      "Selasa",
+      "Rabu",
+      "Kamis",
+      "Jumat",
+      "Sabtu",
+    ];
+    if (dayOfWeek >= 0 && dayOfWeek < days.length) return days[dayOfWeek];
+    return "Minggu";
   }
 
   Map<String, dynamic> toJson() {

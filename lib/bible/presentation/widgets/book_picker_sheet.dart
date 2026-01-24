@@ -33,16 +33,19 @@ class _BookPickerSheetState extends State<BookPickerSheet> {
   @override
   Widget build(BuildContext context) {
     final filtered = widget.books.where((book) {
-      final matchesTestament = _testament == 'ot' ? book.isOldTestament : !book.isOldTestament;
+      final matchesTestament = _testament == 'ot'
+          ? book.isOldTestament
+          : !book.isOldTestament;
       if (!matchesTestament) return false;
 
       if (_canonFilter == 1 && book.isDeuterocanonical) return false;
       if (_canonFilter == 2 && !book.isDeuterocanonical) return false;
 
-      if (_query.isNotEmpty && !book.name.toLowerCase().contains(_query)) return false;
+      if (_query.isNotEmpty && !book.name.toLowerCase().contains(_query)) {
+        return false;
+      }
       return true;
-    }).toList()
-      ..sort((a, b) => a.orderNumber.compareTo(b.orderNumber));
+    }).toList()..sort((a, b) => a.orderNumber.compareTo(b.orderNumber));
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -56,7 +59,10 @@ class _BookPickerSheetState extends State<BookPickerSheet> {
         children: [
           TextField(
             onChanged: (val) => setState(() => _query = val.toLowerCase()),
-            decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Cari kitab...'),
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.search),
+              hintText: 'Cari kitab...',
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
           Row(
@@ -68,7 +74,8 @@ class _BookPickerSheetState extends State<BookPickerSheet> {
                     ButtonSegment(value: 'nt', label: Text('Baru')),
                   ],
                   selected: {_testament},
-                  onSelectionChanged: (val) => setState(() => _testament = val.first),
+                  onSelectionChanged: (val) =>
+                      setState(() => _testament = val.first),
                 ),
               ),
             ],
@@ -100,21 +107,37 @@ class _BookPickerSheetState extends State<BookPickerSheet> {
                 ? const Center(child: Text('Tidak ada kitab ditemukan'))
                 : ListView.separated(
                     itemCount: filtered.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: AppSpacing.sm),
                     itemBuilder: (context, index) {
                       final book = filtered[index];
                       return ListTile(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
+                        ),
                         tileColor: Colors.white,
-                        title: Text(book.name, style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
+                        title: Text(
+                          book.name,
+                          style: GoogleFonts.manrope(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         trailing: book.isDeuterocanonical
                             ? Container(
-                                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.sm,
+                                  vertical: AppSpacing.xs,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Colors.amber.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.md,
+                                  ),
                                 ),
-                                child: const Text('Deuterokanonika', style: TextStyle(fontSize: 10)),
+                                child: const Text(
+                                  'Deuterokanonika',
+                                  style: TextStyle(fontSize: 10),
+                                ),
                               )
                             : null,
                         onTap: () => Navigator.pop(context, book),

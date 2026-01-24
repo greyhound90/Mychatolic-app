@@ -13,7 +13,10 @@ class MasterDataService {
   // 1. Fetch Countries
   Future<List<Country>> fetchCountries() async {
     try {
-      final response = await _supabase.from('countries').select().order('name', ascending: true);
+      final response = await _supabase
+          .from('countries')
+          .select()
+          .order('name', ascending: true);
       final data = response as List<dynamic>;
       return data.map((json) => Country.fromJson(json)).toList();
     } catch (e) {
@@ -68,11 +71,11 @@ class MasterDataService {
           validSchedules.add(schedule);
         } catch (e) {
           debugPrint('Error parsing schedule item: $e');
-          continue; 
+          continue;
         }
       }
 
-      // Manual Sort: 
+      // Manual Sort:
       // 1. Day of Week (Ascending 0-6)
       // 2. Time Start (Ascending HH:MM)
       validSchedules.sort((a, b) {
@@ -95,7 +98,7 @@ class MasterDataService {
           .select()
           .eq('is_published', true)
           .order('created_at', ascending: false)
-          .limit(20); 
+          .limit(20);
       final data = response as List<dynamic>;
       return data.map((json) => Article.fromJson(json)).toList();
     } catch (e) {
@@ -106,33 +109,57 @@ class MasterDataService {
   // 6. Search Locations
   Future<List<Map<String, dynamic>>> searchLocations(String query) async {
     if (query.isEmpty) return [];
-    
+
     try {
       List<Future<dynamic>> searchTasks = [
-        _supabase.from('countries').select('id, name').ilike('name', '%$query%').limit(5),
-        _supabase.from('dioceses').select('id, name').ilike('name', '%$query%').limit(5),
-        _supabase.from('churches').select('id, name').ilike('name', '%$query%').limit(5),
+        _supabase
+            .from('countries')
+            .select('id, name')
+            .ilike('name', '%$query%')
+            .limit(5),
+        _supabase
+            .from('dioceses')
+            .select('id, name')
+            .ilike('name', '%$query%')
+            .limit(5),
+        _supabase
+            .from('churches')
+            .select('id, name')
+            .ilike('name', '%$query%')
+            .limit(5),
       ];
 
       final results = await Future.wait(searchTasks);
-      
-      final countries = (results[0] as List<dynamic>).map((e) => {
-        'id': e['id'].toString(), 
-        'name': e['name'] as String, 
-        'type': 'country', 
-      }).toList();
-      
-      final dioceses = (results[1] as List<dynamic>).map((e) => {
-        'id': e['id'].toString(), 
-        'name': e['name'] as String, 
-        'type': 'diocese', 
-      }).toList();
-      
-      final churches = (results[2] as List<dynamic>).map((e) => {
-        'id': e['id'].toString(), 
-        'name': e['name'] as String, 
-        'type': 'church', 
-      }).toList();
+
+      final countries = (results[0] as List<dynamic>)
+          .map(
+            (e) => {
+              'id': e['id'].toString(),
+              'name': e['name'] as String,
+              'type': 'country',
+            },
+          )
+          .toList();
+
+      final dioceses = (results[1] as List<dynamic>)
+          .map(
+            (e) => {
+              'id': e['id'].toString(),
+              'name': e['name'] as String,
+              'type': 'diocese',
+            },
+          )
+          .toList();
+
+      final churches = (results[2] as List<dynamic>)
+          .map(
+            (e) => {
+              'id': e['id'].toString(),
+              'name': e['name'] as String,
+              'type': 'church',
+            },
+          )
+          .toList();
 
       return [...countries, ...dioceses, ...churches];
     } catch (e) {
@@ -144,11 +171,16 @@ class MasterDataService {
   // --- HELPER DROPDOWNS (Return Map) ---
 
   Future<List<Map<String, dynamic>>> getCountries() async {
-    final response = await _supabase.from('countries').select().order('name', ascending: true);
+    final response = await _supabase
+        .from('countries')
+        .select()
+        .order('name', ascending: true);
     return List<Map<String, dynamic>>.from(response);
   }
 
-  Future<List<Map<String, dynamic>>> getDioceses({required String countryId}) async {
+  Future<List<Map<String, dynamic>>> getDioceses({
+    required String countryId,
+  }) async {
     final response = await _supabase
         .from('dioceses')
         .select()
@@ -157,7 +189,9 @@ class MasterDataService {
     return List<Map<String, dynamic>>.from(response);
   }
 
-  Future<List<Map<String, dynamic>>> getChurches({required String dioceseId}) async {
+  Future<List<Map<String, dynamic>>> getChurches({
+    required String dioceseId,
+  }) async {
     final response = await _supabase
         .from('churches')
         .select()
@@ -167,7 +201,9 @@ class MasterDataService {
   }
 
   // 7. Fetch Church Schedules (Dynamic Map)
-  Future<List<Map<String, dynamic>>> fetchChurchSchedules(String churchId) async {
+  Future<List<Map<String, dynamic>>> fetchChurchSchedules(
+    String churchId,
+  ) async {
     try {
       final response = await _supabase
           .from('mass_schedules')
@@ -175,7 +211,7 @@ class MasterDataService {
           .eq('church_id', churchId)
           .order('day_of_week')
           .order('time_start');
-          
+
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       debugPrint("Error fetching church schedules: $e");

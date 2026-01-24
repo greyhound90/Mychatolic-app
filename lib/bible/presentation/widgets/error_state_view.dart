@@ -18,7 +18,10 @@ class ErrorStateView extends StatelessWidget {
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: AppSpacing.md),
             if (onRetry != null)
-              ElevatedButton(onPressed: onRetry, child: const Text('Coba lagi')),
+              ElevatedButton(
+                onPressed: onRetry,
+                child: const Text('Coba lagi'),
+              ),
           ],
         ),
       ),

@@ -4,7 +4,7 @@ import 'package:mychatolic_app/core/theme.dart';
 import 'package:mychatolic_app/models/church.dart';
 import 'package:mychatolic_app/models/country.dart';
 import 'package:mychatolic_app/models/diocese.dart';
-import 'package:mychatolic_app/pages/church_detail_screen.dart'; // NEW
+import 'package:mychatolic_app/pages/church/church_detail_screen.dart'; // NEW
 import 'package:mychatolic_app/services/master_data_service.dart';
 
 class ChurchSelectorScreen extends StatefulWidget {
@@ -106,8 +106,10 @@ class _ChurchSelectorScreenState extends State<ChurchSelectorScreen> {
   void _onViewDetails() {
     if (_selectedChurch != null) {
       Navigator.push(
-        context, 
-        MaterialPageRoute(builder: (_) => ChurchDetailScreen(church: _selectedChurch!)),
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChurchDetailScreen(church: _selectedChurch!),
+        ),
       );
     }
   }
@@ -117,7 +119,10 @@ class _ChurchSelectorScreenState extends State<ChurchSelectorScreen> {
     return Scaffold(
       backgroundColor: kBackground,
       appBar: AppBar(
-        title: Text("Cari Paroki", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        title: Text(
+          "Cari Paroki",
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: kPrimary,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -151,11 +156,17 @@ class _ChurchSelectorScreenState extends State<ChurchSelectorScreen> {
                 child: DropdownButton<Country>(
                   isExpanded: true,
                   value: _selectedCountry,
-                  hint: Text("Pilih Negara", style: GoogleFonts.outfit(color: kTextMeta)),
+                  hint: Text(
+                    "Pilih Negara",
+                    style: GoogleFonts.outfit(color: kTextMeta),
+                  ),
                   items: _countries.map((country) {
                     return DropdownMenuItem(
                       value: country,
-                      child: Text("${country.flagEmoji ?? ''} ${country.name}".trim(), style: GoogleFonts.outfit(color: kTextTitle)),
+                      child: Text(
+                        "${country.flagEmoji ?? ''} ${country.name}".trim(),
+                        style: GoogleFonts.outfit(color: kTextTitle),
+                      ),
                     );
                   }).toList(),
                   onChanged: _onCountryChanged,
@@ -173,16 +184,25 @@ class _ChurchSelectorScreenState extends State<ChurchSelectorScreen> {
                 child: _buildSelectionTile(
                   title: "KEUSKUPAN",
                   isLoading: _isLoadingDioceses,
-                  isEmpty: _dioceses.isEmpty && _selectedCountry != null && !_isLoadingDioceses,
+                  isEmpty:
+                      _dioceses.isEmpty &&
+                      _selectedCountry != null &&
+                      !_isLoadingDioceses,
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<Diocese>(
                       isExpanded: true,
                       value: _selectedDiocese,
-                      hint: Text("Pilih Keuskupan", style: GoogleFonts.outfit(color: kTextMeta)),
+                      hint: Text(
+                        "Pilih Keuskupan",
+                        style: GoogleFonts.outfit(color: kTextMeta),
+                      ),
                       items: _dioceses.map((diocese) {
                         return DropdownMenuItem(
                           value: diocese,
-                          child: Text(diocese.name, style: GoogleFonts.outfit(color: kTextTitle)),
+                          child: Text(
+                            diocese.name,
+                            style: GoogleFonts.outfit(color: kTextTitle),
+                          ),
                         );
                       }).toList(),
                       onChanged: _onDioceseChanged,
@@ -202,16 +222,25 @@ class _ChurchSelectorScreenState extends State<ChurchSelectorScreen> {
                 child: _buildSelectionTile(
                   title: "PAROKI / GEREJA",
                   isLoading: _isLoadingChurches,
-                  isEmpty: _churches.isEmpty && _selectedDiocese != null && !_isLoadingChurches,
+                  isEmpty:
+                      _churches.isEmpty &&
+                      _selectedDiocese != null &&
+                      !_isLoadingChurches,
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<Church>(
                       isExpanded: true,
                       value: _selectedChurch,
-                      hint: Text("Pilih Gereja", style: GoogleFonts.outfit(color: kTextMeta)),
+                      hint: Text(
+                        "Pilih Gereja",
+                        style: GoogleFonts.outfit(color: kTextMeta),
+                      ),
                       items: _churches.map((church) {
                         return DropdownMenuItem(
                           value: church,
-                          child: Text(church.name, style: GoogleFonts.outfit(color: kTextTitle)),
+                          child: Text(
+                            church.name,
+                            style: GoogleFonts.outfit(color: kTextTitle),
+                          ),
                         );
                       }).toList(),
                       onChanged: _onChurchChanged,
@@ -229,7 +258,9 @@ class _ChurchSelectorScreenState extends State<ChurchSelectorScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: kPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 elevation: 4,
                 shadowColor: kPrimary.withValues(alpha: 0.4),
               ),
@@ -258,7 +289,14 @@ class _ChurchSelectorScreenState extends State<ChurchSelectorScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: GoogleFonts.outfit(color: kTextMeta, fontSize: 12, fontWeight: FontWeight.bold)),
+        Text(
+          title,
+          style: GoogleFonts.outfit(
+            color: kTextMeta,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -271,17 +309,32 @@ class _ChurchSelectorScreenState extends State<ChurchSelectorScreen> {
                 color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
-              )
+              ),
             ],
           ),
           child: isLoading
-              ? const Center(child: Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: kPrimary))))
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: kPrimary,
+                      ),
+                    ),
+                  ),
+                )
               : isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Text("Tidak ada data tersedia", style: GoogleFonts.outfit(color: kTextMeta)),
-                    )
-                  : child,
+              ? Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    "Tidak ada data tersedia",
+                    style: GoogleFonts.outfit(color: kTextMeta),
+                  ),
+                )
+              : child,
         ),
       ],
     );

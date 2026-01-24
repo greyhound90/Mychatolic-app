@@ -57,10 +57,13 @@ class ReaderSettingsController extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _prefs = prefs;
     _settings = ReaderSettings(
-      fontSize: prefs.getDouble(_fontSizeKey) ?? ReaderSettings.defaults.fontSize,
-      lineHeight: prefs.getDouble(_lineHeightKey) ?? ReaderSettings.defaults.lineHeight,
+      fontSize:
+          prefs.getDouble(_fontSizeKey) ?? ReaderSettings.defaults.fontSize,
+      lineHeight:
+          prefs.getDouble(_lineHeightKey) ?? ReaderSettings.defaults.lineHeight,
       mode: prefs.getString(_modeKey) ?? ReaderSettings.defaults.mode,
-      paragraphMode: prefs.getBool(_paragraphKey) ?? ReaderSettings.defaults.paragraphMode,
+      paragraphMode:
+          prefs.getBool(_paragraphKey) ?? ReaderSettings.defaults.paragraphMode,
     );
     _isReady = true;
     notifyListeners();

@@ -55,19 +55,27 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
       await _storyService.uploadStory(
         file: _selectedFile!,
         mediaType: _mediaType,
-        caption: _captionController.text.trim().isEmpty ? null : _captionController.text.trim(),
+        caption: _captionController.text.trim().isEmpty
+            ? null
+            : _captionController.text.trim(),
       );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Story berhasil dibagikan!"), backgroundColor: Colors.green),
+          const SnackBar(
+            content: Text("Story berhasil dibagikan!"),
+            backgroundColor: Colors.green,
+          ),
         );
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Gagal upload story: $e"), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text("Gagal upload story: $e"),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -103,7 +111,8 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
               maxScale: 3.0,
               child: Image.file(
                 _selectedFile!,
-                fit: BoxFit.cover, // STRICT: Cover to fill screen (no black bars in default view)
+                fit: BoxFit
+                    .cover, // STRICT: Cover to fill screen (no black bars in default view)
                 width: double.infinity,
                 height: double.infinity,
               ),
@@ -119,7 +128,10 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
             child: SafeArea(
               bottom: false,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -144,11 +156,14 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
           // LAYER 3: Bottom Caption Input
           // SafeArea bottom only
           Positioned(
-            bottom: MediaQuery.of(context).viewInsets.bottom, // Moves up with keyboard
+            bottom: MediaQuery.of(
+              context,
+            ).viewInsets.bottom, // Moves up with keyboard
             left: 0,
             right: 0,
             child: Container(
-              color: Colors.black54, // Semi-transparent black background for legibility
+              color: Colors
+                  .black54, // Semi-transparent black background for legibility
               padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
               child: SafeArea(
                 top: false,
@@ -161,32 +176,44 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
                         constraints: const BoxConstraints(maxHeight: 100),
                         child: TextField(
                           controller: _captionController,
-                          style: GoogleFonts.outfit(color: Colors.white, fontSize: 16),
+                          style: GoogleFonts.outfit(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
                           maxLines: null, // Auto grow
                           keyboardType: TextInputType.multiline,
                           decoration: InputDecoration(
                             hintText: "Tulis keterangan...",
-                            hintStyle: GoogleFonts.outfit(color: Colors.white60),
+                            hintStyle: GoogleFonts.outfit(
+                              color: Colors.white60,
+                            ),
                             border: InputBorder.none, // No border as requested
-                            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 10,
+                            ),
                             isDense: true,
                           ),
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(width: 12),
-                    
+
                     // Send Button
                     GestureDetector(
                       onTap: _isLoading ? null : _uploadStory,
                       child: Container(
-                        width: 48, height: 48,
+                        width: 48,
+                        height: 48,
                         decoration: const BoxDecoration(
                           color: Color(0xFF0088CC),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.send, color: Colors.white, size: 24),
+                        child: const Icon(
+                          Icons.send,
+                          color: Colors.white,
+                          size: 24,
+                        ),
                       ),
                     ),
                   ],
@@ -225,14 +252,29 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text("Buat Cerita", style: GoogleFonts.outfit(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+            Text(
+              "Buat Cerita",
+              style: GoogleFonts.outfit(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 40),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildPickerButton(Icons.camera_alt, "Kamera", ImageSource.camera),
+                _buildPickerButton(
+                  Icons.camera_alt,
+                  "Kamera",
+                  ImageSource.camera,
+                ),
                 const SizedBox(width: 40),
-                _buildPickerButton(Icons.photo_library, "Galeri", ImageSource.gallery),
+                _buildPickerButton(
+                  Icons.photo_library,
+                  "Galeri",
+                  ImageSource.gallery,
+                ),
               ],
             ),
           ],
@@ -256,7 +298,10 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
             child: Icon(icon, color: Colors.white, size: 36),
           ),
           const SizedBox(height: 12),
-          Text(label, style: GoogleFonts.outfit(color: Colors.white, fontSize: 16)),
+          Text(
+            label,
+            style: GoogleFonts.outfit(color: Colors.white, fontSize: 16),
+          ),
         ],
       ),
     );

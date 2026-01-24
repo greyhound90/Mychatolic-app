@@ -35,15 +35,15 @@ class _EditPostPageState extends State<EditPostPage> {
 
     try {
       final newCaption = _captionController.text.trim();
-      
+
       await _supabase
           .from('posts')
-          .update({'caption': newCaption}) 
+          .update({'caption': newCaption})
           .eq('id', widget.post.id);
 
       if (mounted) {
         final updatedPost = widget.post.copyWith(caption: newCaption);
-        Navigator.pop(context, updatedPost); 
+        Navigator.pop(context, updatedPost);
       }
     } catch (e) {
       if (mounted) {
@@ -62,15 +62,33 @@ class _EditPostPageState extends State<EditPostPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Edit Postingan", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        title: Text(
+          "Edit Postingan",
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
         actions: [
           if (_isLoading)
-            const Center(child: Padding(padding: EdgeInsets.only(right: 16), child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))))
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.only(right: 16),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            )
           else
             TextButton(
               onPressed: _savePost,
-              child: Text("Simpan", style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
-            )
+              child: Text(
+                "Simpan",
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
         ],
       ),
       body: SingleChildScrollView(
@@ -78,17 +96,20 @@ class _EditPostPageState extends State<EditPostPage> {
         child: Column(
           children: [
             if (widget.post.imageUrls.isNotEmpty) ...[
-               Container(
-                 constraints: const BoxConstraints(maxHeight: 300),
-                 width: double.infinity,
-                 child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: SafeNetworkImage(imageUrl: widget.post.imageUrls.first, fit: BoxFit.cover,),
-                 ),
-               ),
-               const SizedBox(height: 16),
+              Container(
+                constraints: const BoxConstraints(maxHeight: 300),
+                width: double.infinity,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: SafeNetworkImage(
+                    imageUrl: widget.post.imageUrls.first,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
             ],
-            
+
             TextField(
               controller: _captionController,
               maxLines: null,

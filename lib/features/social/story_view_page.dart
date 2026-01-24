@@ -20,14 +20,16 @@ class StoryViewPage extends StatefulWidget {
   State<StoryViewPage> createState() => _StoryViewPageState();
 }
 
-class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateMixin {
+class _StoryViewPageState extends State<StoryViewPage>
+    with TickerProviderStateMixin {
   final _supabase = Supabase.instance.client;
   late PageController _pageController;
   late AnimationController _animController;
-  late AnimationController _likeAnimController; // Controller for bouncing heart/fire
+  late AnimationController
+  _likeAnimController; // Controller for bouncing heart/fire
   final TextEditingController _replyController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-  
+
   int _currentIndex = 0;
   bool _isPaused = false;
   bool _isLiked = false; // Optimistic Like State
@@ -40,7 +42,7 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
       vsync: this,
       duration: const Duration(seconds: 5),
     );
-    
+
     // Bouncy animation for Like button
     _likeAnimController = AnimationController(
       vsync: this,
@@ -56,7 +58,7 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
     });
 
     _animController.forward();
-    
+
     // Pause story when typing
     _focusNode.addListener(() {
       if (_focusNode.hasFocus) {
@@ -64,7 +66,7 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
         setState(() => _isPaused = true);
       } else {
         if (!_isPaused && _animController.status != AnimationStatus.completed) {
-           _animController.forward();
+          _animController.forward();
         }
         setState(() => _isPaused = false);
       }
@@ -87,7 +89,7 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
   Future<void> _checkLikeStatus() async {
     final myId = _supabase.auth.currentUser?.id;
     if (myId == null) return;
-    
+
     final storyId = widget.stories[_currentIndex]['id'];
 
     try {
@@ -96,7 +98,7 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
           .count(CountOption.exact)
           .eq('story_id', storyId)
           .eq('user_id', myId);
-      
+
       if (mounted) {
         setState(() {
           _isLiked = count > 0;
@@ -111,9 +113,9 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
     final myId = _supabase.auth.currentUser?.id;
     final targetUserId = widget.userProfile['id'];
     if (myId == null || targetUserId == null) return;
-    
+
     final storyId = widget.stories[_currentIndex]['id'];
-    
+
     // 1. Optimistic UI Update
     setState(() {
       _isLiked = !_isLiked;
@@ -127,7 +129,7 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
     try {
       if (_isLiked) {
         // --- ACTION: LIKE ---
-        
+
         // A. Insert to Story Likes Table
         await _supabase.from('story_likes').insert({
           'user_id': myId,
@@ -139,12 +141,13 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
         if (myId != targetUserId) {
           _sendLikeNotification(myId, targetUserId);
         }
-
       } else {
         // --- ACTION: UNLIKE ---
-        await _supabase.from('story_likes').delete()
-          .eq('user_id', myId)
-          .eq('story_id', storyId);
+        await _supabase
+            .from('story_likes')
+            .delete()
+            .eq('user_id', myId)
+            .eq('story_id', storyId);
       }
     } catch (e) {
       // Rollback on error
@@ -159,18 +162,18 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
   // Separate method for background chat trigger to keep toggleLike clean
   Future<void> _sendLikeNotification(String myId, String targetUserId) async {
     try {
-       // 1. Check/Create Chat
-       String? chatId;
-       
-       // Try to find existing chat with exact participants
-       // Using contains for both is tricky with single query without RPC or exact match logic
-       // Simplest robust approach: Get my chats, filter client side (for MVP scale)
-       final myChats = await _supabase
-          .from('social_chats')
-          .select()
-          .contains('participants', [myId]);
+      // 1. Check/Create Chat
+      String? chatId;
 
-       for (var chat in myChats) {
+      // Try to find existing chat with exact participants
+      // Using contains for both is tricky with single query without RPC or exact match logic
+      // Simplest robust approach: Get my chats, filter client side (for MVP scale)
+      final myChats = await _supabase.from('social_chats').select().contains(
+        'participants',
+        [myId],
+      );
+
+      for (var chat in myChats) {
         final participants = List<dynamic>.from(chat['participants'] ?? []);
         if (participants.contains(targetUserId)) {
           chatId = chat['id'];
@@ -179,11 +182,15 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
       }
 
       if (chatId == null) {
-        final newChat = await _supabase.from('social_chats').insert({
-          'participants': [myId, targetUserId],
-          'updated_at': DateTime.now().toIso8601String(),
-          'last_message': 'Reacted to story',
-        }).select().single();
+        final newChat = await _supabase
+            .from('social_chats')
+            .insert({
+              'participants': [myId, targetUserId],
+              'updated_at': DateTime.now().toIso8601String(),
+              'last_message': 'Reacted to story',
+            })
+            .select()
+            .single();
         chatId = newChat['id'];
       }
 
@@ -196,11 +203,14 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
       });
 
       // 3. Update Chat Timestamp
-      await _supabase.from('social_chats').update({
-        'updated_at': DateTime.now().toIso8601String(),
-        'last_message': '🔥 Menyukai story Anda', // Keep text for inbox preview
-      }).eq('id', chatId!);
-
+      await _supabase
+          .from('social_chats')
+          .update({
+            'updated_at': DateTime.now().toIso8601String(),
+            'last_message':
+                '🔥 Menyukai story Anda', // Keep text for inbox preview
+          })
+          .eq('id', chatId!);
     } catch (e) {
       // Silently fail for notifications, don't revert the actual Like
       debugPrint("Failed to send like notification: $e");
@@ -221,7 +231,7 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
       _animController.forward();
       _checkLikeStatus(); // Check for next story
     } else {
-      Navigator.pop(context); 
+      Navigator.pop(context);
     }
   }
 
@@ -244,7 +254,7 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
   void _onTapDown(TapDownDetails details) {
     if (_focusNode.hasFocus) {
       _focusNode.unfocus();
-      return; 
+      return;
     }
 
     final screenWidth = MediaQuery.of(context).size.width;
@@ -264,11 +274,13 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
 
     final myId = _supabase.auth.currentUser?.id;
     final targetUserId = widget.userProfile['id'];
-    
+
     // Prevent self-reply
     if (myId == null || targetUserId == null) return;
     if (myId == targetUserId) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Tidak bisa membalas story sendiri")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Tidak bisa membalas story sendiri")),
+      );
       return;
     }
 
@@ -280,11 +292,11 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
       // 1. Check or Create Chat Room (Same logic as Like)
       String? chatId;
 
-      final myChats = await _supabase
-          .from('social_chats')
-          .select()
-          .contains('participants', [myId]); 
-      
+      final myChats = await _supabase.from('social_chats').select().contains(
+        'participants',
+        [myId],
+      );
+
       for (var chat in myChats) {
         final participants = List<dynamic>.from(chat['participants'] ?? []);
         if (participants.contains(targetUserId)) {
@@ -294,11 +306,15 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
       }
 
       if (chatId == null) {
-        final newChat = await _supabase.from('social_chats').insert({
-          'participants': [myId, targetUserId],
-          'updated_at': DateTime.now().toIso8601String(),
-          'last_message': 'Replied to story',
-        }).select().single();
+        final newChat = await _supabase
+            .from('social_chats')
+            .insert({
+              'participants': [myId, targetUserId],
+              'updated_at': DateTime.now().toIso8601String(),
+              'last_message': 'Replied to story',
+            })
+            .select()
+            .single();
         chatId = newChat['id'];
       }
 
@@ -311,21 +327,29 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
         'chat_id': chatId,
         'sender_id': myId,
         'content': messageContent,
-        'type': 'story_reply', 
+        'type': 'story_reply',
       });
 
       // 4. Update Chat Last Message
-      await _supabase.from('social_chats').update({
-        'updated_at': DateTime.now().toIso8601String(),
-        'last_message': '💬 Membalas story Anda',
-      }).eq('id', chatId!);
+      await _supabase
+          .from('social_chats')
+          .update({
+            'updated_at': DateTime.now().toIso8601String(),
+            'last_message': '💬 Membalas story Anda',
+          })
+          .eq('id', chatId!);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Balasan terkirim")));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Balasan terkirim")));
       }
-
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error: $e")));
+      }
     }
   }
 
@@ -333,7 +357,8 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
   Widget build(BuildContext context) {
     final story = widget.stories[_currentIndex];
     final createdTime = DateTime.parse(story['created_at']);
-    final isMyStory = widget.userProfile['id'] == _supabase.auth.currentUser?.id;
+    final isMyStory =
+        widget.userProfile['id'] == _supabase.auth.currentUser?.id;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -345,36 +370,39 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
             child: GestureDetector(
               onTapDown: _onTapDown,
               onLongPress: () {
-                 _animController.stop();
+                _animController.stop();
               },
               onLongPressUp: () {
-                 if (!_focusNode.hasFocus) _animController.forward();
+                if (!_focusNode.hasFocus) _animController.forward();
               },
               child: Stack(
                 children: [
-                   Container(color: Colors.black), // Tap target background
-                   Center(
-                      child: SafeNetworkImage(
-                        imageUrl: story['media_url'],
-                        width: double.infinity,
-                        height: double.infinity,
-                        fit: BoxFit.contain,
-                        fallbackIcon: Icons.broken_image,
+                  Container(color: Colors.black), // Tap target background
+                  Center(
+                    child: SafeNetworkImage(
+                      imageUrl: story['media_url'],
+                      width: double.infinity,
+                      height: double.infinity,
+                      fit: BoxFit.contain,
+                      fallbackIcon: Icons.broken_image,
+                    ),
+                  ),
+                  // Gradient at bottom for better text visibility
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: 150,
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.transparent, Colors.black54],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
                       ),
-                   ),
-                   // Gradient at bottom for better text visibility
-                   Positioned(
-                     bottom: 0, left: 0, right: 0,
-                     height: 150,
-                     child: Container(
-                       decoration: const BoxDecoration(
-                         gradient: LinearGradient(
-                           colors: [Colors.transparent, Colors.black54],
-                           begin: Alignment.topCenter, end: Alignment.bottomCenter
-                         )
-                       ),
-                     ),
-                   )
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -397,7 +425,9 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
                               return LinearProgressIndicator(
                                 value: _animController.value,
                                 backgroundColor: Colors.white24,
-                                valueColor: const AlwaysStoppedAnimation(Colors.white),
+                                valueColor: const AlwaysStoppedAnimation(
+                                  Colors.white,
+                                ),
                                 minHeight: 3,
                                 borderRadius: BorderRadius.circular(2),
                               );
@@ -406,7 +436,9 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
                         : LinearProgressIndicator(
                             value: index < _currentIndex ? 1.0 : 0.0,
                             backgroundColor: Colors.white24,
-                            valueColor: const AlwaysStoppedAnimation(Colors.white),
+                            valueColor: const AlwaysStoppedAnimation(
+                              Colors.white,
+                            ),
                             minHeight: 3,
                             borderRadius: BorderRadius.circular(2),
                           ),
@@ -424,7 +456,8 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
               children: [
                 SafeNetworkImage(
                   imageUrl: widget.userProfile['avatar_url'],
-                  width: 40, height: 40,
+                  width: 40,
+                  height: 40,
                   borderRadius: BorderRadius.circular(20),
                   fit: BoxFit.cover,
                 ),
@@ -438,7 +471,9 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
-                        shadows: [const Shadow(color: Colors.black, blurRadius: 4)]
+                        shadows: [
+                          const Shadow(color: Colors.black, blurRadius: 4),
+                        ],
                       ),
                     ),
                     Text(
@@ -446,7 +481,9 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
                       style: GoogleFonts.outfit(
                         color: Colors.white70,
                         fontSize: 12,
-                        shadows: [const Shadow(color: Colors.black, blurRadius: 4)]
+                        shadows: [
+                          const Shadow(color: Colors.black, blurRadius: 4),
+                        ],
                       ),
                     ),
                   ],
@@ -464,15 +501,18 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
               onPressed: () => Navigator.pop(context),
             ),
           ),
-          
+
           // 5. Reply & Like Bar
           if (!isMyStory)
-          Positioned(
-            bottom: Platform.isIOS ? 32 : 16, 
-            left: 16, 
-            right: 16,
+            Positioned(
+              bottom: Platform.isIOS ? 32 : 16,
+              left: 16,
+              right: 16,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 16,
+                ),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     colors: [Colors.transparent, Colors.black87],
@@ -499,12 +539,16 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
                           onSubmitted: (_) => _handleReply(),
                           decoration: InputDecoration(
                             hintText: "Kirim pesan...",
-                            hintStyle: GoogleFonts.outfit(color: Colors.white70),
+                            hintStyle: GoogleFonts.outfit(
+                              color: Colors.white70,
+                            ),
                             filled: false,
                             fillColor: Colors.transparent,
                             border: InputBorder.none,
                             isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                            ),
                           ),
                         ),
                       ),
@@ -520,7 +564,11 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
                           shape: BoxShape.circle,
                           color: Colors.white.withValues(alpha: 0.2),
                         ),
-                        child: const Icon(Icons.send_rounded, color: Colors.white, size: 24),
+                        child: const Icon(
+                          Icons.send_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -529,10 +577,13 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
                     ScaleTransition(
                       scale: _likeAnimController,
                       child: Container(
-                        height: 44, width: 44,
+                        height: 44,
+                        width: 44,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: _isLiked ? Colors.white.withValues(alpha: 0.2) : Colors.transparent,
+                          color: _isLiked
+                              ? Colors.white.withValues(alpha: 0.2)
+                              : Colors.transparent,
                           border: Border.all(color: Colors.white30, width: 1),
                         ),
                         child: IconButton(
@@ -545,11 +596,11 @@ class _StoryViewPageState extends State<StoryViewPage> with TickerProviderStateM
                           onPressed: _toggleLike,
                         ),
                       ),
-                    )
+                    ),
                   ],
                 ),
               ),
-          ),
+            ),
         ],
       ),
     );

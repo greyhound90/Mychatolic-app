@@ -14,7 +14,7 @@ import 'package:mychatolic_app/services/master_data_service.dart';
 import 'package:mychatolic_app/widgets/my_catholic_app_bar.dart';
 import 'package:mychatolic_app/services/bible_service.dart';
 import 'package:mychatolic_app/services/profile_service.dart';
-import 'package:mychatolic_app/edit_profile_page.dart';
+import 'package:mychatolic_app/pages/profile/edit_profile_page.dart';
 
 class SchedulePage extends StatefulWidget {
   const SchedulePage({super.key});
@@ -48,7 +48,7 @@ class _SchedulePageState extends State<SchedulePage> {
   // State: Results
   List<MassSchedule> _schedules = [];
   bool _isLoadingSchedules = false;
-  
+
   // Grouping for "Church Search" mode
   bool _isChurchSearchMode = false;
 
@@ -109,18 +109,20 @@ class _SchedulePageState extends State<SchedulePage> {
   }
 
   // --- SCHEDULE LOGIC ---
-  
+
   // 1. Load by Date (Default View)
   Future<void> _loadDailySchedules() async {
     setState(() {
       _isLoadingSchedules = true;
       _isChurchSearchMode = false;
     });
-    
+
     try {
       // Fetch general schedules for this weekday
       // Note: In a real app this should be filtered by user location or favourites
-      final data = await _scheduleService.fetchSchedules(dayOfWeek: _selectedDate.weekday);
+      final data = await _scheduleService.fetchSchedules(
+        dayOfWeek: _selectedDate.weekday,
+      );
       if (mounted) {
         setState(() {
           _schedules = data;
@@ -135,18 +137,22 @@ class _SchedulePageState extends State<SchedulePage> {
   // 2. Search Specific Church (Advanced View)
   Future<void> _searchByChurch() async {
     if (_selectedChurchId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Pilih Gereja terlebih dahulu")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Pilih Gereja terlebih dahulu")),
+      );
       return;
     }
 
     setState(() {
       _isLoadingSchedules = true;
-      _isChurchSearchMode = true; 
+      _isChurchSearchMode = true;
     });
 
     try {
       // Use the service which now returns strictly typed List<MassSchedule>
-      final data = await _scheduleService.fetchSchedules(churchId: _selectedChurchId!);
+      final data = await _scheduleService.fetchSchedules(
+        churchId: _selectedChurchId!,
+      );
 
       if (mounted) {
         setState(() {
@@ -167,8 +173,8 @@ class _SchedulePageState extends State<SchedulePage> {
     final bgColor = isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FA);
 
     // Liturgical Color Logic
-    final liturgicalColor = _currentLiturgy != null 
-        ? LiturgyService.getLiturgicalColor(_currentLiturgy!.color) 
+    final liturgicalColor = _currentLiturgy != null
+        ? LiturgyService.getLiturgicalColor(_currentLiturgy!.color)
         : AppColors.primaryBrand; // Default fallback
 
     return Scaffold(
@@ -178,96 +184,135 @@ class _SchedulePageState extends State<SchedulePage> {
         slivers: [
           // 1. Calendar
           SliverToBoxAdapter(
-             child: Container(
-               color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-               padding: const EdgeInsets.symmetric(vertical: 20),
-               child: EasyDateTimeLine(
-                 initialDate: _selectedDate,
-                 onDateChange: (d) {
-                   // Optimistic update for UI responsiveness
-                   setState(() { 
-                      _selectedDate = d;
-                      // Reset liturgy to null or keep previous? Better to keep previous to avoid flash, 
-                      // or show loading. But the color needs to update.
-                      // We'll let the fetch update the state.
-                   }); 
-                   _fetchLiturgy();
-                   if (!_isChurchSearchMode) _loadDailySchedules(); 
-                 },
-                 headerProps: const EasyHeaderProps(
-                   monthPickerType: MonthPickerType.switcher,
-                   dateFormatter: DateFormatter.fullDateDMY(),
-                 ),
-                 dayProps: EasyDayProps(
-                   dayStructure: DayStructure.dayStrDayNum,
-                   activeDayStyle: DayStyle(
-                     decoration: BoxDecoration(
-                       borderRadius: BorderRadius.circular(12),
-                       gradient: LinearGradient(
-                         colors: [liturgicalColor, liturgicalColor.withValues(alpha: 0.8)],
-                       ),
-                       boxShadow: [
-                         BoxShadow(
-                           color: liturgicalColor.withValues(alpha: 0.3),
-                           blurRadius: 8,
-                           offset: const Offset(0, 4),
-                         )
-                       ]
-                     ),
-                   ),
-                   todayStyle: DayStyle(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: liturgicalColor.withValues(alpha: 0.5), width: 2),
-                      )
-                   )
-                 ),
-               ),
-             ),
+            child: Container(
+              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: EasyDateTimeLine(
+                initialDate: _selectedDate,
+                onDateChange: (d) {
+                  // Optimistic update for UI responsiveness
+                  setState(() {
+                    _selectedDate = d;
+                    // Reset liturgy to null or keep previous? Better to keep previous to avoid flash,
+                    // or show loading. But the color needs to update.
+                    // We'll let the fetch update the state.
+                  });
+                  _fetchLiturgy();
+                  if (!_isChurchSearchMode) _loadDailySchedules();
+                },
+                headerProps: const EasyHeaderProps(
+                  monthPickerType: MonthPickerType.switcher,
+                  dateFormatter: DateFormatter.fullDateDMY(),
+                ),
+                dayProps: EasyDayProps(
+                  dayStructure: DayStructure.dayStrDayNum,
+                  activeDayStyle: DayStyle(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      gradient: LinearGradient(
+                        colors: [
+                          liturgicalColor,
+                          liturgicalColor.withValues(alpha: 0.8),
+                        ],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: liturgicalColor.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                  ),
+                  todayStyle: DayStyle(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: liturgicalColor.withValues(alpha: 0.5),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
 
           // 2. Liturgy Card
-          SliverToBoxAdapter(
-            child: _buildLiturgyHeader(isDark),
-          ),
-          
+          SliverToBoxAdapter(child: _buildLiturgyHeader(isDark)),
+
           // 2.5 Personalized Parish Schedule
-          SliverToBoxAdapter(
-            child: _buildPersonalParishSection(isDark),
-          ),
-          
+          SliverToBoxAdapter(child: _buildPersonalParishSection(isDark)),
+
           // 3. Advanced Search Toggle
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Card(
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.withValues(alpha: 0.2))),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+                ),
                 color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 child: ExpansionTile(
-                  title: Text("Cari Jadwal Misa", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black)),
-                  leading: const Icon(Icons.search, color: AppColors.primaryBrand),
+                  title: Text(
+                    "Cari Jadwal Misa",
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black,
+                    ),
+                  ),
+                  leading: const Icon(
+                    Icons.search,
+                    color: AppColors.primaryBrand,
+                  ),
                   childrenPadding: const EdgeInsets.all(16),
                   children: [
                     _buildDropdown<String>(
                       label: "Negara",
                       value: _selectedCountryId,
-                      items: _countries.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+                      items: _countries
+                          .map(
+                            (c) => DropdownMenuItem(
+                              value: c.id,
+                              child: Text(c.name),
+                            ),
+                          )
+                          .toList(),
                       onChanged: _onCountryChanged,
                     ),
                     const SizedBox(height: 12),
                     _buildDropdown<String>(
                       label: "Keuskupan",
                       value: _selectedDioceseId,
-                      items: _dioceses.map((d) => DropdownMenuItem(value: d.id, child: Text(d.name))).toList(),
-                      onChanged: _selectedCountryId == null ? null : _onDioceseChanged,
+                      items: _dioceses
+                          .map(
+                            (d) => DropdownMenuItem(
+                              value: d.id,
+                              child: Text(d.name),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: _selectedCountryId == null
+                          ? null
+                          : _onDioceseChanged,
                     ),
                     const SizedBox(height: 12),
                     _buildDropdown<String>(
                       label: "Paroki / Gereja",
                       value: _selectedChurchId,
-                      items: _churches.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
-                      onChanged: _selectedDioceseId == null ? null : (val) => setState(() => _selectedChurchId = val),
+                      items: _churches
+                          .map(
+                            (c) => DropdownMenuItem(
+                              value: c.id,
+                              child: Text(c.name),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: _selectedDioceseId == null
+                          ? null
+                          : (val) => setState(() => _selectedChurchId = val),
                     ),
                     const SizedBox(height: 16),
                     SizedBox(
@@ -276,19 +321,30 @@ class _SchedulePageState extends State<SchedulePage> {
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryBrand,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         onPressed: _searchByChurch,
-                        child: Text("Lihat Jadwal", style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+                        child: Text(
+                          "Lihat Jadwal",
+                          style: GoogleFonts.outfit(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                     if (_isChurchSearchMode) ...[
-                       const SizedBox(height: 12),
-                       TextButton(
-                         onPressed: _loadDailySchedules, // Reset to Daily View
-                         child: Text("Reset ke Tampilan Harian", style: GoogleFonts.outfit(color: Colors.red)),
-                       )
-                    ]
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: _loadDailySchedules, // Reset to Daily View
+                        child: Text(
+                          "Reset ke Tampilan Harian",
+                          style: GoogleFonts.outfit(color: Colors.red),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -300,17 +356,27 @@ class _SchedulePageState extends State<SchedulePage> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
               child: Text(
-                _isChurchSearchMode ? "Jadwal Lengkap Gereja" : "Jadwal Misa Hari Ini",
-                style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
+                _isChurchSearchMode
+                    ? "Jadwal Lengkap Gereja"
+                    : "Jadwal Misa Hari Ini",
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
               ),
             ),
           ),
 
           // 5. List
           if (_isLoadingSchedules)
-            const SliverFillRemaining(child: Center(child: CircularProgressIndicator(color: AppColors.primaryBrand)))
+            const SliverFillRemaining(
+              child: Center(
+                child: CircularProgressIndicator(color: AppColors.primaryBrand),
+              ),
+            )
           else if (_schedules.isEmpty)
-             SliverFillRemaining(
+            SliverFillRemaining(
               hasScrollBody: false,
               child: Center(
                 child: Column(
@@ -319,9 +385,11 @@ class _SchedulePageState extends State<SchedulePage> {
                     Icon(Icons.event_busy, size: 60, color: Colors.grey[400]),
                     const SizedBox(height: 10),
                     Text(
-                      _isChurchSearchMode ? "Jadwal belum tersedia" : "Tidak ada jadwal (Data sample)", // Friendly fallback
-                      textAlign: TextAlign.center, 
-                      style: GoogleFonts.outfit(color: Colors.grey)
+                      _isChurchSearchMode
+                          ? "Jadwal belum tersedia"
+                          : "Tidak ada jadwal (Data sample)", // Friendly fallback
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.outfit(color: Colors.grey),
                     ),
                   ],
                 ),
@@ -329,20 +397,20 @@ class _SchedulePageState extends State<SchedulePage> {
             )
           else
             SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final item = _schedules[index];
-                  // If in Church Mode, we might want to show day header or just list all
-                  // For simplicity: List all, maybe showing Day Name if different
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    child: _buildTicketCard(item, isDark),
-                  );
-                },
-                childCount: _schedules.length,
-              ),
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final item = _schedules[index];
+                // If in Church Mode, we might want to show day header or just list all
+                // For simplicity: List all, maybe showing Day Name if different
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+                  child: _buildTicketCard(item, isDark),
+                );
+              }, childCount: _schedules.length),
             ),
-          
+
           const SliverToBoxAdapter(child: SizedBox(height: 40)),
         ],
       ),
@@ -352,15 +420,20 @@ class _SchedulePageState extends State<SchedulePage> {
   // --- UI COMPONENTS ---
   Widget _buildLiturgyHeader(bool isDark) {
     if (_loadingLiturgy) {
-      return const Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator()));
+      return const Padding(
+        padding: EdgeInsets.all(20),
+        child: Center(child: CircularProgressIndicator()),
+      );
     }
 
     // Default values if no liturgy
-    final bgColor = _currentLiturgy != null 
-        ? LiturgyService.getLiturgicalColor(_currentLiturgy!.color) 
-        : Colors.blue; 
-    
-    final textColor = LiturgyService.getLiturgicalTextColor(_currentLiturgy?.color); // Use helper
+    final bgColor = _currentLiturgy != null
+        ? LiturgyService.getLiturgicalColor(_currentLiturgy!.color)
+        : Colors.blue;
+
+    final textColor = LiturgyService.getLiturgicalTextColor(
+      _currentLiturgy?.color,
+    ); // Use helper
 
     return Container(
       margin: const EdgeInsets.all(16),
@@ -369,17 +442,26 @@ class _SchedulePageState extends State<SchedulePage> {
         color: bgColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-           BoxShadow(color: bgColor.withValues(alpha: 0.4), blurRadius: 10, offset: const Offset(0, 4))
+          BoxShadow(
+            color: bgColor.withValues(alpha: 0.4),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Stack(
         children: [
           // Background Pattern (Optional)
           Positioned(
-             right: -20, top: -20,
-             child: Icon(Icons.church, size: 150, color: Colors.white.withValues(alpha: 0.1)),
+            right: -20,
+            top: -20,
+            child: Icon(
+              Icons.church,
+              size: 150,
+              color: Colors.white.withValues(alpha: 0.1),
+            ),
           ),
-          
+
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -389,38 +471,80 @@ class _SchedulePageState extends State<SchedulePage> {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       child: Text(
-                        DateFormat('EEEE, d MMMM yyyy', 'id').format(_selectedDate),
-                        style: GoogleFonts.outfit(color: textColor, fontWeight: FontWeight.bold),
+                        DateFormat(
+                          'EEEE, d MMMM yyyy',
+                          'id',
+                        ).format(_selectedDate),
+                        style: GoogleFonts.outfit(
+                          color: textColor,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     const Spacer(),
-                    Icon(Icons.auto_awesome, color: textColor.withValues(alpha: 0.8), size: 20),
+                    Icon(
+                      Icons.auto_awesome,
+                      color: textColor.withValues(alpha: 0.8),
+                      size: 20,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Feast Name
                 Text(
                   _currentLiturgy?.feastName ?? "Hari Biasa",
-                  style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: textColor),
+                  style: GoogleFonts.outfit(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
                 ),
                 Text(
                   "Warna Liturgi: ${_currentLiturgy?.color.toUpperCase() ?? '-'}",
-                  style: GoogleFonts.outfit(fontSize: 14, color: textColor.withValues(alpha: 0.9)),
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    color: textColor.withValues(alpha: 0.9),
+                  ),
                 ),
                 const SizedBox(height: 20),
-                
+
                 // Readings
-                if (_currentLiturgy != null && _currentLiturgy!.readings.isNotEmpty) ...[
-                   _buildReadingRow("Bacaan 1", _currentLiturgy!.readings['bacaan1'] ?? '-', textColor),
-                   if (_currentLiturgy!.readings['mazmur'] != null)
-                      _buildReadingRow("Mazmur", _currentLiturgy!.readings['mazmur'] ?? '-', textColor),
-                   _buildReadingRow("Injil", _currentLiturgy!.readings['injil'] ?? '-', textColor),
+                if (_currentLiturgy != null &&
+                    _currentLiturgy!.readings.isNotEmpty) ...[
+                  _buildReadingRow(
+                    "Bacaan 1",
+                    _currentLiturgy!.readings['bacaan1'] ?? '-',
+                    textColor,
+                  ),
+                  if (_currentLiturgy!.readings['mazmur'] != null)
+                    _buildReadingRow(
+                      "Mazmur",
+                      _currentLiturgy!.readings['mazmur'] ?? '-',
+                      textColor,
+                    ),
+                  _buildReadingRow(
+                    "Injil",
+                    _currentLiturgy!.readings['injil'] ?? '-',
+                    textColor,
+                  ),
                 ] else
-                   Text("Data bacaan belum tersedia.", style: GoogleFonts.outfit(color: textColor.withValues(alpha: 0.7), fontStyle: FontStyle.italic)),
+                  Text(
+                    "Data bacaan belum tersedia.",
+                    style: GoogleFonts.outfit(
+                      color: textColor.withValues(alpha: 0.7),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -438,11 +562,25 @@ class _SchedulePageState extends State<SchedulePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-              width: 70, 
-              child: Text(label, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: color.withValues(alpha: 0.8), fontSize: 13))
+              width: 70,
+              child: Text(
+                label,
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold,
+                  color: color.withValues(alpha: 0.8),
+                  fontSize: 13,
+                ),
+              ),
             ),
             Expanded(
-              child: Text(ref, style: GoogleFonts.outfit(color: color, fontSize: 13, fontWeight: FontWeight.w500)),
+              child: Text(
+                ref,
+                style: GoogleFonts.outfit(
+                  color: color,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
           ],
         ),
@@ -461,11 +599,27 @@ class _SchedulePageState extends State<SchedulePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-              width: 70, 
-              child: Text(label, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: color.withValues(alpha: 0.8), fontSize: 13))
+              width: 70,
+              child: Text(
+                label,
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold,
+                  color: color.withValues(alpha: 0.8),
+                  fontSize: 13,
+                ),
+              ),
             ),
             Expanded(
-              child: Text(ref, style: GoogleFonts.outfit(color: color, fontSize: 13, fontWeight: FontWeight.w500, decoration: TextDecoration.underline, decorationColor: color.withValues(alpha: 0.5))),
+              child: Text(
+                ref,
+                style: GoogleFonts.outfit(
+                  color: color,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  decoration: TextDecoration.underline,
+                  decorationColor: color.withValues(alpha: 0.5),
+                ),
+              ),
             ),
           ],
         ),
@@ -474,15 +628,24 @@ class _SchedulePageState extends State<SchedulePage> {
             future: BibleService().getVersesText(ref),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-                ));
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                );
               }
               if (snapshot.hasError || snapshot.data == null) {
                 return Padding(
                   padding: const EdgeInsets.all(8.0),
-                  child: Text("Gagal memuat ayat.", style: GoogleFonts.outfit(color: Colors.red, fontSize: 12)),
+                  child: Text(
+                    "Gagal memuat ayat.",
+                    style: GoogleFonts.outfit(color: Colors.red, fontSize: 12),
+                  ),
                 );
               }
               return Container(
@@ -524,10 +687,19 @@ class _SchedulePageState extends State<SchedulePage> {
         labelText: label,
         labelStyle: GoogleFonts.outfit(color: Colors.grey[600]),
         filled: true,
-        fillColor: Colors.grey[50], 
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[300]!)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[300]!)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        fillColor: Colors.grey[50],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
       ),
       style: GoogleFonts.outfit(color: Colors.black),
       dropdownColor: Colors.white,
@@ -543,7 +715,11 @@ class _SchedulePageState extends State<SchedulePage> {
         color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       padding: const EdgeInsets.all(16),
@@ -558,12 +734,23 @@ class _SchedulePageState extends State<SchedulePage> {
             child: Column(
               children: [
                 if (_isChurchSearchMode) ...[
-                   Text(dayName.substring(0, 3).toUpperCase(), style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primaryBrand)),
-                   const SizedBox(height: 2),
+                  Text(
+                    dayName.substring(0, 3).toUpperCase(),
+                    style: GoogleFonts.outfit(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryBrand,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
                 ],
                 Text(
                   item.timeStart.substring(0, 5), // HH:mm
-                  style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryBrand)
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryBrand,
+                  ),
                 ),
               ],
             ),
@@ -574,21 +761,40 @@ class _SchedulePageState extends State<SchedulePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                   item.churchName, 
-                   style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? Colors.white : Colors.black87),
-                   maxLines: 1, overflow: TextOverflow.ellipsis
+                  item.churchName,
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  _isChurchSearchMode ? dayName : (item.churchParish ?? '-'), // Show Day if Church Mode, Parish otherwise
-                  style: GoogleFonts.outfit(fontSize: 13, color: Colors.grey[600]), 
-                  maxLines: 1, overflow: TextOverflow.ellipsis
+                  _isChurchSearchMode
+                      ? dayName
+                      : (item.churchParish ??
+                            '-'), // Show Day if Church Mode, Parish otherwise
+                  style: GoogleFonts.outfit(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                     Icon(Icons.language, size: 12, color: Colors.orange[700]),
-                     const SizedBox(width: 4),
-                     Text(item.language ?? "Umum", style: GoogleFonts.outfit(fontSize: 12, color: Colors.orange[700], fontWeight: FontWeight.w600)),
+                    Icon(Icons.language, size: 12, color: Colors.orange[700]),
+                    const SizedBox(width: 4),
+                    Text(
+                      item.language ?? "Umum",
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        color: Colors.orange[700],
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -601,7 +807,15 @@ class _SchedulePageState extends State<SchedulePage> {
   }
 
   String _getDayName(int day) {
-    const days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+    const days = [
+      'Senin',
+      'Selasa',
+      'Rabu',
+      'Kamis',
+      'Jumat',
+      'Sabtu',
+      'Minggu',
+    ];
     if (day >= 1 && day <= 7) return days[day - 1];
     return '-';
   }
@@ -618,11 +832,13 @@ class _SchedulePageState extends State<SchedulePage> {
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const SizedBox.shrink();
 
-        final profile = snapshot.data!['profile'] as dynamic; // Using dynamic to access properties safely or cast to Profile
-        // Assuming Profile model has parishId or we check 'parish' string. 
-        // Based on Profile model provided: 'parish' is a String (Name). 
-        // We need 'church_id' to query schedules. 
-        // Profile model doesn't seem to have 'churchId'. 
+        final profile =
+            snapshot.data!['profile']
+                as dynamic; // Using dynamic to access properties safely or cast to Profile
+        // Assuming Profile model has parishId or we check 'parish' string.
+        // Based on Profile model provided: 'parish' is a String (Name).
+        // We need 'church_id' to query schedules.
+        // Profile model doesn't seem to have 'churchId'.
         // Let's assume 'parish' field stores the ID or we need to add church_id to Profile.
         // CHECK: Profile model only has `final String? parish;`.
         // If `parish` stores the NAME, we can't query by ID easily without a search or change in Profile model.
@@ -630,18 +846,19 @@ class _SchedulePageState extends State<SchedulePage> {
         // If the user selects a parish from dropdown, usually we store ID.
         // Let's assume the 'parish' field in `profiles` table might hold the ID or we extended it.
         // If 'parish' holds the name 'St. Yoseph', we can't query mass_schedules by 'church_id'.
-        // Workaround: We will rely on getting 'church_id' from profile if available. 
+        // Workaround: We will rely on getting 'church_id' from profile if available.
         // Inspecting ProfileService: `.select('..., parish, ...')`.
         // If 'parish' is just a name, this feature requires backend change to store parish_id.
         // PROCEEDING with assumption: We try to use `parish` as ID. If it fails (empty list), user sees nothing.
         // But better: Let's check if we can fetch schedules by matching church name or if we need to request Profile Update.
         // USER REQUEST: "Fetch the current user's profile... to get their `church_id`".
         // I will attempt to cast `profile.parish` as the ID.
-        
+
         // Wait, ProfileService fetchUserProfile returns `Profile` object.
         // Profile class has `parish`.
-        
-        final parishId = profile.parish; // Assuming this stores the UUID or foreign key.
+
+        final parishId =
+            profile.parish; // Assuming this stores the UUID or foreign key.
 
         if (parishId == null || parishId.isEmpty) {
           return _buildSetParishCard(isDark);
@@ -650,81 +867,129 @@ class _SchedulePageState extends State<SchedulePage> {
         return FutureBuilder<List<MassSchedule>>(
           future: _scheduleService.fetchSchedules(churchId: parishId),
           builder: (context, scheduleSnapshot) {
-             if (scheduleSnapshot.connectionState == ConnectionState.waiting) {
-               return const Center(child: Padding(padding: EdgeInsets.all(8), child: CircularProgressIndicator.adaptive()));
-             }
-             
-             // If no schedules found (maybe parishId was just a name "Paroki Blok B", not a UUID), 
-             // or truly no schedules.
-             if (!scheduleSnapshot.hasData || scheduleSnapshot.data!.isEmpty) {
-                // If it looks like a name (not UUID len), maybe warn? Or just show empty.
-                return _buildSetParishCard(isDark, isUpdate: true);
-             }
+            if (scheduleSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(8),
+                  child: CircularProgressIndicator.adaptive(),
+                ),
+              );
+            }
 
-             final schedules = scheduleSnapshot.data!;
-             // Get Church Name from first schedule
-             final churchName = schedules.first.churchName;
+            // If no schedules found (maybe parishId was just a name "Paroki Blok B", not a UUID),
+            // or truly no schedules.
+            if (!scheduleSnapshot.hasData || scheduleSnapshot.data!.isEmpty) {
+              // If it looks like a name (not UUID len), maybe warn? Or just show empty.
+              return _buildSetParishCard(isDark, isUpdate: true);
+            }
 
-             return Container(
-               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-               padding: const EdgeInsets.all(16),
-               decoration: BoxDecoration(
-                 color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE8F0FE), // Different tint
-                 borderRadius: BorderRadius.circular(16),
-                 border: Border.all(color: AppColors.primaryBrand.withValues(alpha: 0.3)),
-               ),
-               child: Column(
-                 crossAxisAlignment: CrossAxisAlignment.start,
-                 children: [
-                   Row(
-                     children: [
-                       Icon(Icons.star, color: AppColors.primaryBrand, size: 20),
-                       const SizedBox(width: 8),
-                       Expanded(
-                         child: Text(
-                           "Jadwal Paroki Anda",
-                           style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primaryBrand),
-                         ),
-                       ),
-                     ],
-                   ),
-                   const SizedBox(height: 4),
-                   Text(
-                     churchName,
-                     style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
-                   ),
-                   const SizedBox(height: 12),
-                   if (schedules.isEmpty)
-                      Text("Belum ada jadwal.", style: GoogleFonts.outfit(color: Colors.grey)),
-                   
-                   // Horizontal List for compactness
-                   SingleChildScrollView(
-                     scrollDirection: Axis.horizontal,
-                     child: Row(
-                       children: schedules.map((s) {
-                         return Container(
-                           margin: const EdgeInsets.only(right: 12),
-                           padding: const EdgeInsets.all(12),
-                           decoration: BoxDecoration(
-                             color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                             borderRadius: BorderRadius.circular(12),
-                             boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0,2))],
-                           ),
-                           child: Column(
-                             crossAxisAlignment: CrossAxisAlignment.start,
-                             children: [
-                               Text(_getDayName(s.dayOfWeek), style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.bold)),
-                               Text(s.timeStart.substring(0, 5), style: GoogleFonts.outfit(fontSize: 16, color: AppColors.primaryBrand, fontWeight: FontWeight.bold)),
-                               Text(s.language ?? 'Umum', style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey)),
-                             ],
-                           ),
-                         );
-                       }).toList(),
-                     ),
-                   )
-                 ],
-               ),
-             );
+            final schedules = scheduleSnapshot.data!;
+            // Get Church Name from first schedule
+            final churchName = schedules.first.churchName;
+
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF2C2C2C)
+                    : const Color(0xFFE8F0FE), // Different tint
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.primaryBrand.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.star, color: AppColors.primaryBrand, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "Jadwal Paroki Anda",
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryBrand,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    churchName,
+                    style: GoogleFonts.outfit(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (schedules.isEmpty)
+                    Text(
+                      "Belum ada jadwal.",
+                      style: GoogleFonts.outfit(color: Colors.grey),
+                    ),
+
+                  // Horizontal List for compactness
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: schedules.map((s) {
+                        return Container(
+                          margin: const EdgeInsets.only(right: 12),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF1E1E1E)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _getDayName(s.dayOfWeek),
+                                style: GoogleFonts.outfit(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                s.timeStart.substring(0, 5),
+                                style: GoogleFonts.outfit(
+                                  fontSize: 16,
+                                  color: AppColors.primaryBrand,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                s.language ?? 'Umum',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 10,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            );
           },
         );
       },
@@ -736,7 +1001,9 @@ class _SchedulePageState extends State<SchedulePage> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF2C2C2C) : Colors.amber.withValues(alpha: 0.1),
+        color: isDark
+            ? const Color(0xFF2C2C2C)
+            : Colors.amber.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
       ),
@@ -750,13 +1017,19 @@ class _SchedulePageState extends State<SchedulePage> {
               children: [
                 Text(
                   isUpdate ? "Data Paroki Tidak Sesuai?" : "Atur Paroki Anda",
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
                 ),
                 Text(
-                  isUpdate 
-                    ? "Perbarui profil untuk melihat jadwal yang tepat."
-                    : "Pilih paroki di profil untuk lihat jadwal otomatis.",
-                  style: GoogleFonts.outfit(fontSize: 12, color: isDark ? Colors.grey[400] : Colors.black54),
+                  isUpdate
+                      ? "Perbarui profil untuk melihat jadwal yang tepat."
+                      : "Pilih paroki di profil untuk lihat jadwal otomatis.",
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    color: isDark ? Colors.grey[400] : Colors.black54,
+                  ),
                 ),
               ],
             ),
@@ -766,19 +1039,24 @@ class _SchedulePageState extends State<SchedulePage> {
               backgroundColor: Colors.amber[700],
               foregroundColor: Colors.white,
               visualDensity: VisualDensity.compact,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             onPressed: () {
-               // Navigation to Edit Profile
-               Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilePage())).then((_) {
-                  // REFRESH: Re-trigger the stream or state if needed. 
-                  // Since the PersonalParishSection uses a StreamBuilder from a Future (Stream.fromFuture), it won't auto-refresh unless we force rebuild.
-                  // Easiest is to setState.
-                  setState(() {}); 
-               });
-            }, 
+              // Navigation to Edit Profile
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EditProfilePage()),
+              ).then((_) {
+                // REFRESH: Re-trigger the stream or state if needed.
+                // Since the PersonalParishSection uses a StreamBuilder from a Future (Stream.fromFuture), it won't auto-refresh unless we force rebuild.
+                // Easiest is to setState.
+                setState(() {});
+              });
+            },
             child: const Text("Atur"),
-          )
+          ),
         ],
       ),
     );

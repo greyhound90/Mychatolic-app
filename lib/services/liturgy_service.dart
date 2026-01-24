@@ -31,7 +31,7 @@ class LiturgyService {
   Future<LiturgyModel?> getLiturgyByDate(DateTime date) async {
     try {
       final dateString = date.toIso8601String().split('T')[0];
-      
+
       final response = await _supabase
           .from('daily_liturgy')
           .select()
@@ -39,7 +39,7 @@ class LiturgyService {
           .maybeSingle(); // Returns null if no record found
 
       if (response == null) {
-        return null; 
+        return null;
       }
 
       return LiturgyModel.fromJson(response);
@@ -63,20 +63,21 @@ class LiturgyService {
         return Colors.amber[100]!; // Gold/Yellowish for visible 'White' theme
       case 'rose':
       case 'pink':
-        return Colors.pink[300]!; 
+        return Colors.pink[300]!;
       default:
         return Colors.blue; // Safe fallback
     }
   }
-  
+
   /// Helper for text color on top of liturgical backgrounds
   static Color getLiturgicalTextColor(String? colorCode) {
-     switch (colorCode?.toLowerCase()) {
+    switch (colorCode?.toLowerCase()) {
       case 'white':
       case 'gold':
         return Colors.brown[900]!; // Dark text for light background
       default:
-        return Colors.white; // Light text for dark backgrounds (Red, Green, Purple)
+        return Colors
+            .white; // Light text for dark backgrounds (Red, Green, Purple)
     }
   }
 }

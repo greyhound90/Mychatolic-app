@@ -3,11 +3,7 @@ class Diocese {
   final String name;
   final String countryId;
 
-  Diocese({
-    required this.id,
-    required this.name,
-    required this.countryId,
-  });
+  Diocese({required this.id, required this.name, required this.countryId});
 
   factory Diocese.fromJson(Map<String, dynamic> json) {
     return Diocese(
@@ -18,10 +14,6 @@ class Diocese {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'country_id': countryId,
-    };
+    return {'id': id, 'name': name, 'country_id': countryId};
   }
 }

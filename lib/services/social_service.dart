@@ -10,12 +10,13 @@ class SocialService {
   final _supabase = Supabase.instance.client;
 
   // --- REAL-TIME POST STREAM (EVENT BUS) ---
-  static final StreamController<UserPost> _postStream = StreamController.broadcast();
+  static final StreamController<UserPost> _postStream =
+      StreamController.broadcast();
   static Stream<UserPost> get postUpdateStream => _postStream.stream;
 
   static void broadcastPostUpdate(UserPost post) {
     if (!_postStream.isClosed) {
-       _postStream.add(post);
+      _postStream.add(post);
     }
   }
 
@@ -27,18 +28,37 @@ class SocialService {
     final userId = _supabase.auth.currentUser?.id;
     try {
       // 1. Fetch Post Data
-      final postData = await _supabase.from('posts').select().eq('id', postId).single();
-      
+      final postData = await _supabase
+          .from('posts')
+          .select()
+          .eq('id', postId)
+          .single();
+
       // 2. Fetch Author Profile
       final authorId = postData['user_id'];
-      final authorData = await _supabase.from('profiles').select().eq('id', authorId).single();
+      final authorData = await _supabase
+          .from('profiles')
+          .select()
+          .eq('id', authorId)
+          .single();
       // 3. Fetch Counts & Status
-      final likesCount = await _supabase.from('post_likes').count().eq('post_id', postId);
-      final commentsCount = await _supabase.from('post_comments').count().eq('post_id', postId);
-      
+      final likesCount = await _supabase
+          .from('post_likes')
+          .count()
+          .eq('post_id', postId);
+      final commentsCount = await _supabase
+          .from('post_comments')
+          .count()
+          .eq('post_id', postId);
+
       bool isLiked = false;
       if (userId != null) {
-        final likeCheck = await _supabase.from('post_likes').select('id').eq('post_id', postId).eq('user_id', userId).maybeSingle();
+        final likeCheck = await _supabase
+            .from('post_likes')
+            .select('id')
+            .eq('post_id', postId)
+            .eq('user_id', userId)
+            .maybeSingle();
         isLiked = likeCheck != null;
       }
 
@@ -49,8 +69,12 @@ class SocialService {
         userAvatar: authorData['avatar_url'] ?? '',
         userFullName: authorData['full_name'] ?? 'Umat',
         caption: postData['caption'],
-        imageUrls: postData['image_url'] != null ? [postData['image_url'].toString()] : [],
-        createdAt: DateTime.tryParse(postData['created_at']?.toString() ?? '') ?? DateTime.now(),
+        imageUrls: postData['image_url'] != null
+            ? [postData['image_url'].toString()]
+            : [],
+        createdAt:
+            DateTime.tryParse(postData['created_at']?.toString() ?? '') ??
+            DateTime.now(),
         likesCount: (likesCount as num?)?.toInt() ?? 0,
         commentsCount: (commentsCount as num?)?.toInt() ?? 0,
         isLiked: isLiked,
@@ -101,9 +125,9 @@ class SocialService {
       final response = await query
           .order('created_at', ascending: false)
           .range(from, to);
-      
+
       final List<dynamic> postsData = response as List<dynamic>;
-      
+
       // 4. Optimized "Is Liked" Check (Batch)
       Set<String> likedPostIds = {};
       if (currentUserId != null && postsData.isNotEmpty) {
@@ -113,43 +137,47 @@ class SocialService {
             .select('post_id')
             .eq('user_id', currentUserId)
             .inFilter('post_id', postIds);
-        
-        likedPostIds = (likesResponse as List).map((l) => l['post_id'].toString()).toSet();
+
+        likedPostIds = (likesResponse as List)
+            .map((l) => l['post_id'].toString())
+            .toSet();
       }
 
       // 5. Map to UserPost Model
-      return postsData.map((json) {
-        final profile = json['profiles'] ?? {};
-        final String uName = profile['username'] ?? 'user';
-        final String uAvatar = profile['avatar_url'] ?? '';
-        final String uFull = profile['full_name'] ?? 'Umat';
-        
-        // Image Logic
-        List<String> imgs = [];
-        if (json['image_url'] != null) {
-          if (json['image_url'] is List) {
-             imgs = List<String>.from(json['image_url']);
-          } else {
-             final str = json['image_url'].toString();
-             if (str.isNotEmpty) imgs.add(str);
-          }
-        }
+      return postsData
+          .map((json) {
+            final profile = json['profiles'] ?? {};
+            final String uName = profile['username'] ?? 'user';
+            final String uAvatar = profile['avatar_url'] ?? '';
+            final String uFull = profile['full_name'] ?? 'Umat';
 
-        return UserPost(
-          id: json['id'].toString(),
-          userId: json['user_id']?.toString() ?? '',
-          userName: uName,
-          userAvatar: uAvatar,
-          userFullName: uFull,
-          caption: json['caption'] ?? '',
-          imageUrls: imgs,
-          createdAt: DateTime.parse(json['created_at']),
-          likesCount: json['likes_count'] ?? 0,
-          commentsCount: json['comments_count'] ?? 0,
-          isLiked: likedPostIds.contains(json['id']),
-        );
-      }).toList().cast<UserPost>();
+            // Image Logic
+            List<String> imgs = [];
+            if (json['image_url'] != null) {
+              if (json['image_url'] is List) {
+                imgs = List<String>.from(json['image_url']);
+              } else {
+                final str = json['image_url'].toString();
+                if (str.isNotEmpty) imgs.add(str);
+              }
+            }
 
+            return UserPost(
+              id: json['id'].toString(),
+              userId: json['user_id']?.toString() ?? '',
+              userName: uName,
+              userAvatar: uAvatar,
+              userFullName: uFull,
+              caption: json['caption'] ?? '',
+              imageUrls: imgs,
+              createdAt: DateTime.parse(json['created_at']),
+              likesCount: json['likes_count'] ?? 0,
+              commentsCount: json['comments_count'] ?? 0,
+              isLiked: likedPostIds.contains(json['id']),
+            );
+          })
+          .toList()
+          .cast<UserPost>();
     } catch (e) {
       debugPrint("Error fetching posts: $e");
       return [];
@@ -158,8 +186,8 @@ class SocialService {
 
   // 3. Create Post
   Future<void> createPost({
-    required String content, 
-    String? imageUrl, 
+    required String content,
+    String? imageUrl,
     required String type,
     String? countryId,
     String? dioceseId,
@@ -186,21 +214,24 @@ class SocialService {
 
   // 4. Upload Post Image
   Future<String> uploadPostImage(File image) async {
-      final user = _supabase.auth.currentUser;
-      if (user == null) throw Exception("User not logged in");
-      
-      final fileExt = image.path.split('.').last;
-      final fileName = '${user.id}/${DateTime.now().millisecondsSinceEpoch}.$fileExt';
-      try {
-        await _supabase.storage.from('post_images').upload(
-          fileName,
-          image,
-          fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
-        );
-        return _supabase.storage.from('post_images').getPublicUrl(fileName);
-      } catch (e) {
-        throw Exception("Image upload failed: $e");
-      }
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception("User not logged in");
+
+    final fileExt = image.path.split('.').last;
+    final fileName =
+        '${user.id}/${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+    try {
+      await _supabase.storage
+          .from('post_images')
+          .upload(
+            fileName,
+            image,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
+          );
+      return _supabase.storage.from('post_images').getPublicUrl(fileName);
+    } catch (e) {
+      throw Exception("Image upload failed: $e");
+    }
   }
 
   // 5. Toggle Like (Optimized)
@@ -245,19 +276,21 @@ class SocialService {
           .select('*, profiles(*), comment_likes(user_id)')
           .eq('post_id', postId)
           .order('created_at', ascending: true);
-      
+
       final data = response as List<dynamic>;
 
       final List<Comment> allComments = [];
       for (var json in data) {
         try {
           final likesList = json['comment_likes'] as List<dynamic>? ?? [];
-          final isLiked = currentUser != null && likesList.any((l) => l['user_id'] == currentUser.id);
+          final isLiked =
+              currentUser != null &&
+              likesList.any((l) => l['user_id'] == currentUser.id);
 
           final map = Map<String, dynamic>.from(json);
           map['likes_count'] = likesList.length;
           map['is_liked_by_me'] = isLiked;
-          
+
           final comment = Comment.fromJson(map);
           allComments.add(comment);
         } catch (e) {
@@ -297,7 +330,6 @@ class SocialService {
         }
       }
       return rootComments;
-
     } catch (e, stack) {
       debugPrint("Failed to fetch comments: $e");
       debugPrint(stack.toString());
@@ -306,7 +338,11 @@ class SocialService {
   }
 
   // 7. Add Comment
-  Future<void> addComment(String postId, String content, {String? parentId}) async {
+  Future<void> addComment(
+    String postId,
+    String content, {
+    String? parentId,
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception("User not logged in");
 
@@ -329,23 +365,23 @@ class SocialService {
     if (user == null) return false;
 
     try {
-       final check = await _supabase
-           .from('comment_likes')
-           .select('id')
-           .eq('comment_id', commentId)
-           .eq('user_id', user.id)
-           .maybeSingle();
+      final check = await _supabase
+          .from('comment_likes')
+          .select('id')
+          .eq('comment_id', commentId)
+          .eq('user_id', user.id)
+          .maybeSingle();
 
-       if (check != null) {
-         await _supabase.from('comment_likes').delete().eq('id', check['id']);
-         return false; 
-       } else {
-         await _supabase.from('comment_likes').insert({
-           'comment_id': commentId,
-           'user_id': user.id,
-         });
-         return true;
-       }
+      if (check != null) {
+        await _supabase.from('comment_likes').delete().eq('id', check['id']);
+        return false;
+      } else {
+        await _supabase.from('comment_likes').insert({
+          'comment_id': commentId,
+          'user_id': user.id,
+        });
+        return true;
+      }
     } catch (e) {
       throw Exception("Like comment failed: $e");
     }
@@ -365,7 +401,7 @@ class SocialService {
         'created_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {
-       throw Exception("Report comment failed: $e");
+      throw Exception("Report comment failed: $e");
     }
   }
 

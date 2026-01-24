@@ -36,7 +36,10 @@ class VerseActionBottomSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(reference, style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+          Text(
+            reference,
+            style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: AppSpacing.sm),
           Text(verse.content, style: TextStyle(color: textColor)),
           const SizedBox(height: AppSpacing.lg),
@@ -44,11 +47,31 @@ class VerseActionBottomSheet extends StatelessWidget {
             spacing: AppSpacing.md,
             runSpacing: AppSpacing.md,
             children: [
-              _ActionChip(icon: Icons.copy_rounded, label: 'Copy', onTap: onCopy),
-              _ActionChip(icon: Icons.share_rounded, label: 'Share Text', onTap: onShareText),
-              _ActionChip(icon: Icons.image_outlined, label: 'Bagikan sebagai gambar', onTap: onShareImage),
-              _ActionChip(icon: Icons.bookmark_border, label: 'Bookmark', onTap: onBookmark),
-              _ActionChip(icon: Icons.edit_note, label: 'Catatan', onTap: onNote),
+              _ActionChip(
+                icon: Icons.copy_rounded,
+                label: 'Copy',
+                onTap: onCopy,
+              ),
+              _ActionChip(
+                icon: Icons.share_rounded,
+                label: 'Share Text',
+                onTap: onShareText,
+              ),
+              _ActionChip(
+                icon: Icons.image_outlined,
+                label: 'Bagikan sebagai gambar',
+                onTap: onShareImage,
+              ),
+              _ActionChip(
+                icon: Icons.bookmark_border,
+                label: 'Bookmark',
+                onTap: onBookmark,
+              ),
+              _ActionChip(
+                icon: Icons.edit_note,
+                label: 'Catatan',
+                onTap: onNote,
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -56,9 +79,12 @@ class VerseActionBottomSheet extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: _highlightPalette
-                .map((color) => _ColorDot(color: color, onTap: () => onHighlight(color)))
+                .map(
+                  (color) =>
+                      _ColorDot(color: color, onTap: () => onHighlight(color)),
+                )
                 .toList(),
-          )
+          ),
         ],
       ),
     );
@@ -70,7 +96,11 @@ class _ActionChip extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
-  const _ActionChip({required this.icon, required this.label, required this.onTap});
+  const _ActionChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {

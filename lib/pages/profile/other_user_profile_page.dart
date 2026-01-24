@@ -4,10 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 class OtherUserProfilePage extends StatelessWidget {
   final Map<String, dynamic> userData;
 
-  const OtherUserProfilePage({
-    super.key,
-    required this.userData,
-  });
+  const OtherUserProfilePage({super.key, required this.userData});
 
   @override
   Widget build(BuildContext context) {

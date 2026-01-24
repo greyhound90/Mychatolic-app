@@ -87,3 +87,4 @@ flutter:
   assets:
     - assets/
     - assets/beep.png
+    - .env

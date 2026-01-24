@@ -18,14 +18,19 @@ class BiblePlanTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => BiblePlanViewModel(planRepository: BibleModule.readingPlanRepository)..loadPlans(),
+      create: (_) =>
+          BiblePlanViewModel(planRepository: BibleModule.readingPlanRepository)
+            ..loadPlans(),
       child: Consumer<BiblePlanViewModel>(
         builder: (context, vm, _) {
           if (vm.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
           if (vm.errorMessage != null) {
-            return ErrorStateView(message: vm.errorMessage!, onRetry: vm.loadPlans);
+            return ErrorStateView(
+              message: vm.errorMessage!,
+              onRetry: vm.loadPlans,
+            );
           }
 
           if (vm.plans.isEmpty) {
@@ -38,7 +43,11 @@ class BiblePlanTab extends StatelessWidget {
               if (vm.activePlan != null) ...[
                 _ActivePlanCard(
                   plan: vm.activePlan!,
-                  onReadToday: () => _openDay(context, vm.activePlan!, vm.activePlan!.currentDay ?? 1),
+                  onReadToday: () => _openDay(
+                    context,
+                    vm.activePlan!,
+                    vm.activePlan!.currentDay ?? 1,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
               ],
@@ -82,9 +91,18 @@ class _ActivePlanCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Rencana Aktif', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
+          Text(
+            'Rencana Aktif',
+            style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: AppSpacing.sm),
-          Text(plan.title, style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(
+            plan.title,
+            style: GoogleFonts.manrope(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: AppSpacing.md),
           LinearProgressIndicator(value: progress == 0 ? null : progress),
           const SizedBox(height: AppSpacing.md),
@@ -100,25 +118,38 @@ class _PlanCard extends StatelessWidget {
   final VoidCallback onAction;
   final bool isActive;
 
-  const _PlanCard({required this.plan, required this.onAction, required this.isActive});
+  const _PlanCard({
+    required this.plan,
+    required this.onAction,
+    required this.isActive,
+  });
 
   @override
   Widget build(BuildContext context) {
     return AppCard(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
       child: Row(
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(plan.title, style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
+                Text(
+                  plan.title,
+                  style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: AppSpacing.xs),
                 Text('${plan.durationDays} hari • ${plan.theme ?? 'Umum'}'),
               ],
             ),
           ),
-          PrimaryButton(label: isActive ? 'Aktif' : 'Mulai', onPressed: isActive ? null : onAction),
+          PrimaryButton(
+            label: isActive ? 'Aktif' : 'Mulai',
+            onPressed: isActive ? null : onAction,
+          ),
         ],
       ),
     );

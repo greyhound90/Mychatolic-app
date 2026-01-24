@@ -6,12 +6,7 @@ class AppCard extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final Color? color;
 
-  const AppCard({
-    super.key,
-    required this.child,
-    this.padding,
-    this.color,
-  });
+  const AppCard({super.key, required this.child, this.padding, this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +46,10 @@ class PrimaryButton extends StatelessWidget {
       return ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.md),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl,
+            vertical: AppSpacing.md,
+          ),
         ),
         child: Text(label),
       );
@@ -61,7 +59,10 @@ class PrimaryButton extends StatelessWidget {
       icon: Icon(icon, size: 18),
       label: Text(label),
       style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.md),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl,
+          vertical: AppSpacing.md,
+        ),
       ),
     );
   }
@@ -85,7 +86,10 @@ class SecondaryButton extends StatelessWidget {
       return OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.md),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl,
+            vertical: AppSpacing.md,
+          ),
         ),
         child: Text(label),
       );
@@ -95,7 +99,10 @@ class SecondaryButton extends StatelessWidget {
       icon: Icon(icon, size: 18),
       label: Text(label),
       style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.md),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl,
+          vertical: AppSpacing.md,
+        ),
       ),
     );
   }
@@ -119,7 +126,9 @@ class AppChip extends StatelessWidget {
       label: Text(label),
       selected: selected,
       onSelected: (_) => onTap(),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+      ),
     );
   }
 }
@@ -129,9 +138,6 @@ class AppDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Divider(
-      thickness: 1,
-      color: Theme.of(context).dividerColor,
-    );
+    return Divider(thickness: 1, color: Theme.of(context).dividerColor);
   }
 }

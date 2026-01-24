@@ -23,7 +23,10 @@ class BibleRootPage extends StatelessWidget {
           length: 5,
           child: Scaffold(
             appBar: AppBar(
-              title: Text('Alkitab', style: GoogleFonts.manrope(fontWeight: FontWeight.w700)),
+              title: Text(
+                'Alkitab',
+                style: GoogleFonts.manrope(fontWeight: FontWeight.w700),
+              ),
               centerTitle: false,
               bottom: TabBar(
                 isScrollable: true,

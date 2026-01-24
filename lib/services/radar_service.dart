@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:mychatolic_app/models/radar_event.dart';
 
 class JoinRadarOutcome {
   final String status;
@@ -15,7 +16,7 @@ class RadarService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
   // Fetch PUBLIC radar events (future only), with creator profile + participant count.
-  Future<List<Map<String, dynamic>>> fetchPublicRadars({
+  Future<List<RadarEvent>> fetchPublicRadars({
     int page = 0,
     int limit = 10,
   }) async {
@@ -60,13 +61,10 @@ class RadarService {
             ? (radarParticipantsAgg.first as Map)['count']
             : 0;
 
-        return {
-          ...row,
-          // Backward-compatible keys used by some UI widgets.
-          'schedule_time': row['event_time'],
-          'location_name': row['church_name'],
-          'participant_count': participantCount,
-        };
+        final modRow = Map<String, dynamic>.from(row);
+        modRow['participant_count'] = participantCount;
+
+        return RadarEvent.fromJson(modRow);
       }).toList();
     } catch (e, st) {
       _logPostgrestError(
@@ -449,10 +447,10 @@ class RadarService {
 
     try {
       // Prefer RPC for atomic checks (if installed).
-      final rpc = await _supabase.rpc('join_radar_event', params: {
-        'p_radar_id': radarId,
-        'p_user_id': userId,
-      });
+      final rpc = await _supabase.rpc(
+        'join_radar_event',
+        params: {'p_radar_id': radarId, 'p_user_id': userId},
+      );
 
       if (rpc is Map) {
         final status = (rpc['status'] ?? 'JOINED').toString();
@@ -489,8 +487,9 @@ class RadarService {
         throw Exception("Radar tidak aktif");
       }
 
-      final eventTime =
-          DateTime.tryParse(event['event_time']?.toString() ?? '');
+      final eventTime = DateTime.tryParse(
+        event['event_time']?.toString() ?? '',
+      );
       if (eventTime != null &&
           eventTime.toUtc().isBefore(DateTime.now().toUtc())) {
         throw Exception("Radar sudah lewat");
@@ -512,8 +511,7 @@ class RadarService {
         }
       }
 
-      final requireHostApproval =
-          event['require_host_approval'] == true;
+      final requireHostApproval = event['require_host_approval'] == true;
 
       final existing = await _supabase
           .from('radar_participants')
@@ -555,10 +553,10 @@ class RadarService {
       if (newStatus == 'JOINED') {
         final chatRoomId = event['chat_room_id']?.toString();
         if (chatRoomId != null && chatRoomId.isNotEmpty) {
-          await _supabase.from('chat_members').upsert(
-            {'chat_id': chatRoomId, 'user_id': userId},
-            onConflict: 'chat_id, user_id',
-          );
+          await _supabase.from('chat_members').upsert({
+            'chat_id': chatRoomId,
+            'user_id': userId,
+          }, onConflict: 'chat_id, user_id');
         }
         await _insertRadarLog(
           radarId: radarId,
@@ -647,10 +645,10 @@ class RadarService {
     if (chatRoomId == null) return null;
 
     try {
-      await _supabase.from('chat_members').upsert(
-        {'chat_id': chatRoomId, 'user_id': userId},
-        onConflict: 'chat_id, user_id',
-      );
+      await _supabase.from('chat_members').upsert({
+        'chat_id': chatRoomId,
+        'user_id': userId,
+      }, onConflict: 'chat_id, user_id');
     } catch (e, st) {
       _logPostgrestError(
         tag: '[RADAR CHAT MEMBER ERROR]',
@@ -761,10 +759,10 @@ class RadarService {
     try {
       final chatRoomId = await fetchRadarChatRoomId(radarId);
       if (chatRoomId != null && chatRoomId.trim().isNotEmpty) {
-        await _supabase.from('chat_members').upsert(
-          {'chat_id': chatRoomId, 'user_id': userId},
-          onConflict: 'chat_id, user_id',
-        );
+        await _supabase.from('chat_members').upsert({
+          'chat_id': chatRoomId,
+          'user_id': userId,
+        }, onConflict: 'chat_id, user_id');
       }
     } catch (e, st) {
       _logPostgrestError(
@@ -832,10 +830,10 @@ class RadarService {
 
     // Prefer RPC if available (atomic).
     try {
-      await _supabase.rpc('leave_radar_event', params: {
-        'p_radar_id': radarId,
-        'p_user_id': userId,
-      });
+      await _supabase.rpc(
+        'leave_radar_event',
+        params: {'p_radar_id': radarId, 'p_user_id': userId},
+      );
       return;
     } catch (e, st) {
       _logPostgrestError(
@@ -903,11 +901,14 @@ class RadarService {
     if (userId.trim().isEmpty) throw Exception("User tidak valid");
 
     try {
-      await _supabase.rpc('kick_radar_participant', params: {
-        'p_radar_id': radarId,
-        'p_user_id': userId,
-        'p_actor_id': currentUserId,
-      });
+      await _supabase.rpc(
+        'kick_radar_participant',
+        params: {
+          'p_radar_id': radarId,
+          'p_user_id': userId,
+          'p_actor_id': currentUserId,
+        },
+      );
       return;
     } catch (e, st) {
       _logPostgrestError(
@@ -944,7 +945,6 @@ class RadarService {
             .eq('chat_id', chatRoomId)
             .eq('user_id', userId);
       }
-
     } catch (e, st) {
       _logPostgrestError(
         tag: '[RADAR KICK ERROR]',
@@ -1006,8 +1006,9 @@ class RadarService {
           .eq('radar_id', radarId)
           .eq('user_id', inviteeId)
           .maybeSingle();
-      final existingParticipantStatus =
-          existingParticipant?['status']?.toString().toUpperCase();
+      final existingParticipantStatus = existingParticipant?['status']
+          ?.toString()
+          .toUpperCase();
       if (existingParticipantStatus == 'JOINED') {
         throw Exception("User sudah menjadi peserta");
       }
@@ -1089,11 +1090,14 @@ class RadarService {
     try {
       // Prefer RPC for atomic response (if installed).
       try {
-        await _supabase.rpc('respond_radar_invite', params: {
-          'p_invite_id': inviteId,
-          'p_accept': accept,
-          'p_user_id': userId,
-        });
+        await _supabase.rpc(
+          'respond_radar_invite',
+          params: {
+            'p_invite_id': inviteId,
+            'p_accept': accept,
+            'p_user_id': userId,
+          },
+        );
       } catch (e, st) {
         _logPostgrestError(
           tag: '[RADAR INVITE RESPOND RPC ERROR]',
@@ -1128,10 +1132,10 @@ class RadarService {
 
             final chatRoomId = event['chat_room_id']?.toString();
             if (chatRoomId != null && chatRoomId.isNotEmpty) {
-              await _supabase.from('chat_members').upsert(
-                {'chat_id': chatRoomId, 'user_id': userId},
-                onConflict: 'chat_id, user_id',
-              );
+              await _supabase.from('chat_members').upsert({
+                'chat_id': chatRoomId,
+                'user_id': userId,
+              }, onConflict: 'chat_id, user_id');
             }
           }
         }

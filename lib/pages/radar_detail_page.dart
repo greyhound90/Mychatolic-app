@@ -163,7 +163,9 @@ class _RadarDetailPageState extends State<RadarDetailPage> {
       if (chatRoomId == null || chatRoomId.trim().isEmpty) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Grup chat belum siap. Coba lagi nanti.")),
+          const SnackBar(
+            content: Text("Grup chat belum siap. Coba lagi nanti."),
+          ),
         );
         return;
       }
@@ -177,10 +179,8 @@ class _RadarDetailPageState extends State<RadarDetailPage> {
       await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => RadarChatPage(
-            chatRoomId: chatRoomId,
-            title: _event.title,
-          ),
+          builder: (_) =>
+              RadarChatPage(chatRoomId: chatRoomId, title: _event.title),
         ),
       );
     } catch (e, st) {
@@ -413,9 +413,9 @@ class _RadarDetailPageState extends State<RadarDetailPage> {
     try {
       await _radarService.deleteRadar(_event.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Radar berhasil dihapus")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Radar berhasil dihapus")));
       Navigator.pop(context, true);
     } catch (e, st) {
       if (kDebugMode) {
@@ -431,10 +431,9 @@ class _RadarDetailPageState extends State<RadarDetailPage> {
   }
 
   Future<void> _openChurchMaps() async {
-    final query =
-        (_churchAddress?.trim().isNotEmpty ?? false)
-            ? _churchAddress!.trim()
-            : _event.churchName.trim();
+    final query = (_churchAddress?.trim().isNotEmpty ?? false)
+        ? _churchAddress!.trim()
+        : _event.churchName.trim();
     if (query.isEmpty) return;
 
     final uri = Uri.parse(
@@ -502,10 +501,7 @@ class _RadarDetailPageState extends State<RadarDetailPage> {
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Icon(
-                  Icons.chat_bubble_outline,
-                  color: Color(0xFF0088CC),
-                ),
+              : const Icon(Icons.chat_bubble_outline, color: Color(0xFF0088CC)),
           onPressed: _isOpeningChat ? null : _openChat,
         ),
       );

@@ -11,10 +11,12 @@ class BibleApiClient {
     http.Client? client,
     String? Function()? tokenProvider,
     int maxRetries = 2,
-  })  : _baseUrl = baseUrl ?? const String.fromEnvironment('BIBLE_API_BASE_URL', defaultValue: ''),
-        _client = client ?? http.Client(),
-        _tokenProvider = tokenProvider ?? _defaultTokenProvider,
-        _maxRetries = maxRetries;
+  }) : _baseUrl =
+           baseUrl ??
+           const String.fromEnvironment('BIBLE_API_BASE_URL', defaultValue: ''),
+       _client = client ?? http.Client(),
+       _tokenProvider = tokenProvider ?? _defaultTokenProvider,
+       _maxRetries = maxRetries;
 
   final String _baseUrl;
   final http.Client _client;
@@ -38,10 +40,16 @@ class BibleApiClient {
       throw ApiException(message: 'BIBLE_API_BASE_URL belum diset.');
     }
 
-    final base = _baseUrl.endsWith('/') ? _baseUrl.substring(0, _baseUrl.length - 1) : _baseUrl;
+    final base = _baseUrl.endsWith('/')
+        ? _baseUrl.substring(0, _baseUrl.length - 1)
+        : _baseUrl;
     final uri = Uri.parse('$base$path');
     if (query == null || query.isEmpty) return uri;
-    return uri.replace(queryParameters: query.map((key, value) => MapEntry(key, value.toString())));
+    return uri.replace(
+      queryParameters: query.map(
+        (key, value) => MapEntry(key, value.toString()),
+      ),
+    );
   }
 
   Future<dynamic> get(String path, {Map<String, dynamic>? query}) async {
@@ -49,11 +57,17 @@ class BibleApiClient {
   }
 
   Future<dynamic> post(String path, Map<String, dynamic> body) async {
-    return _request(() => _client.post(_uri(path), headers: _headers(), body: jsonEncode(body)));
+    return _request(
+      () =>
+          _client.post(_uri(path), headers: _headers(), body: jsonEncode(body)),
+    );
   }
 
   Future<dynamic> put(String path, Map<String, dynamic> body) async {
-    return _request(() => _client.put(_uri(path), headers: _headers(), body: jsonEncode(body)));
+    return _request(
+      () =>
+          _client.put(_uri(path), headers: _headers(), body: jsonEncode(body)),
+    );
   }
 
   Future<void> delete(String path) async {
@@ -90,7 +104,11 @@ class BibleApiClient {
 
     final message = ApiErrorMapper.toUserMessage(lastError ?? 'Unknown error');
     if (lastError is ApiException) {
-      throw ApiException(message: lastError.message, statusCode: lastError.statusCode, details: lastError.details);
+      throw ApiException(
+        message: lastError.message,
+        statusCode: lastError.statusCode,
+        details: lastError.details,
+      );
     }
     throw ApiException(message: message);
   }

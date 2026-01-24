@@ -47,16 +47,14 @@ class SecureImageLoader extends StatelessWidget {
           return Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(borderRadius),
-              image: DecorationImage(
-                image: imageProvider,
-                fit: fit,
-              ),
+              image: DecorationImage(image: imageProvider, fit: fit),
             ),
           );
         },
         placeholder: (context, _) => placeholder ?? const _LoadingShimmer(),
-        errorWidget: (context, _, __) =>
-            errorWidget ?? const _ErrorContainer(message: 'File tidak ditemukan'),
+        errorWidget: (context, url, error) =>
+            errorWidget ??
+            const _ErrorContainer(message: 'File tidak ditemukan'),
       ),
     );
   }
@@ -86,9 +84,7 @@ class _LoadingShimmer extends StatelessWidget {
     return Shimmer.fromColors(
       baseColor: const Color(0xFFE6E6E6),
       highlightColor: const Color(0xFFF5F5F5),
-      child: Container(
-        color: const Color(0xFFE0E0E0),
-      ),
+      child: Container(color: const Color(0xFFE0E0E0)),
     );
   }
 }
@@ -107,7 +103,11 @@ class _ErrorContainer extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.broken_image_outlined, size: 18, color: Color(0xFFD9534F)),
+          const Icon(
+            Icons.broken_image_outlined,
+            size: 18,
+            color: Color(0xFFD9534F),
+          ),
           const SizedBox(height: 4),
           Text(
             message,

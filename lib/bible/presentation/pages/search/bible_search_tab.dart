@@ -18,7 +18,8 @@ class BibleSearchTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => BibleSearchViewModel(bibleRepository: BibleModule.bibleRepository),
+      create: (_) =>
+          BibleSearchViewModel(bibleRepository: BibleModule.bibleRepository),
       child: const _BibleSearchTabs(),
     );
   }
@@ -89,7 +90,10 @@ class _KeywordSearchTabState extends State<_KeywordSearchTab> {
           child: TextField(
             controller: _controller,
             onChanged: _onSearchChanged,
-            decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Cari kata kunci...'),
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.search),
+              hintText: 'Cari kata kunci...',
+            ),
           ),
         ),
         const _SearchResultList(),
@@ -122,13 +126,17 @@ class _ReferenceSearchTabState extends State<_ReferenceSearchTab> {
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: TextField(
             controller: _controller,
-            onSubmitted: (_) => context.read<BibleSearchViewModel>().lookupReference(_controller.text),
+            onSubmitted: (_) => context
+                .read<BibleSearchViewModel>()
+                .lookupReference(_controller.text),
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.auto_awesome),
               hintText: 'Contoh: Yohanes 3:16',
               suffixIcon: IconButton(
                 icon: const Icon(Icons.search),
-                onPressed: () => context.read<BibleSearchViewModel>().lookupReference(_controller.text),
+                onPressed: () => context
+                    .read<BibleSearchViewModel>()
+                    .lookupReference(_controller.text),
               ),
             ),
           ),
@@ -147,7 +155,15 @@ class _ThemeSearchTab extends StatefulWidget {
 }
 
 class _ThemeSearchTabState extends State<_ThemeSearchTab> {
-  final List<String> _themes = const ['Doa', 'Pertobatan', 'Maria', 'Roh Kudus', 'Ekaristi', 'Kasih', 'Harapan'];
+  final List<String> _themes = const [
+    'Doa',
+    'Pertobatan',
+    'Maria',
+    'Roh Kudus',
+    'Ekaristi',
+    'Kasih',
+    'Harapan',
+  ];
   String? _selectedTheme;
 
   @override
@@ -207,10 +223,17 @@ class _SearchResultList extends StatelessWidget {
                       query: query,
                       maxLines: 2,
                     )
-                  : Text(item.snippet, maxLines: 2, overflow: TextOverflow.ellipsis);
+                  : Text(
+                      item.snippet,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    );
 
               return ListTile(
-                title: Text(item.reference, style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
+                title: Text(
+                  item.reference,
+                  style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+                ),
                 subtitle: snippetWidget,
                 onTap: () {
                   if (item.bookId != null && item.chapter != null) {
@@ -286,7 +309,12 @@ class _HighlightedText extends StatelessWidget {
       if (index > start) {
         spans.add(TextSpan(text: text.substring(start, index)));
       }
-      spans.add(TextSpan(text: text.substring(index, index + query.length), style: highlightStyle));
+      spans.add(
+        TextSpan(
+          text: text.substring(index, index + query.length),
+          style: highlightStyle,
+        ),
+      );
       start = index + query.length;
     }
 

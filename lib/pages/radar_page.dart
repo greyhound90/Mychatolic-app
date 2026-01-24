@@ -27,7 +27,7 @@ class _RadarPageState extends State<RadarPage>
   final String _myUserId = Supabase.instance.client.auth.currentUser?.id ?? '';
 
   static const int _pageSize = 10;
-  List<Map<String, dynamic>> _publicRadars = [];
+  List<RadarEvent> _publicRadars = [];
   bool _isLoadingPublic = false;
   bool _isLoadingMore = false;
   bool _hasMoreData = true;
@@ -97,12 +97,12 @@ class _RadarPageState extends State<RadarPage>
     _loadRadars();
   }
 
-  Future<void> _openRadarDetail(Map<String, dynamic> radar) async {
-    final event = RadarEvent.fromJson(radar);
+  Future<void> _openRadarDetail(RadarEvent event) async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => RadarDetailPage(event: event, radarData: radar),
+        builder: (_) =>
+            RadarDetailPage(event: event, radarData: event.toJson()),
       ),
     );
     if (!mounted) return;
@@ -117,9 +117,9 @@ class _RadarPageState extends State<RadarPage>
     super.dispose();
   }
 
-  Future<void> _handleJoin(Map<String, dynamic> radar) async {
-    final radarId = (radar['id'] ?? '').toString();
-    final title = (radar['title'] ?? 'Grup Radar').toString();
+  Future<void> _handleJoin(RadarEvent event) async {
+    final radarId = event.id;
+    final title = event.title;
 
     if (radarId.trim().isEmpty) {
       ScaffoldMessenger.of(
@@ -150,7 +150,8 @@ class _RadarPageState extends State<RadarPage>
       }
 
       final chatRoomId =
-          outcome.chatRoomId ?? await _radarService.prepareChatForRadar(radarId);
+          outcome.chatRoomId ??
+          await _radarService.prepareChatForRadar(radarId);
       if (!mounted) return;
 
       if (chatRoomId != null && chatRoomId.trim().isNotEmpty) {
@@ -162,7 +163,9 @@ class _RadarPageState extends State<RadarPage>
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Berhasil bergabung. Grup chat belum siap.")),
+          const SnackBar(
+            content: Text("Berhasil bergabung. Grup chat belum siap."),
+          ),
         );
       }
 

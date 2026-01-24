@@ -3,11 +3,7 @@ class BibleVersion {
   final String name;
   final String? abbreviation;
 
-  BibleVersion({
-    required this.id,
-    required this.name,
-    this.abbreviation,
-  });
+  BibleVersion({required this.id, required this.name, this.abbreviation});
 }
 
 class BibleBook {
@@ -32,13 +28,18 @@ class BibleBook {
   bool get isOldTestament {
     final key = testament?.toLowerCase();
     if (key != null) {
-      if (key.contains('lama') || key.contains('old') || key == 'ot') return true;
-      if (key.contains('baru') || key.contains('new') || key == 'nt') return false;
+      if (key.contains('lama') || key.contains('old') || key == 'ot') {
+        return true;
+      }
+      if (key.contains('baru') || key.contains('new') || key == 'nt') {
+        return false;
+      }
     }
     return orderNumber <= 46;
   }
 
-  String get displayCategory => (category == null || category!.trim().isEmpty) ? 'Lainnya' : category!;
+  String get displayCategory =>
+      (category == null || category!.trim().isEmpty) ? 'Lainnya' : category!;
 }
 
 class BibleVerse {
@@ -81,7 +82,9 @@ class BibleVerse {
       chapter: chapter,
       verse: verse,
       content: content,
-      highlightColor: clearHighlight ? null : (highlightColor ?? this.highlightColor),
+      highlightColor: clearHighlight
+          ? null
+          : (highlightColor ?? this.highlightColor),
       note: clearNote ? null : (note ?? this.note),
       isBookmarked: isBookmarked ?? this.isBookmarked,
       highlightId: highlightId ?? this.highlightId,

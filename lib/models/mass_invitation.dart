@@ -24,7 +24,9 @@ class MassInvitation {
   factory MassInvitation.fromJson(Map<String, dynamic> json) {
     // Handle nested sender profile data safely
     final senderData = json['sender'];
-    final Map<String, dynamic> senderMap = (senderData is Map<String, dynamic>) ? senderData : {};
+    final Map<String, dynamic> senderMap = (senderData is Map<String, dynamic>)
+        ? senderData
+        : {};
 
     return MassInvitation(
       id: json['id']?.toString() ?? '',
@@ -32,10 +34,14 @@ class MassInvitation {
       senderName: senderMap['full_name']?.toString() ?? 'Teman',
       senderAvatar: senderMap['avatar_url']?.toString(),
       churchName: json['church_name']?.toString() ?? 'Gereja',
-      scheduleTime: DateTime.tryParse(json['schedule_time']?.toString() ?? '') ?? DateTime.now(),
+      scheduleTime:
+          DateTime.tryParse(json['schedule_time']?.toString() ?? '') ??
+          DateTime.now(),
       message: json['message']?.toString(),
       status: json['status']?.toString() ?? 'pending',
-      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
+      createdAt:
+          DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+          DateTime.now(),
     );
   }
 }

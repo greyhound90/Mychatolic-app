@@ -17,7 +17,7 @@ class StoryRail extends StatefulWidget {
 class _StoryRailState extends State<StoryRail> {
   final _storyService = StoryService();
   final _supabase = Supabase.instance.client;
-  
+
   late Future<Map<String, dynamic>> _dataFuture;
 
   @override
@@ -35,10 +35,12 @@ class _StoryRailState extends State<StoryRail> {
     try {
       // 1. Fetch Stories
       final stories = await _storyService.fetchActiveStories();
-      
+
       // 2. Check if current user has a story
-      final myStoryGroup = stories.where((s) => s.userId == user.id).firstOrNull;
-      
+      final myStoryGroup = stories
+          .where((s) => s.userId == user.id)
+          .firstOrNull;
+
       String? myAvatar;
       if (myStoryGroup != null) {
         myAvatar = myStoryGroup.userAvatar;
@@ -77,7 +79,9 @@ class _StoryRailState extends State<StoryRail> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final data = snapshot.data ?? {'stories': <UserStoryGroup>[], 'myAvatar': null};
+          final data =
+              snapshot.data ??
+              {'stories': <UserStoryGroup>[], 'myAvatar': null};
           final allStories = data['stories'] as List<UserStoryGroup>;
           final myAvatar = data['myAvatar'] as String?;
           final user = _supabase.auth.currentUser;
@@ -87,7 +91,7 @@ class _StoryRailState extends State<StoryRail> {
           // Separate My Story vs Friends
           UserStoryGroup? myStoryGroup;
           final List<UserStoryGroup> friendStories = [];
-          
+
           for (var group in allStories) {
             if (group.userId == user.id) {
               myStoryGroup = group;
@@ -96,7 +100,8 @@ class _StoryRailState extends State<StoryRail> {
             }
           }
 
-          final int itemCount = 1 + friendStories.length; // 1 for "My Story" + friends
+          final int itemCount =
+              1 + friendStories.length; // 1 for "My Story" + friends
 
           return ListView.builder(
             scrollDirection: Axis.horizontal,
@@ -127,13 +132,13 @@ class _StoryRailState extends State<StoryRail> {
           await Navigator.push(
             context,
             MaterialPageRoute(
-               builder: (_) => StoryViewPage(
-                 stories: group.stories,
-                 userProfile: {
-                   'full_name': 'Cerita Saya', // Placeholder name
-                   'avatar_url': avatarUrl,
-                 },
-               ),
+              builder: (_) => StoryViewPage(
+                stories: group.stories,
+                userProfile: {
+                  'full_name': 'Cerita Saya', // Placeholder name
+                  'avatar_url': avatarUrl,
+                },
+              ),
             ),
           );
         } else {
@@ -159,15 +164,15 @@ class _StoryRailState extends State<StoryRail> {
                   Container(
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: hasStory 
+                      gradient: hasStory
                           ? const LinearGradient(
                               colors: [Colors.purple, Colors.orange],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
-                            ) 
+                            )
                           : null,
-                      border: !hasStory 
-                          ? Border.all(color: Colors.grey.shade300, width: 2) 
+                      border: !hasStory
+                          ? Border.all(color: Colors.grey.shade300, width: 2)
                           : null,
                     ),
                     padding: const EdgeInsets.all(3),
@@ -188,7 +193,7 @@ class _StoryRailState extends State<StoryRail> {
                       ),
                     ),
                   ),
-                  
+
                   // "+" Badge if no story
                   if (!hasStory)
                     Positioned(
@@ -201,7 +206,11 @@ class _StoryRailState extends State<StoryRail> {
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 2),
                         ),
-                        child: const Icon(Icons.add, size: 14, color: Colors.white),
+                        child: const Icon(
+                          Icons.add,
+                          size: 14,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                 ],
@@ -210,7 +219,10 @@ class _StoryRailState extends State<StoryRail> {
             const SizedBox(height: 6),
             Text(
               "Cerita Saya",
-              style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w500),
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -234,7 +246,9 @@ class _StoryRailState extends State<StoryRail> {
               },
             ),
           ),
-        ).then((_) => _refresh()); // Refresh on return to update view status if needed
+        ).then(
+          (_) => _refresh(),
+        ); // Refresh on return to update view status if needed
       },
       child: Container(
         width: 80,
@@ -247,12 +261,12 @@ class _StoryRailState extends State<StoryRail> {
               height: 64,
               padding: const EdgeInsets.all(3),
               decoration: const BoxDecoration(
-                 shape: BoxShape.circle,
-                 gradient: LinearGradient(
-                   colors: [Colors.purple, Colors.orange, Colors.pink],
-                   begin: Alignment.topRight,
-                   end: Alignment.bottomLeft,
-                 ),
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [Colors.purple, Colors.orange, Colors.pink],
+                  begin: Alignment.topRight,
+                  end: Alignment.bottomLeft,
+                ),
               ),
               child: Container(
                 decoration: const BoxDecoration(

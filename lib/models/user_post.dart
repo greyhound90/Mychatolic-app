@@ -79,7 +79,7 @@ class UserPost {
     // 3. Likes/Comments Defaults
     final int lCount = (json['likes_count'] as num?)?.toInt() ?? 0;
     final int cCount = (json['comments_count'] as num?)?.toInt() ?? 0;
-    
+
     // 4. Is Liked Logic (Check multiple possible keys from different query styles)
     bool liked = false;
     if (json['is_liked'] != null) {
@@ -87,7 +87,7 @@ class UserPost {
     } else if (json['isLiked'] != null) {
       liked = json['isLiked'];
     }
-    
+
     return UserPost(
       id: json['id']?.toString() ?? '',
       userId: json['user_id']?.toString() ?? '',
@@ -96,8 +96,8 @@ class UserPost {
       userFullName: uFull,
       caption: json['caption'] ?? '',
       imageUrls: imgs,
-      createdAt: json['created_at'] != null 
-          ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now() 
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
           : DateTime.now(),
       likesCount: lCount,
       commentsCount: cCount,
@@ -110,11 +110,16 @@ class UserPost {
   String? get content => caption;
   String get type => imageUrls.isNotEmpty ? 'photo' : 'text';
   bool get isLikedByMe => isLiked;
-  
+
   // Also recreate author object getter for deep compatibility if needed
   // or simple field access is enough for most views.
   // For ProfilePage/PostCard legacy calls:
-  dynamic get author => _AuthorComp(id: userId, fullName: userFullName, avatarUrl: userAvatar, role: 'Umat');
+  dynamic get author => _AuthorComp(
+    id: userId,
+    fullName: userFullName,
+    avatarUrl: userAvatar,
+    role: 'Umat',
+  );
 
   String get timeAgo => timeago.format(createdAt, locale: 'id');
   String get singleImageUrl => imageUrls.isNotEmpty ? imageUrls.first : '';
@@ -126,5 +131,10 @@ class _AuthorComp {
   final String fullName;
   final String avatarUrl;
   final String role;
-  _AuthorComp({required this.id, required this.fullName, required this.avatarUrl, required this.role});
+  _AuthorComp({
+    required this.id,
+    required this.fullName,
+    required this.avatarUrl,
+    required this.role,
+  });
 }

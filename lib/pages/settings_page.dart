@@ -59,7 +59,7 @@ class _SettingsPageState extends State<SettingsPage> {
           .select('is_age_visible, is_ethnicity_visible')
           .eq('id', userId)
           .single();
-      
+
       if (mounted) {
         setState(() {
           _showAge = response['is_age_visible'] ?? false;
@@ -88,7 +88,6 @@ class _SettingsPageState extends State<SettingsPage> {
           .from('profiles')
           .update({key: value})
           .eq('id', userId);
-          
     } catch (e) {
       // Revert if error
       if (mounted) {
@@ -96,7 +95,9 @@ class _SettingsPageState extends State<SettingsPage> {
           if (key == 'is_age_visible') _showAge = !value;
           if (key == 'is_ethnicity_visible') _showEthnicity = !value;
         });
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal mengupdate privacy: $e")));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Gagal mengupdate privacy: $e")));
       }
     }
   }
@@ -104,7 +105,8 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _logout() async {
     await Supabase.instance.client.auth.signOut();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.clear(); // Clears all local prefs including theme if needed, but safe
+    await prefs
+        .clear(); // Clears all local prefs including theme if needed, but safe
 
     if (mounted) {
       Navigator.pushAndRemoveUntil(
@@ -118,73 +120,75 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: const MyCatholicAppBar(
-        title: "Pengaturan",
-      ),
+      appBar: const MyCatholicAppBar(title: "Pengaturan"),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // SECTION: TAMPILAN
-             _buildSectionTitle("Tampilan", context),
+            _buildSectionTitle("Tampilan", context),
             const SizedBox(height: 8),
             Card(
               child: RadioGroup<ThemeMode>(
                 groupValue: themeProvider.themeMode,
-                onChanged: (val) => themeProvider.setThemeMode(val ?? ThemeMode.system),
+                onChanged: (val) =>
+                    themeProvider.setThemeMode(val ?? ThemeMode.system),
                 child: Column(
                   children: [
                     RadioListTile<ThemeMode>(
                       title: Text("Ikuti Sistem", style: GoogleFonts.outfit()),
-                      value: ThemeMode.system, 
+                      value: ThemeMode.system,
                       activeColor: Theme.of(context).primaryColor,
                     ),
                     RadioListTile<ThemeMode>(
                       title: Text("Mode Terang", style: GoogleFonts.outfit()),
-                      value: ThemeMode.light, 
+                      value: ThemeMode.light,
                       activeColor: Theme.of(context).primaryColor,
                     ),
                     RadioListTile<ThemeMode>(
                       title: Text("Mode Gelap", style: GoogleFonts.outfit()),
-                      value: ThemeMode.dark, 
+                      value: ThemeMode.dark,
                       activeColor: Theme.of(context).primaryColor,
                     ),
                   ],
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 32),
 
             // SECTION: PRIVASI
             _buildSectionTitle("Privasi", context),
             const SizedBox(height: 8),
             Card(
-              child: _isLoading 
-                ? const Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator()))
-                : Column(
-                  children: [
-                    _buildSwitchTile(
-                      "Tampilkan Usia di Profil",
-                      "Izinkan publik melihat usia anda",
-                      _showAge, 
-                      (val) => _togglePrivacy('is_age_visible', val), 
-                      context
+              child: _isLoading
+                  ? const Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  : Column(
+                      children: [
+                        _buildSwitchTile(
+                          "Tampilkan Usia di Profil",
+                          "Izinkan publik melihat usia anda",
+                          _showAge,
+                          (val) => _togglePrivacy('is_age_visible', val),
+                          context,
+                        ),
+                        const Divider(height: 1),
+                        _buildSwitchTile(
+                          "Tampilkan Suku di Profil",
+                          "Izinkan publik melihat suku anda",
+                          _showEthnicity,
+                          (val) => _togglePrivacy('is_ethnicity_visible', val),
+                          context,
+                        ),
+                      ],
                     ),
-                    const Divider(height: 1),
-                    _buildSwitchTile(
-                      "Tampilkan Suku di Profil",
-                      "Izinkan publik melihat suku anda",
-                      _showEthnicity, 
-                      (val) => _togglePrivacy('is_ethnicity_visible', val),
-                      context
-                    ),
-                  ],
-                ),
             ),
 
             const SizedBox(height: 32),
@@ -195,12 +199,23 @@ class _SettingsPageState extends State<SettingsPage> {
             Card(
               child: SwitchListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                title: Text("Upload Kualitas Tinggi (HD)", style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
-                subtitle: Text("Gambar lebih tajam, namun memakan lebih banyak kuota data.", style: GoogleFonts.outfit(fontSize: 12, color: Theme.of(context).textTheme.bodySmall?.color)),
+                title: Text(
+                  "Upload Kualitas Tinggi (HD)",
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  "Gambar lebih tajam, namun memakan lebih banyak kuota data.",
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    color: Theme.of(context).textTheme.bodySmall?.color,
+                  ),
+                ),
                 value: _isHighQualityUpload,
                 onChanged: _toggleUploadQuality,
                 activeThumbColor: Theme.of(context).primaryColor,
-                activeTrackColor: Theme.of(context).primaryColor.withValues(alpha: 0.4),
+                activeTrackColor: Theme.of(
+                  context,
+                ).primaryColor.withValues(alpha: 0.4),
               ),
             ),
 
@@ -211,24 +226,39 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(height: 8),
             Card(
               child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 leading: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                   child: const Icon(Icons.logout, color: Colors.red),
                 ),
-                title: Text("Logout / Keluar", style: GoogleFonts.outfit(color: Colors.red, fontWeight: FontWeight.bold)),
+                title: Text(
+                  "Logout / Keluar",
+                  style: GoogleFonts.outfit(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 onTap: _logout,
               ),
             ),
-            
+
             const SizedBox(height: 40),
             Center(
               child: Text(
                 "Versi Aplikasi 1.0.0",
-                style: GoogleFonts.outfit(color: Theme.of(context).disabledColor, fontSize: 12),
+                style: GoogleFonts.outfit(
+                  color: Theme.of(context).disabledColor,
+                  fontSize: 12,
+                ),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -244,16 +274,31 @@ class _SettingsPageState extends State<SettingsPage> {
         color: Theme.of(context).textTheme.bodySmall?.color,
         fontSize: 12,
         fontWeight: FontWeight.bold,
-        letterSpacing: 1.2
+        letterSpacing: 1.2,
       ),
     );
   }
 
-  Widget _buildSwitchTile(String title, String subtitle, bool value, Function(bool) onChanged, BuildContext context) {
+  Widget _buildSwitchTile(
+    String title,
+    String subtitle,
+    bool value,
+    Function(bool) onChanged,
+    BuildContext context,
+  ) {
     return SwitchListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-      title: Text(title, style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
-      subtitle: Text(subtitle, style: GoogleFonts.outfit(fontSize: 12, color: Theme.of(context).textTheme.bodySmall?.color)),
+      title: Text(
+        title,
+        style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: GoogleFonts.outfit(
+          fontSize: 12,
+          color: Theme.of(context).textTheme.bodySmall?.color,
+        ),
+      ),
       value: value,
       onChanged: onChanged,
       activeThumbColor: Theme.of(context).primaryColor,

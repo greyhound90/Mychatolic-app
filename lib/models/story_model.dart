@@ -8,7 +8,7 @@ class Story {
   final String? caption;
   final DateTime createdAt;
   final DateTime expiresAt;
-  
+
   // Author info (optional, usually joined from profiles)
   final String? authorName;
   final String? authorAvatar;
@@ -29,7 +29,7 @@ class Story {
     // Handle parsing the joined profile data if it exists
     String? name;
     String? avatar;
-    
+
     // Supabase often returns joined data in 'profiles' or similar key if configured
     if (json['profiles'] != null) {
       final profile = json['profiles'];
@@ -41,7 +41,9 @@ class Story {
       id: json['id'],
       userId: json['user_id'],
       mediaUrl: json['media_url'],
-      mediaType: json['media_type'] == 'video' ? MediaType.video : MediaType.image,
+      mediaType: json['media_type'] == 'video'
+          ? MediaType.video
+          : MediaType.image,
       caption: json['caption'],
       createdAt: DateTime.parse(json['created_at']).toLocal(),
       expiresAt: DateTime.parse(json['expires_at']).toLocal(),

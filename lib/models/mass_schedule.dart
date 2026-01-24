@@ -21,11 +21,11 @@ class MassSchedule {
     // 1. Handle Church Info (Joined Data - Optional)
     String cName = 'Gereja';
     String? cInfo;
-    
+
     if (json['churches'] != null) {
       final cData = json['churches'];
       cName = cData['name'] ?? cName;
-      cInfo = cData['parish'] ?? cData['parish_name'] ?? cData['address']; 
+      cInfo = cData['parish'] ?? cData['parish_name'] ?? cData['address'];
     }
 
     // 2. Handle Time (DB: start_time)

@@ -45,11 +45,13 @@ class _UploadDocumentPageState extends State<UploadDocumentPage> {
     final String fileName = '${user.id}/${docType}_$timestamp.$fileExt';
 
     try {
-      await _supabase.storage.from('verification_docs').upload(
-        fileName,
-        file,
-        fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
-      );
+      await _supabase.storage
+          .from('verification_docs')
+          .upload(
+            fileName,
+            file,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
+          );
       return _supabase.storage.from('verification_docs').getPublicUrl(fileName);
     } catch (e) {
       debugPrint("Upload Error: $e");
@@ -83,7 +85,7 @@ class _UploadDocumentPageState extends State<UploadDocumentPage> {
           'verification_doc_url': baptismUrl,
           'updated_at': DateTime.now().toIso8601String(),
         };
-        
+
         if (chrismUrl != null) {
           updates['chrism_cert_url'] = chrismUrl;
         }
@@ -97,7 +99,10 @@ class _UploadDocumentPageState extends State<UploadDocumentPage> {
             barrierDismissible: false,
             builder: (ctx) => AlertDialog(
               backgroundColor: cardPurple,
-              title: const Text("Berhasil Terkirim!", style: TextStyle(color: Colors.white)),
+              title: const Text(
+                "Berhasil Terkirim!",
+                style: TextStyle(color: Colors.white),
+              ),
               content: const Text(
                 "Dokumen Anda sedang ditinjau oleh tim kami. Status Anda kini 'Pending'.",
                 style: TextStyle(color: Colors.white70),
@@ -106,10 +111,19 @@ class _UploadDocumentPageState extends State<UploadDocumentPage> {
                 TextButton(
                   onPressed: () {
                     Navigator.pop(ctx); // Close Dialog
-                    Navigator.pop(context, true); // Return to Profile with success flag
+                    Navigator.pop(
+                      context,
+                      true,
+                    ); // Return to Profile with success flag
                   },
-                  child: const Text("OK", style: TextStyle(color: accentOrange, fontWeight: FontWeight.bold)),
-                )
+                  child: const Text(
+                    "OK",
+                    style: TextStyle(
+                      color: accentOrange,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ],
             ),
           );
@@ -117,9 +131,9 @@ class _UploadDocumentPageState extends State<UploadDocumentPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Gagal mengirim: $e")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Gagal mengirim: $e")));
       }
     } finally {
       if (mounted) setState(() => _isUploading = false);
@@ -137,7 +151,10 @@ class _UploadDocumentPageState extends State<UploadDocumentPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text("Verifikasi Iman", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          "Verifikasi Iman",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -147,7 +164,11 @@ class _UploadDocumentPageState extends State<UploadDocumentPage> {
           children: [
             const Text(
               "Upload Dokumen Sakramen",
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
@@ -164,7 +185,7 @@ class _UploadDocumentPageState extends State<UploadDocumentPage> {
               file: _baptismImage,
               onTap: () => _pickImage(true),
             ),
-            
+
             const SizedBox(height: 16),
 
             // UPLOAD BOX 2: KRISMA
@@ -182,15 +203,29 @@ class _UploadDocumentPageState extends State<UploadDocumentPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: accentOrange,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 elevation: 5,
                 shadowColor: accentOrange.withValues(alpha: 0.5),
               ),
               child: _isUploading
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.black,
+                        strokeWidth: 2,
+                      ),
+                    )
                   : const Text(
                       "KIRIM VERIFIKASI",
-                      style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1),
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1,
+                      ),
                     ),
             ),
           ],
@@ -199,11 +234,22 @@ class _UploadDocumentPageState extends State<UploadDocumentPage> {
     );
   }
 
-  Widget _buildUploadBox({required String label, required File? file, required VoidCallback onTap}) {
+  Widget _buildUploadBox({
+    required String label,
+    required File? file,
+    required VoidCallback onTap,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 14)),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white70,
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
         const SizedBox(height: 8),
         InkWell(
           onTap: onTap,
@@ -214,8 +260,11 @@ class _UploadDocumentPageState extends State<UploadDocumentPage> {
             decoration: BoxDecoration(
               color: cardPurple,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white24, style: BorderStyle.solid),
-              image: file != null 
+              border: Border.all(
+                color: Colors.white24,
+                style: BorderStyle.solid,
+              ),
+              image: file != null
                   ? DecorationImage(image: FileImage(file), fit: BoxFit.cover)
                   : null,
             ),
@@ -223,18 +272,32 @@ class _UploadDocumentPageState extends State<UploadDocumentPage> {
                 ? Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.add_a_photo_rounded, color: accentOrange.withValues(alpha: 0.8), size: 40),
+                      Icon(
+                        Icons.add_a_photo_rounded,
+                        color: accentOrange.withValues(alpha: 0.8),
+                        size: 40,
+                      ),
                       const SizedBox(height: 8),
-                      Text("Ketuk untuk Upload", style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12)),
+                      Text(
+                        "Ketuk untuk Upload",
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.5),
+                          fontSize: 12,
+                        ),
+                      ),
                     ],
                   )
                 : Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
-                      color: Colors.black26, 
+                      color: Colors.black26,
                     ),
                     alignment: Alignment.center,
-                    child: const Icon(Icons.check_circle, color: Colors.greenAccent, size: 40),
+                    child: const Icon(
+                      Icons.check_circle,
+                      color: Colors.greenAccent,
+                      size: 40,
+                    ),
                   ),
           ),
         ),

@@ -20,32 +20,32 @@ class AppRadius {
 
 class AppTypography {
   static TextStyle title(Color color) => GoogleFonts.manrope(
-        fontSize: 20,
-        height: 1.3,
-        fontWeight: FontWeight.w700,
-        color: color,
-      );
+    fontSize: 20,
+    height: 1.3,
+    fontWeight: FontWeight.w700,
+    color: color,
+  );
 
   static TextStyle subtitle(Color color) => GoogleFonts.manrope(
-        fontSize: 16,
-        height: 1.4,
-        fontWeight: FontWeight.w600,
-        color: color,
-      );
+    fontSize: 16,
+    height: 1.4,
+    fontWeight: FontWeight.w600,
+    color: color,
+  );
 
   static TextStyle body(Color color) => GoogleFonts.manrope(
-        fontSize: 14,
-        height: 1.6,
-        fontWeight: FontWeight.w500,
-        color: color,
-      );
+    fontSize: 14,
+    height: 1.6,
+    fontWeight: FontWeight.w500,
+    color: color,
+  );
 
   static TextStyle small(Color color) => GoogleFonts.manrope(
-        fontSize: 12,
-        height: 1.4,
-        fontWeight: FontWeight.w500,
-        color: color,
-      );
+    fontSize: 12,
+    height: 1.4,
+    fontWeight: FontWeight.w500,
+    color: color,
+  );
 }
 
 class ReaderTypography {

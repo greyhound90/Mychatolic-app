@@ -23,12 +23,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   static const Color kSecondary = Color(0xFF0088CC); // Primary Blue
   static const Color kCardColor = Colors.white;
 
-
-
-  
   static const Color kBubbleIncoming = Color(0xFFF1F5F9); // Slate 100
   static const Color kBorder = Color(0xFFE2E8F0); // Slate 200
-  
+
   static const Color kTextTitle = Color(0xFF0F172A);
   static const Color kTextBody = Color(0xFF334155);
   static const Color kTextMeta = Color(0xFF64748B);
@@ -47,10 +44,22 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   // DUMMY MESSAGES (Preserved Logic)
   final List<Map<String, dynamic>> _messages = [
-    {'text': 'Suster, apakah jadwal misa jam 5 masih ada slot?', 'isMe': true, 'time': '09:00'},
+    {
+      'text': 'Suster, apakah jadwal misa jam 5 masih ada slot?',
+      'isMe': true,
+      'time': '09:00',
+    },
     {'text': 'Sebentar saya cek dulu ya.', 'isMe': false, 'time': '09:02'},
-    {'text': 'Masih ada, silakan bawa buku puji syukur ya.', 'isMe': false, 'time': '09:05'},
-    {'text': 'Siap Suster, terima kasih infonya! 🙏', 'isMe': true, 'time': '09:10'},
+    {
+      'text': 'Masih ada, silakan bawa buku puji syukur ya.',
+      'isMe': false,
+      'time': '09:05',
+    },
+    {
+      'text': 'Siap Suster, terima kasih infonya! 🙏',
+      'isMe': true,
+      'time': '09:10',
+    },
   ];
 
   @override
@@ -58,7 +67,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
   }
-  
+
   @override
   void dispose() {
     _focusNode.dispose();
@@ -68,25 +77,26 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent, 
-        duration: const Duration(milliseconds: 300), 
-        curve: Curves.easeOut
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
       );
     }
   }
 
   void _sendMessage() {
     if (_messageController.text.trim().isEmpty) return;
-    
+
     setState(() {
       _messages.add({
         'text': _messageController.text.trim(),
         'isMe': true,
-        'time': "${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}"
+        'time':
+            "${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}",
       });
       _messageController.clear();
     });
-    
+
     Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
   }
 
@@ -103,7 +113,12 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               Expanded(
                 child: ListView.builder(
                   controller: _scrollController,
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 100), // Bottom padding for Input Bar
+                  padding: const EdgeInsets.fromLTRB(
+                    16,
+                    16,
+                    16,
+                    100,
+                  ), // Bottom padding for Input Bar
                   itemCount: _messages.length,
                   itemBuilder: (context, index) {
                     final msg = _messages[index];
@@ -113,12 +128,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               ),
             ],
           ),
-          
+
           // --- FLOATING GLASS INPUT BAR ---
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: _buildInputBar(),
-          )
+          Align(alignment: Alignment.bottomCenter, child: _buildInputBar()),
         ],
       ),
       // NO FAB (Removed per request)
@@ -142,11 +154,15 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               gradient: primaryGradient,
             ),
             child: CircleAvatar(
-              radius: 18, 
-              backgroundColor: kBackground, 
+              radius: 18,
+              backgroundColor: kBackground,
               child: Text(
-                widget.name.isNotEmpty ? widget.name[0] : "?", 
-                style: GoogleFonts.outfit(fontSize: 16, color: kTextBody, fontWeight: FontWeight.bold)
+                widget.name.isNotEmpty ? widget.name[0] : "?",
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  color: kTextBody,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -155,14 +171,35 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(widget.name, style: GoogleFonts.outfit(color: kTextTitle, fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(
+                  widget.name,
+                  style: GoogleFonts.outfit(
+                    color: kTextTitle,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
                 Row(
                   children: [
-                    Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle)), // Green Dot
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF10B981),
+                        shape: BoxShape.circle,
+                      ),
+                    ), // Green Dot
                     const SizedBox(width: 6),
-                    Text("Online", style: GoogleFonts.outfit(color: const Color(0xFF10B981), fontSize: 11, fontWeight: FontWeight.w500)),
+                    Text(
+                      "Online",
+                      style: GoogleFonts.outfit(
+                        color: const Color(0xFF10B981),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ],
-                )
+                ),
               ],
             ),
           ),
@@ -190,9 +227,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   Widget _buildGlassActionIcon(IconData icon) {
     return Container(
-      width: 40, height: 40,
+      width: 40,
+      height: 40,
       decoration: BoxDecoration(
-        color: kCardColor, 
+        color: kCardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: kBorder),
       ),
@@ -206,13 +244,15 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
+        ),
         child: Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
             gradient: isMe ? bubbleGradient : null,
-            color: isMe ? null : kBubbleIncoming, 
+            color: isMe ? null : kBubbleIncoming,
             border: isMe ? null : Border.all(color: kBorder),
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(20),
@@ -221,34 +261,36 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               bottomRight: isMe ? Radius.zero : const Radius.circular(20),
             ),
             boxShadow: [
-               if (isMe) 
-                 BoxShadow(
-                   color: kSecondary.withValues(alpha: 0.3), 
-                   blurRadius: 12, 
-                   offset: const Offset(0, 4)
-                 )
-            ]
+              if (isMe)
+                BoxShadow(
+                  color: kSecondary.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+            ],
           ),
           child: Column(
-            crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            crossAxisAlignment: isMe
+                ? CrossAxisAlignment.end
+                : CrossAxisAlignment.start,
             children: [
               Text(
-                msg['text'], 
+                msg['text'],
                 style: GoogleFonts.outfit(
-                  color: isMe ? Colors.white : kTextTitle, 
+                  color: isMe ? Colors.white : kTextTitle,
                   fontSize: 15,
                   fontWeight: FontWeight.w400,
-                  height: 1.4
-                )
+                  height: 1.4,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
-                msg['time'], 
+                msg['time'],
                 style: GoogleFonts.outfit(
                   color: isMe ? Colors.white70 : kTextMeta,
                   fontSize: 10,
-                  fontWeight: FontWeight.w500
-                )
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
@@ -265,7 +307,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           margin: const EdgeInsets.all(16),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           decoration: BoxDecoration(
-            color: kCardColor, 
+            color: kCardColor,
             borderRadius: BorderRadius.circular(30),
             border: Border.all(color: kBorder),
             boxShadow: [
@@ -273,18 +315,22 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 color: Colors.black.withValues(alpha: 0.2),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
-              )
+              ),
             ],
           ),
           child: Row(
             children: [
               // Prefix: Emoji Icon (Functional)
               IconButton(
-                onPressed: () => FocusScope.of(context).requestFocus(_focusNode),
-                icon: const Icon(Icons.emoji_emotions_outlined, color: kTextMeta),
+                onPressed: () =>
+                    FocusScope.of(context).requestFocus(_focusNode),
+                icon: const Icon(
+                  Icons.emoji_emotions_outlined,
+                  color: kTextMeta,
+                ),
                 tooltip: "Emoji",
               ),
-              
+
               // Text Field
               Expanded(
                 child: TextField(
@@ -299,7 +345,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                     hintStyle: GoogleFonts.outfit(color: kTextMeta),
                     border: InputBorder.none,
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 10,
+                    ),
                   ),
                 ),
               ),
@@ -318,7 +367,11 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                       gradient: primaryGradient,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                    child: const Icon(
+                      Icons.send_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
                 ),
               ),

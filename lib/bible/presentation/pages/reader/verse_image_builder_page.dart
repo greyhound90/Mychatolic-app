@@ -61,11 +61,15 @@ class _VerseImageBuilderPageState extends State<VerseImageBuilderPage> {
   @override
   Widget build(BuildContext context) {
     final templates = _buildTemplates();
-    final template = templates[_selectedTemplate.clamp(0, templates.length - 1)];
+    final template =
+        templates[_selectedTemplate.clamp(0, templates.length - 1)];
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Bagikan sebagai gambar', style: GoogleFonts.manrope(fontWeight: FontWeight.w700)),
+        title: Text(
+          'Bagikan sebagai gambar',
+          style: GoogleFonts.manrope(fontWeight: FontWeight.w700),
+        ),
       ),
       body: Column(
         children: [
@@ -123,7 +127,9 @@ class _VerseImageBuilderPageState extends State<VerseImageBuilderPage> {
                             textAlign: TextAlign.center,
                             style: GoogleFonts.manrope(
                               fontSize: 12,
-                              color: template.referenceColor.withValues(alpha: 0.75),
+                              color: template.referenceColor.withValues(
+                                alpha: 0.75,
+                              ),
                             ),
                           ),
                         ],
@@ -140,14 +146,20 @@ class _VerseImageBuilderPageState extends State<VerseImageBuilderPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Template', style: AppTypography.subtitle(Theme.of(context).colorScheme.onSurface)),
+                Text(
+                  'Template',
+                  style: AppTypography.subtitle(
+                    Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
                 const SizedBox(height: AppSpacing.sm),
                 SizedBox(
                   height: 80,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: templates.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+                    separatorBuilder: (_, _) =>
+                        const SizedBox(width: AppSpacing.sm),
                     itemBuilder: (context, index) {
                       final t = templates[index];
                       final selected = index == _selectedTemplate;
@@ -161,7 +173,9 @@ class _VerseImageBuilderPageState extends State<VerseImageBuilderPage> {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(AppRadius.md),
                             border: Border.all(
-                              color: selected ? Theme.of(context).colorScheme.primary : Colors.transparent,
+                              color: selected
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Colors.transparent,
                               width: 2,
                             ),
                           ),
@@ -297,23 +311,27 @@ class _VerseImageBuilderPageState extends State<VerseImageBuilderPage> {
   Future<void> _exportAndShare() async {
     setState(() => _isExporting = true);
     try {
-      final boundary = _boundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      final boundary =
+          _boundaryKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
       if (boundary == null) return;
-      final pixelRatio = (MediaQuery.of(context).devicePixelRatio * 2).clamp(2.5, 4.0);
+      final pixelRatio = (MediaQuery.of(context).devicePixelRatio * 2).clamp(
+        2.5,
+        4.0,
+      );
       final image = await boundary.toImage(pixelRatio: pixelRatio);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) return;
 
       final bytes = byteData.buffer.asUint8List();
       final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/verse_story_${DateTime.now().millisecondsSinceEpoch}.png');
+      final file = File(
+        '${dir.path}/verse_story_${DateTime.now().millisecondsSinceEpoch}.png',
+      );
       await file.writeAsBytes(bytes);
 
       await SharePlus.instance.share(
-        ShareParams(
-          files: [XFile(file.path)],
-          text: widget.reference,
-        ),
+        ShareParams(files: [XFile(file.path)], text: widget.reference),
       );
     } finally {
       if (mounted) {
