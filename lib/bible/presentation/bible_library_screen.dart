@@ -559,19 +559,40 @@ class _BibleLibraryScreenState extends State<BibleLibraryScreen> {
                                 return InkWell(
                                   onTap: () async {
                                     if (selectedChapter == null) {
-                                      // Select Chapter -> Load Verses
+                                      // Step 1: Start Loading
                                       setSheetState(() {
-                                        selectedChapter = number;
                                         isLoadingVerses = true;
                                       });
+
+                                      // Step 2: Fetch Data
                                       await vm.loadChapter(number);
-                                      if (context.mounted) {
+
+                                      if (!context.mounted) return;
+
+                                      // Step 3: Stop Loading (Always Stop)
+                                      setSheetState(() {
+                                        isLoadingVerses = false;
+                                      });
+
+                                      // Step 4: Check Data (Fail-Safe)
+                                      if (vm.verses.isEmpty) {
+                                        // Scenario B: No Data -> Navigate to Reader (Shows "Under Digitalization")
+                                        Navigator.pop(ctx);
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                const BibleReaderScreen(),
+                                          ),
+                                        );
+                                      } else {
+                                        // Scenario A: Data Found -> Show Verse Grid
                                         setSheetState(() {
-                                          isLoadingVerses = false;
+                                          selectedChapter = number;
                                         });
                                       }
                                     } else {
-                                      // Select Verse -> Go to Reader
+                                      // Verse Selection Mode: Go to Reader at specific verse
                                       Navigator.pop(ctx);
                                       Navigator.push(
                                         context,
