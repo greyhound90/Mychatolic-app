@@ -28,18 +28,23 @@ class BibleRepositoryImpl implements BibleRepository {
 
   @override
   Future<List<BibleVerse>> getChapter(int bookId, int chapter) async {
+    print(">>> FETCHING Bible Chapter: BookId=$bookId, Chapter=$chapter");
     try {
-      // Fetch specific columns for optimization
+      // Fetch ALL columns to avoid "Column does not exist" errors
+      // and ensure we don't accidentally miss 'verse' or 'verse_number'
       final response = await _supabase
           .from('bible_verses')
-          .select('id, book_id, chapter, verse, content, type') // 'verse' maps to verse_number in DB schema usually, adjusting for aliasing if needed or standardizing on 'verse' as per schema prompt 'verse' was requested but DB migration used 'verse' or 'verse_number'. I'll stick to 'verse' based on schema prompt saying 'verse (int)'
+          .select()
           .eq('book_id', bookId)
           .eq('chapter', chapter)
-          .order('verse', ascending: true); // Ordering by verse number is safer than id
+          .order('verse_number', ascending: true);
 
       final data = response as List<dynamic>;
+      print(">>> FETCH SUCCESS: Retrieved ${data.length} verses");
+      
       return data.map((json) => BibleVerse.fromJson(json)).toList();
     } catch (e) {
+      print(">>> FETCH ERROR: $e");
       throw Exception('Gagal memuat pasal: $e');
     }
   }

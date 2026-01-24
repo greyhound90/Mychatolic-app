@@ -38,17 +38,20 @@ class BibleBook {
     );
   }
 
-  static BibleBookGroup _parseGroup(String group) {
-    switch (group) {
-      case 'OldTestament':
-        return BibleBookGroup.oldTestament;
-      case 'NewTestament':
-        return BibleBookGroup.newTestament;
-      case 'Deuterocanonical':
-        return BibleBookGroup.deuterocanonical;
-      default:
-        return BibleBookGroup.oldTestament;
+  static BibleBookGroup _parseGroup(String? group) {
+    // Fail-safe parsing
+    if (group == null) return BibleBookGroup.oldTestament;
+    
+    final cleanGroup = group.replaceAll(' ', '').toLowerCase();
+    
+    if (cleanGroup.contains('old') || cleanGroup == 'oldtestament') {
+      return BibleBookGroup.oldTestament;
+    } else if (cleanGroup.contains('new') || cleanGroup == 'newtestament') {
+      return BibleBookGroup.newTestament;
+    } else if (cleanGroup.contains('deutero')) {
+      return BibleBookGroup.deuterocanonical;
     }
+    return BibleBookGroup.oldTestament;
   }
 }
 
@@ -74,14 +77,16 @@ class BibleVerse {
       id: json['id'].toString(),
       bookId: json['book_id'],
       chapter: json['chapter'],
-      verseNumber: json['verse'] ?? json['verse_number'] ?? 0,
-      content: json['content'],
+      // Prioritize verse_number, fall back to verse, then 0
+      verseNumber: json['verse_number'] ?? json['verse'] ?? 0,
+      content: json['content'] ?? '',
       type: _parseType(json['type']),
     );
   }
 
   static BibleVerseType _parseType(String? type) {
-    switch (type) {
+    if (type == null) return BibleVerseType.text;
+    switch (type.toLowerCase()) {
       case 'heading':
         return BibleVerseType.heading;
       case 'footnote':

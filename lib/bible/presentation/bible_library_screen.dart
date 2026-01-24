@@ -43,133 +43,246 @@ class _BibleLibraryScreenState extends State<BibleLibraryScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF121212) : const Color(0xFFF8F9FA);
-    final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    final primaryColor = theme.primaryColor;
+    final palette = _LibraryPalette.fromTheme(theme);
 
     return Scaffold(
-      backgroundColor: bgColor,
-      // Minimalist AppBar
-      appBar: AppBar(
-        backgroundColor: bgColor,
-        title: Text(
-          "Alkitab",
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-            color: isDark ? Colors.white : Colors.black87,
-          ),
-        ),
-        centerTitle: false,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-      ),
-      body: Consumer<BibleViewModel>(
-        builder: (context, vm, child) {
-          if (vm.isLoadingBooks) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          _buildBackground(palette),
+          Consumer<BibleViewModel>(
+            builder: (context, vm, child) {
+              if (vm.isLoadingBooks) {
+                return Center(
+                  child: CircularProgressIndicator(color: palette.accent),
+                );
+              }
 
-          if (vm.books.isEmpty) {
-            return Center(
-              child: Text(
-                "Gagal memuat daftar kitab.",
-                style: GoogleFonts.outfit(color: Colors.grey),
-              ),
-            );
-          }
+              if (vm.books.isEmpty) {
+                return _buildEmptyState(palette);
+              }
 
-          // Group Books
-          List<BibleBook> currentGroupBooks = [];
-          
-          // If searching, show all matches regardless of tab? 
-          // Or keep tabs? Let's keep tabs for organization, 
-          // but if search is active, maybe search across all?
-          // For simplicity/UX: keep tab filtering active.
-          
-          if (_selectedTabIndex == 0) {
-            currentGroupBooks = vm.books.where((b) => b.group == BibleBookGroup.oldTestament).toList();
-          } else if (_selectedTabIndex == 1) {
-            currentGroupBooks = vm.books.where((b) => b.group == BibleBookGroup.newTestament).toList();
-          } else {
-            currentGroupBooks = vm.books.where((b) => b.group == BibleBookGroup.deuterocanonical).toList();
-          }
+              List<BibleBook> currentGroupBooks = [];
+              if (_selectedTabIndex == 0) {
+                currentGroupBooks = vm.books
+                    .where((b) => b.group == BibleBookGroup.oldTestament)
+                    .toList();
+              } else if (_selectedTabIndex == 1) {
+                currentGroupBooks = vm.books
+                    .where((b) => b.group == BibleBookGroup.newTestament)
+                    .toList();
+              } else {
+                currentGroupBooks = vm.books
+                    .where((b) => b.group == BibleBookGroup.deuterocanonical)
+                    .toList();
+              }
 
-          final displayBooks = _filterBooks(currentGroupBooks);
+              final displayBooks = _filterBooks(currentGroupBooks);
 
-          return Column(
-            children: [
-              // 1. Search Bar
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: cardColor,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
+              return CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  SliverAppBar(
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    pinned: true,
+                    expandedHeight: 180,
+                    automaticallyImplyLeading: false,
+                    titleSpacing: 20,
+                    title: Text(
+                      "Alkitab",
+                      style: GoogleFonts.playfairDisplay(
+                        color: palette.textPrimary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 22,
                       ),
-                    ],
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (val) {
-                      setState(() {
-                        _searchQuery = val;
-                      });
-                    },
-                    style: GoogleFonts.outfit(color: isDark ? Colors.white : Colors.black87),
-                    decoration: InputDecoration(
-                      hintText: "Cari kitab (contoh: Kejadian)",
-                      hintStyle: GoogleFonts.outfit(color: Colors.grey),
-                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ),
+                    flexibleSpace: FlexibleSpaceBar(
+                      collapseMode: CollapseMode.pin,
+                      background: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 100, 20, 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Kitab Suci Katolik",
+                              style: GoogleFonts.playfairDisplay(
+                                color: palette.textPrimary,
+                                fontSize: 28,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              "Pilih kitab dan bab untuk mulai membaca",
+                              style: GoogleFonts.manrope(
+                                color: palette.textSecondary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-
-              // 2. Pill Tabs
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    _buildPillTab("Perjanjian Lama", 0, isDark, primaryColor),
-                    const SizedBox(width: 8),
-                    _buildPillTab("Perjanjian Baru", 1, isDark, primaryColor),
-                    const SizedBox(width: 8),
-                    _buildPillTab("Deutero", 2, isDark, primaryColor),
-                  ],
-                ),
-              ),
-
-              // 3. Book List
-              Expanded(
-                child: displayBooks.isEmpty
-                    ? Center(child: Text("Tidak ada kitab ditemukan", style: GoogleFonts.outfit(color: Colors.grey)))
-                    : ListView.separated(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: displayBooks.length,
-                        separatorBuilder: (ctx, i) => const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          final book = displayBooks[index];
-                          return _buildBookTile(book, cardColor, isDark, primaryColor);
-                        },
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                      child: _buildSearchBar(palette),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                      child: Row(
+                        children: [
+                          _buildPillTab("Perjanjian Lama", 0, palette),
+                          const SizedBox(width: 8),
+                          _buildPillTab("Perjanjian Baru", 1, palette),
+                          const SizedBox(width: 8),
+                          _buildPillTab("Deutero", 2, palette),
+                        ],
                       ),
-              ),
-            ],
-          );
-        },
+                    ),
+                  ),
+                  if (displayBooks.isEmpty)
+                    SliverFillRemaining(
+                      child: Center(
+                        child: Text(
+                          "Tidak ada kitab ditemukan",
+                          style: GoogleFonts.manrope(
+                            color: palette.textSecondary,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          final book = displayBooks[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: _buildBookTile(book, palette),
+                          );
+                        }, childCount: displayBooks.length),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildPillTab(String label, int index, bool isDark, Color primaryColor) {
+  Widget _buildBackground(_LibraryPalette palette) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            const Color(0xFFE1F5FE), // Light Blue 50
+            const Color(0xFFFFFFFF), // White
+          ],
+          stops: const [0.0, 0.6],
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -100,
+            top: -50,
+            child: _buildGlow(const Color(0xFF0088CC).withOpacity(0.15), 300),
+          ),
+          Positioned(
+            left: -80,
+            top: 100,
+            child: _buildGlow(const Color(0xFF007AB8).withOpacity(0.10), 250),
+          ),
+          Positioned(
+            right: 20,
+            top: 60,
+            child: Icon(
+              Icons.auto_stories_rounded,
+              size: 140,
+              color: const Color(0xFF0088CC).withOpacity(0.05),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGlow(Color color, double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(colors: [color, Colors.transparent]),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar(_LibraryPalette palette) {
+    return Container(
+      decoration: BoxDecoration(
+        color: palette.surfaceElevated,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: palette.border),
+        boxShadow: [
+          BoxShadow(
+            color: palette.shadow,
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (val) {
+          setState(() {
+            _searchQuery = val;
+          });
+        },
+        style: GoogleFonts.manrope(
+          color: palette.textPrimary,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+        cursorColor: palette.accent,
+        decoration: InputDecoration(
+          hintText: "Cari kitab atau singkatan",
+          hintStyle: GoogleFonts.manrope(color: palette.textSecondary),
+          prefixIcon: Icon(Icons.search_rounded, color: palette.textSecondary),
+          suffixIcon: _searchQuery.isEmpty
+              ? null
+              : IconButton(
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() {
+                      _searchQuery = "";
+                    });
+                  },
+                  icon: Icon(Icons.close_rounded, color: palette.textSecondary),
+                ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPillTab(String label, int index, _LibraryPalette palette) {
     final bool isSelected = _selectedTabIndex == index;
     return Expanded(
       child: GestureDetector(
@@ -182,25 +295,32 @@ class _BibleLibraryScreenState extends State<BibleLibraryScreen> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? primaryColor : (isDark ? const Color(0xFF2C2C2C) : Colors.white),
-            borderRadius: BorderRadius.circular(30),
-            border: isSelected ? null : Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
+            gradient: isSelected
+                ? LinearGradient(
+                    colors: [palette.accent, palette.accentSecondary],
+                  )
+                : null,
+            color: isSelected ? null : palette.surface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: isSelected ? Colors.transparent : palette.border,
+            ),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: primaryColor.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    )
+                      color: palette.accent.withOpacity(0.25),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
                   ]
                 : [],
           ),
           alignment: Alignment.center,
           child: Text(
             label,
-            style: GoogleFonts.outfit(
-              color: isSelected ? Colors.white : (isDark ? Colors.grey : Colors.black54),
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            style: GoogleFonts.manrope(
+              color: isSelected ? Colors.white : palette.textSecondary,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
               fontSize: 12,
             ),
             maxLines: 1,
@@ -211,191 +331,363 @@ class _BibleLibraryScreenState extends State<BibleLibraryScreen> {
     );
   }
 
-  Widget _buildBookTile(BibleBook book, Color cardColor, bool isDark, Color primaryColor) {
+  Widget _buildBookTile(BibleBook book, _LibraryPalette palette) {
     return InkWell(
       onTap: () {
         context.read<BibleViewModel>().openBook(book);
-        _showChapterSheet(context, book, cardColor, isDark, primaryColor);
+        _showChapterSheet(context, book, palette);
       },
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(22),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [
+              palette.accent.withOpacity(0.2),
+              palette.accentSecondary.withOpacity(0.05),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(22),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.02),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            )
+              color: palette.shadow,
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
           ],
         ),
-        child: Row(
-          children: [
-            // Abbreviation Circle
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                book.abbreviation,
-                style: GoogleFonts.outfit(
-                  color: primaryColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
+        padding: const EdgeInsets.all(1.2),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          decoration: BoxDecoration(
+            color: palette.surfaceElevated,
+            borderRadius: BorderRadius.circular(21),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      palette.accent.withOpacity(0.2),
+                      palette.accent.withOpacity(0.05),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: palette.accent.withOpacity(0.35)),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  book.abbreviation,
+                  style: GoogleFonts.manrope(
+                    color: palette.accent,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 16),
-            // Title
-            Expanded(
-              child: Text(
-                book.name,
-                style: GoogleFonts.outfit(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white : Colors.black87,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      book.name,
+                      style: GoogleFonts.playfairDisplay(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: palette.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      "${book.totalChapters} Bab",
+                      style: GoogleFonts.manrope(
+                        fontSize: 12,
+                        color: palette.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            // Trailing Info
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: isDark ? Colors.white10 : Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                "${book.totalChapters} Bab",
-                style: GoogleFonts.outfit(
-                  fontSize: 12,
-                  color: isDark ? Colors.grey : Colors.grey.shade600,
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: palette.chip,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: palette.border),
+                ),
+                child: Text(
+                  "Buka",
+                  style: GoogleFonts.manrope(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: palette.textPrimary,
+                  ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right_rounded, color: palette.textSecondary),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  void _showChapterSheet(BuildContext context, BibleBook book, Color cardColor, bool isDark, Color primaryColor) {
+  void _showChapterSheet(
+    BuildContext context,
+    BibleBook book,
+    _LibraryPalette palette,
+  ) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: cardColor,
+      backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       builder: (ctx) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          minChildSize: 0.5,
-          maxChildSize: 0.95,
-          expand: false,
-          builder: (_, scrollController) {
-            return Column(
-              children: [
-                const SizedBox(height: 12),
-                // Handle bar
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(2),
+        int? selectedChapter;
+        bool isLoadingVerses = false;
+
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final bottomPadding = MediaQuery.of(context).padding.bottom;
+            final vm = context.read<BibleViewModel>();
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.6,
+              padding: EdgeInsets.only(bottom: bottomPadding + 16),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: palette.surfaceElevated,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(28),
                   ),
+                  border: Border.all(color: palette.border),
+                  boxShadow: [
+                    BoxShadow(
+                      color: palette.shadow,
+                      blurRadius: 24,
+                      offset: const Offset(0, -8),
+                    ),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Row(
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                child: Column(
+                  children: [
+                    const SizedBox(height: 12),
+                    Container(
+                      width: 46,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: palette.textSecondary.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 16, 12),
+                      child: Row(
                         children: [
-                          Text(
-                            book.name,
-                            style: GoogleFonts.outfit(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : Colors.black87,
+                          if (selectedChapter != null)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: IconButton(
+                                icon: Icon(Icons.arrow_back_ios_new_rounded,
+                                    size: 20, color: palette.textSecondary),
+                                onPressed: () {
+                                  setSheetState(() {
+                                    selectedChapter = null;
+                                  });
+                                },
+                              ),
                             ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                book.name,
+                                style: GoogleFonts.playfairDisplay(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w700,
+                                  color: palette.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                selectedChapter == null
+                                    ? "Pilih Bab"
+                                    : "Bab $selectedChapter : Pilih Ayat",
+                                style: GoogleFonts.manrope(
+                                  fontSize: 13,
+                                  color: palette.textSecondary,
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            "Pilih Bab",
-                            style: GoogleFonts.outfit(
-                              fontSize: 14,
-                              color: Colors.grey,
-                            ),
+                          const Spacer(),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded),
+                            color: palette.textSecondary,
+                            onPressed: () => Navigator.pop(ctx),
                           ),
                         ],
                       ),
-                      const Spacer(),
-                      // Close button
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(ctx),
-                      )
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: GridView.builder(
-                    controller: scrollController,
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 5,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
                     ),
-                    itemCount: book.totalChapters,
-                    itemBuilder: (context, index) {
-                      final chapter = index + 1;
-                      return InkWell(
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const BibleReaderScreen()));
-                          context.read<BibleViewModel>().loadChapter(chapter);
-                        },
-                        child: Container(
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isDark ? Colors.white10 : Colors.grey.shade200,
+                    Expanded(
+                      child: isLoadingVerses
+                          ? Center(
+                              child: CircularProgressIndicator(
+                                  color: palette.accent))
+                          : GridView.builder(
+                              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 5,
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 12,
+                              ),
+                              itemCount: selectedChapter == null
+                                  ? book.totalChapters
+                                  : vm.maxVerseNumber,
+                              itemBuilder: (context, index) {
+                                final number = index + 1;
+                                return InkWell(
+                                  onTap: () async {
+                                    if (selectedChapter == null) {
+                                      // Select Chapter -> Load Verses
+                                      setSheetState(() {
+                                        selectedChapter = number;
+                                        isLoadingVerses = true;
+                                      });
+                                      await vm.loadChapter(number);
+                                      if (context.mounted) {
+                                        setSheetState(() {
+                                          isLoadingVerses = false;
+                                        });
+                                      }
+                                    } else {
+                                      // Select Verse -> Go to Reader
+                                      Navigator.pop(ctx);
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => BibleReaderScreen(
+                                              targetVerse: number),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: Container(
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: palette.surface,
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(color: palette.border),
+                                    ),
+                                    child: Text(
+                                      "$number",
+                                      style: GoogleFonts.manrope(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: palette.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
-                            boxShadow: isDark
-                                ? []
-                                : [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.03),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    )
-                                  ],
-                          ),
-                          child: Text(
-                            "$chapter",
-                            style: GoogleFonts.outfit(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : Colors.black87,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             );
           },
         );
       },
+    );
+  }
+
+  Widget _buildEmptyState(_LibraryPalette palette) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.menu_book_rounded, size: 52, color: palette.error),
+          const SizedBox(height: 12),
+          Text(
+            "Gagal memuat daftar kitab.",
+            style: GoogleFonts.manrope(color: palette.error, fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LibraryPalette {
+  final Color background;
+  final Color backgroundSecondary;
+  final Color surface;
+  final Color surfaceElevated;
+  final Color accent;
+  final Color accentSecondary;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color success;
+  final Color error;
+  final Color border;
+  final Color chip;
+  final Color shadow;
+
+  _LibraryPalette({
+    required this.background,
+    required this.backgroundSecondary,
+    required this.surface,
+    required this.surfaceElevated,
+    required this.accent,
+    required this.accentSecondary,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.success,
+    required this.error,
+    required this.border,
+    required this.chip,
+    required this.shadow,
+  });
+
+  factory _LibraryPalette.fromTheme(ThemeData _) {
+    final accent = const Color(0xFF0088CC);
+    final accentSecondary = const Color(0xFF007AB8);
+    // Using a more interesting background base
+    const background = Color(0xFFF0F9FF); // Very light blue tint
+    const surface = Color(0xFFFFFFFF);
+    const textPrimary = Color(0xFF1A1A1A); // Softer black
+    const textSecondary = Color(0xFF555555);
+    const success = Color(0xFF2ECC71);
+    const error = Color(0xFFE74C3C);
+    const border = Color(0xFFE1EFF5); // Blue-ish border
+    const chip = Color(0xFFF0F9FF);
+
+    return _LibraryPalette(
+      background: background,
+      backgroundSecondary: surface,
+      surface: surface,
+      surfaceElevated: surface,
+      accent: accent,
+      accentSecondary: accentSecondary,
+      textPrimary: textPrimary,
+      textSecondary: textSecondary,
+      success: success,
+      error: error,
+      border: border,
+      chip: chip,
+      shadow: const Color(0xFF0088CC).withOpacity(0.08), // Blue-tinted shadow
     );
   }
 }

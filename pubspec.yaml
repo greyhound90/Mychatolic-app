@@ -59,6 +59,7 @@ dependencies:
   flutter_image_compress: ^2.4.0
   easy_date_timeline: ^2.0.9
   flutter_dotenv: ^5.1.0
+  scrollable_positioned_list: ^0.3.8
 
 dev_dependencies:
   flutter_test:

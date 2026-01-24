@@ -25,6 +25,16 @@ class BibleViewModel extends ChangeNotifier {
   List<BibleVerse> _verses = [];
   List<BibleVerse> get verses => _verses;
   
+  int get maxVerseNumber {
+    if (_verses.isEmpty) return 0;
+    // Find highest verse number
+    int max = 0;
+    for (final v in _verses) {
+      if (v.verseNumber > max) max = v.verseNumber;
+    }
+    return max;
+  }
+  
   bool _isLoadingChapter = false;
   bool get isLoadingChapter => _isLoadingChapter;
   String? _readerError;
@@ -75,6 +85,7 @@ class BibleViewModel extends ChangeNotifier {
       _readerError = "Gagal memuat teks. Periksa koneksi internet.";
       debugPrint("Error loading chapter: $e");
     } finally {
+      // Logic for safety: always stop loading
       _isLoadingChapter = false;
       notifyListeners();
     }
