@@ -25,25 +25,28 @@ class Comment {
   });
 
   factory Comment.fromJson(Map<String, dynamic> json) {
-    Profile? authorProfile;
-    if (json['profiles'] != null) {
-      if (json['profiles'] is List) {
-        final List list = json['profiles'];
-        if (list.isNotEmpty) {
-          authorProfile = Profile.fromJson(list.first);
-        }
-      } else if (json['profiles'] is Map<String, dynamic>) {
-        // Strict Map check
-        authorProfile = Profile.fromJson(json['profiles']);
-      } else if (json['profiles'] is Map) {
-        // Dynamic Map Check
-        // Try strict cast
-        try {
-          authorProfile = Profile.fromJson(
-            Map<String, dynamic>.from(json['profiles']),
-          );
-        } catch (_) {}
-      }
+    // 1. Ambil data profil (Support Flat JSON dari RPC/View & Nested JSON dari Table)
+    Profile? authorData;
+    
+    // Cek jika data flat (dari View/RPC) tersedia
+    // Biasanya view mengembalikan 'full_name' atau 'username' di root
+    if (json['full_name'] != null || json['username'] != null) {
+       authorData = Profile(
+         id: json['user_id']?.toString() ?? '',
+         fullName: json['full_name']?.toString() ?? json['username']?.toString() ?? 'User', 
+         avatarUrl: json['avatar_url']?.toString(), 
+       );
+    } 
+    // Cek jika data nested (dari Table standard) tersedia
+    else if (json['profiles'] != null) {
+       // Handle jika profiles adalah List (kadang terjadi di join one-to-many meski limit 1)
+       if (json['profiles'] is List && (json['profiles'] as List).isNotEmpty) {
+          authorData = Profile.fromJson((json['profiles'] as List).first);
+       } 
+       // Handle jika profiles adalah Map (join one-to-one standard)
+       else if (json['profiles'] is Map<String, dynamic>) {
+          authorData = Profile.fromJson(json['profiles']);
+       }
     }
 
     // Defensive Date Parsing
@@ -57,13 +60,10 @@ class Comment {
     return Comment(
       id: json['id']?.toString() ?? '',
       userId: json['user_id']?.toString() ?? '',
-      content:
-          json['content']?.toString() ??
-          '', // CRITICAL: Prevent null content crash
+      content: json['content']?.toString() ?? '',
       createdAt: date,
-      author: authorProfile,
-      parentId: json['parent_id']?.toString(), // Handle null
-      // replies will be populated manually later or if json has it
+      author: authorData,
+      parentId: json['parent_id']?.toString(),
       likesCount: json['likes_count'] != null
           ? (json['likes_count'] as num).toInt()
           : (json['comment_likes'] as List?)?.length ?? 0,

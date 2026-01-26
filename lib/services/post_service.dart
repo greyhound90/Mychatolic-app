@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mychatolic_app/models/user_post.dart';
+import 'package:mychatolic_app/models/comment.dart'; // IMPORT ADDED
 import 'package:image_picker/image_picker.dart';
 
 class PostService {
@@ -72,17 +73,11 @@ class PostService {
       final userId = _supabase.auth.currentUser?.id;
       final response = await _supabase
           .from('posts')
-          .select('*, profiles(*), comments(count)')
+          .select('*, profiles(*)')
           .filter('image_url', 'not.is', null) 
           .order('created_at', ascending: false);
 
-      final posts = (response as List).map((e) {
-        // Map relation count to integer field if available
-        if (e['comments'] != null && e['comments'] is List && (e['comments'] as List).isNotEmpty) {
-           e['comments_count'] = e['comments'][0]['count'];
-        }
-        return UserPost.fromJson(e);
-      }).toList();
+      final posts = (response as List).map((e) => UserPost.fromJson(e)).toList();
       
       if (userId != null) {
         return await _enrichPostsWithUserInteraction(posts, userId);
@@ -99,16 +94,11 @@ class PostService {
       final userId = _supabase.auth.currentUser?.id;
       final response = await _supabase
           .from('posts')
-          .select('*, profiles(*), comments(count)')
+          .select('*, profiles(*)')
           .filter('image_url', 'is', null) 
           .order('created_at', ascending: false);
 
-      final posts = (response as List).map((e) {
-        if (e['comments'] != null && e['comments'] is List && (e['comments'] as List).isNotEmpty) {
-           e['comments_count'] = e['comments'][0]['count'];
-        }
-        return UserPost.fromJson(e);
-      }).toList();
+      final posts = (response as List).map((e) => UserPost.fromJson(e)).toList();
 
       if (userId != null) {
         return await _enrichPostsWithUserInteraction(posts, userId);
@@ -297,31 +287,78 @@ class PostService {
      }
   }
 
-  // 7. Add Comment with manual count update fallback
-  Future<void> addComment(String postId, String content, {String? parentId}) async {
+  // 7. Add Comment (RPC Atomic) - returns the new Comment object
+  Future<Comment> addComment(String postId, String content, {String? parentId}) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception("User belum login");
     
     try {
-      await _supabase.from('comments').insert({
-        'post_id': postId,
-        'user_id': userId,
-        'content': content,
-        'parent_id': parentId,
-        'created_at': DateTime.now().toIso8601String(),
+      // RPC should strictly return a single JSON object representing the inserted row
+      // Make sure your backend RPC 'add_comment_v2' returns `setof comments_with_profiles` or similar.
+      final response = await _supabase.rpc('add_comment_v2', params: {
+        'p_post_id': postId,
+        'p_content': content,
+        'p_parent_id': parentId, // Pass as UUID String or null
       });
       
-      // Manual Update Count
-      final countResponse = await _supabase
-           .from('comments')
-           .count(CountOption.exact)
-           .eq('post_id', postId);
-           
-      await _supabase.from('posts').update({'comments_count': countResponse}).eq('id', postId);
+      // If RPC returns list, take first. If object, take it.
+      final data = (response is List && response.isNotEmpty) ? response.first : response;
+      
+      return Comment.fromJson(Map<String, dynamic>.from(data));
       
     } catch (e) {
       debugPrint("Add comment error: $e");
-      throw Exception("Gagal mengirim komentar.");
+      throw Exception("Gagal mengirim komentar: $e");
+    }
+  }
+
+  // 11. Delete Comment (RPC Atomic)
+  Future<void> deleteComment(String commentId, String postId) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception("User belum login");
+
+    try {
+      await _supabase.rpc('delete_comment_v2', params: {
+        'p_comment_id': commentId,
+        'p_post_id': postId,
+      });
+    } catch (e) {
+      debugPrint("Delete comment error: $e");
+      throw Exception("Gagal menghapus komentar.");
+    }
+  }
+
+  // 12. Report Comment
+  Future<void> reportComment(String commentId, String reason) async {
+     final userId = _supabase.auth.currentUser?.id;
+     if (userId == null) throw Exception("User belum login");
+
+     try {
+       await _supabase.from('comment_reports').insert({
+         'reporter_id': userId,
+         'comment_id': commentId,
+         'reason': reason,
+         'created_at': DateTime.now().toIso8601String(),
+       });
+     } catch (e) {
+       debugPrint("Report comment error: $e");
+       throw Exception("Gagal melaporkan komentar.");
+     }
+  }
+
+  // New: Get Comments from VIEW
+  Future<List<Comment>> getComments(String postId) async {
+    try {
+      final response = await _supabase
+          .from('comments_with_profiles') // Queries the VIEW
+          .select()
+          .eq('post_id', postId)
+          .order('created_at', ascending: true);
+
+      return (response as List).map((e) => Comment.fromJson(e)).toList();
+    } catch (e) {
+      debugPrint("Get Comments Error: $e");
+      return [];
     }
   }
 

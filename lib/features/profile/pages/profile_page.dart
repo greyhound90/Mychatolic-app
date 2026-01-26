@@ -13,6 +13,7 @@ import 'package:mychatolic_app/features/profile/pages/follow_list_page.dart';
 import 'package:mychatolic_app/features/feed/widgets/post_card.dart'; // Re-use PostCard
 import 'package:mychatolic_app/widgets/secure_image_loader.dart';
 import 'package:mychatolic_app/features/feed/pages/post_detail_page.dart';
+import 'package:mychatolic_app/pages/chat/chat_page.dart'; // Chat Import
 
 class ProfilePage extends StatefulWidget {
   final String? userId; // Optional, null means "Me"
@@ -567,26 +568,27 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
   }
 
   Widget _buildActionButtons() {
+    // Jika Profil Saya (Edit & Share)
     if (_isMe) {
       return Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           ElevatedButton.icon(
             onPressed: () async {
-               final reload = await Navigator.push(
-                 context, 
-                 MaterialPageRoute(builder: (_) => const EditProfilePage())
-               );
-               if (reload == true) _loadData();
+              final reload = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EditProfilePage())
+              );
+              if (reload == true) _loadData();
             },
             icon: const Icon(Icons.edit, size: 18),
             label: Text("Edit Profil", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
             style: ElevatedButton.styleFrom(
-               backgroundColor: _primaryColor,
-               foregroundColor: Colors.white,
-               elevation: 0,
-               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              backgroundColor: _primaryColor,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
             ),
           ),
           const SizedBox(width: 12),
@@ -594,57 +596,109 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
             onPressed: () { /* Share Logic */ },
             icon: const Icon(Icons.share, size: 18),
             label: Text("Share", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-             style: OutlinedButton.styleFrom(
-               foregroundColor: Colors.black87,
-               side: BorderSide(color: Colors.grey.shade300),
-               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.black87,
+              side: BorderSide(color: Colors.grey.shade300),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
             ),
           ),
         ],
       );
-    } else {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-           Expanded(
-             child: ElevatedButton(
-               onPressed: _toggleFollow,
-               style: ElevatedButton.styleFrom(
-                 backgroundColor: _isFollowing ? Colors.grey.shade200 : _primaryColor,
-                 foregroundColor: _isFollowing ? Colors.black : Colors.white,
-                 elevation: 0,
-                 padding: const EdgeInsets.symmetric(vertical: 12),
-                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-               ),
-               child: Text(
-                 _isFollowing ? "Mengikuti" : "Ikuti",
-                 style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-               ),
-             ),
-           ),
-           const SizedBox(width: 12),
-           Expanded(
-             child: ElevatedButton.icon(
-               onPressed: () {
-                 Navigator.push(
-                   context,
-                   MaterialPageRoute(builder: (_) => CreatePersonalRadarPage(targetUser: _profile!)),
-                 );
-               },
-               icon: const Icon(Icons.church, size: 18),
-               label: Text("Ajak Misa", style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold)),
-               style: ElevatedButton.styleFrom(
-                 backgroundColor: Colors.white,
-                 foregroundColor: _primaryColor,
-                 side: BorderSide(color: _primaryColor),
-                 elevation: 0,
-                 padding: const EdgeInsets.symmetric(vertical: 12),
-                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-               ),
-             ),
-           ),
-        ],
+    } 
+    
+    // Jika Profil Orang Lain (Ikuti, Pesan, Ajak Misa)
+    else {
+      // Warna Hijau untuk tombol Ajak Misa
+      final Color colorGreen = const Color(0xFF2ECC71); 
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16), 
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // 1. Tombol Ikuti
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _toggleFollow,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isFollowing ? Colors.grey.shade200 : _primaryColor,
+                  foregroundColor: _isFollowing ? Colors.black : Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                ),
+                child: Text(
+                  _isFollowing ? "Mengikuti" : "Ikuti",
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            
+            const SizedBox(width: 8),
+
+            // 2. Tombol Pesan (Chat)
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ChatPage(partnerId: _targetUserId),
+                    ),
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _primaryColor,
+                  side: BorderSide(color: _primaryColor),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  backgroundColor: Colors.white,
+                ),
+                child: Text(
+                  "Pesan", 
+                  style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 8),
+
+            // 3. Tombol Ajak Misa (Fitur Radar)
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () {
+                   if (_profile != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => CreatePersonalRadarPage(targetUser: _profile!),
+                        ),
+                      );
+                   }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorGreen, 
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                ),
+                child: Text(
+                  "Ajak Misa",
+                  style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ],
+        ),
       );
     }
   }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mychatolic_app/models/user_post.dart';
 import 'package:mychatolic_app/services/social_service.dart';
-import 'package:mychatolic_app/widgets/post_card.dart';
+import 'package:mychatolic_app/features/feed/widgets/post_card.dart';
 import 'package:mychatolic_app/pages/notification_screen.dart';
 import 'package:mychatolic_app/pages/create_post_screen.dart';
 import 'package:mychatolic_app/pages/radar_page.dart';
