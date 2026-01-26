@@ -10,27 +10,17 @@ import 'package:mychatolic_app/features/feed/pages/full_screen_image_page.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// Import SocialService though we might not use it directly, to keep compatibility if needed, 
-// OR we just remove it from the constructor if home_screen is updated. 
-// Plan: Update constructor to accept socialService but ignore it or use internal logic.
-// However, the cleanest is to update the caller. 
-// But since I am overwriting the LEGACY file, I should try to minimize breakage or update the caller.
-// Let's update the caller (home_screen.dart) in the next step.
-// For now, this file is the NEW PostCard implementation.
-
 class PostCard extends StatefulWidget {
   final UserPost post;
   final VoidCallback? onPlay; 
   final Function(UserPost updatedPost)? onUpdate;
-  // Legacy params (optional, to avoid immediate crash if hot reload happens before home_screen update)
-  final dynamic socialService; 
 
   const PostCard({
     Key? key, 
     required this.post,
     this.onPlay,
     this.onUpdate,
-    this.socialService,
+    dynamic socialService, // ignored, for compatibility
   }) : super(key: key);
 
   @override
@@ -42,66 +32,75 @@ class _PostCardState extends State<PostCard> {
   final _currentUserId = Supabase.instance.client.auth.currentUser?.id;
   
   late bool _isLiked;
-  late int _likesCount;
-  late bool _isSaved;
+  late Stream<Map<String, dynamic>> _postStream;
 
   @override
   void initState() {
     super.initState();
     _isLiked = widget.post.isLiked;
-    _likesCount = widget.post.likesCount;
-    _isSaved = widget.post.isSaved;
+    // We stream the post to get the latest likes_count & comments_count in Realtime
+    _postStream = _postService.streamPost(widget.post.id);
   }
 
   @override
   void didUpdateWidget(PostCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.post != widget.post) {
-      setState(() {
-        _isLiked = widget.post.isLiked;
-        _likesCount = widget.post.likesCount;
-        _isSaved = widget.post.isSaved;
-      });
+      if (oldWidget.post.id != widget.post.id) {
+         _postStream = _postService.streamPost(widget.post.id);
+      }
+      _isLiked = widget.post.isLiked;
     }
   }
 
   Future<void> _toggleLike() async {
+    final bool oldLiked = _isLiked;
+    final bool newLiked = !oldLiked;
+
+    // Instant Optimistic Update (UI)
     setState(() {
-      _isLiked = !_isLiked;
-      _likesCount += _isLiked ? 1 : -1;
+      _isLiked = newLiked;
     });
+
+    // Notify Parent (Feed) immediately so it updates too
+    widget.onUpdate?.call(widget.post.copyWith(
+      isLiked: newLiked,
+      likesCount: widget.post.likesCount + (newLiked ? 1 : -1) // Temporary adjust
+    ));
 
     try {
       await _postService.toggleLike(widget.post.id);
-      widget.onUpdate?.call(widget.post.copyWith(isLiked: _isLiked, likesCount: _likesCount));
+      // Success. Stream will eventually correct the count from Server if needed.
     } catch (e) {
-      // Revert
+      // Revert if failed
       setState(() {
-        _isLiked = !_isLiked;
-        _likesCount += _isLiked ? 1 : -1;
+        _isLiked = oldLiked;
       });
+      widget.onUpdate?.call(widget.post.copyWith(isLiked: oldLiked, likesCount: widget.post.likesCount));
     }
   }
 
   Future<void> _toggleSave() async {
-    setState(() {
-      _isSaved = !_isSaved;
-    });
+    // Optimistic
+    final oldSaved = widget.post.isSaved;
+    final newSaved = !oldSaved;
+
+    // Optimistic Update UI via Parent Callback (since isSaved is in widget.post)
+    widget.onUpdate?.call(widget.post.copyWith(isSaved: newSaved));
 
     try {
-      await _postService.toggleSavePost(widget.post.id);
-      widget.onUpdate?.call(widget.post.copyWith(isSaved: _isSaved));
-      ScaffoldMessenger.of(context).showSnackBar(
+       await _postService.toggleSavePost(widget.post.id);
+       ScaffoldMessenger.of(context).hideCurrentSnackBar();
+       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_isSaved ? "Disimpan ke koleksi" : "Dihapus dari koleksi"),
+          content: Text(newSaved ? "Disimpan ke koleksi" : "Dihapus dari koleksi"),
           duration: const Duration(seconds: 1),
         ),
       );
     } catch (e) {
-      setState(() {
-        _isSaved = !_isSaved;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal menyimpan: $e")));
+      // Revert if failed
+       widget.onUpdate?.call(widget.post.copyWith(isSaved: oldSaved));
+       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal menyimpan: $e")));
     }
   }
   
@@ -151,7 +150,6 @@ class _PostCardState extends State<PostCard> {
                       );
                       if (confirm == true) {
                          try {
-                            // Using PostService directly
                            await _postService.deletePost(widget.post.id);
                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Postingan dihapus")));
                          } catch (e) {
@@ -223,13 +221,7 @@ class _PostCardState extends State<PostCard> {
 
   @override
   Widget build(BuildContext context) {
-    // If post has multiple images, user logic usually handles it. 
-    // This implementation defaults to using the FIRST imageUrl if available, 
-    // or checks imageUrls list. The model 'UserPost' has 'imageUrls'.
-    
     final bool hasImage = widget.post.imageUrls.isNotEmpty;
-    // Fallback: Check if there's a single image property, adapt as needed. 
-    // Assuming 'imageUrls' is the source of truth.
     final String? imageUrl = hasImage ? widget.post.imageUrls.first : null;
 
     return Container(
@@ -312,43 +304,67 @@ class _PostCardState extends State<PostCard> {
               ),
             ),
 
-          // 4. ACTIONS
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                _buildActionButton(
-                  icon: Icons.local_fire_department, 
-                  color: _likesCount > 0 || _isLiked ? Colors.deepOrange : Colors.grey[600]!, 
-                  label: "$_likesCount",
-                  onTap: _toggleLike,
+          // 4. ACTIONS (Wrapped in StreamBuilder for Realtime Counter)
+          StreamBuilder<Map<String, dynamic>>(
+            stream: _postStream,
+            builder: (context, snapshot) {
+              int likesCount = widget.post.likesCount;
+              int commentsCount = widget.post.commentsCount;
+
+              if (snapshot.hasData && snapshot.data != null && snapshot.data!.isNotEmpty) {
+                 final realtimePost = snapshot.data!;
+                 
+                 if (realtimePost.containsKey('likes_count')) {
+                    likesCount = realtimePost['likes_count'] as int;
+                 }
+                 if (realtimePost.containsKey('comments_count')) {
+                    commentsCount = realtimePost['comments_count'] as int;
+                 }
+              } else {
+                 // Optimistic Fallback
+                 if (_isLiked != widget.post.isLiked) {
+                    likesCount += (_isLiked ? 1 : -1);
+                 }
+              }
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    _buildActionButton(
+                      icon: Icons.local_fire_department, 
+                      iconColor: _isLiked ? Colors.deepOrange : Colors.grey[600]!, 
+                      label: "$likesCount",
+                      onTap: _toggleLike,
+                    ),
+                    const SizedBox(width: 24),
+                    _buildActionButton(
+                      icon: Icons.chat_bubble_outline,
+                      iconColor: Colors.grey[600]!,
+                      label: "$commentsCount", 
+                      onTap: () {
+                         Navigator.push(
+                           context,
+                           MaterialPageRoute(builder: (_) => CommentsPage(processId: widget.post.id)), 
+                         );
+                      },
+                    ),
+                    const Spacer(),
+                    _buildActionButton(
+                      icon: widget.post.isSaved ? Icons.bookmark : Icons.bookmark_border,
+                      iconColor: widget.post.isSaved ? const Color(0xFF0088CC) : Colors.grey[600]!,
+                      onTap: _toggleSave,
+                    ),
+                    const SizedBox(width: 16),
+                    _buildActionButton(
+                      icon: Icons.share_outlined,
+                      iconColor: Colors.grey[600]!,
+                      onTap: _sharePost,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 24),
-                _buildActionButton(
-                  icon: Icons.chat_bubble_outline,
-                  color: Colors.grey[600]!,
-                  label: "", 
-                  onTap: () {
-                     Navigator.push(
-                       context,
-                       MaterialPageRoute(builder: (_) => CommentsPage(processId: widget.post.id)), 
-                     );
-                  },
-                ),
-                const Spacer(),
-                _buildActionButton(
-                  icon: _isSaved ? Icons.bookmark : Icons.bookmark_border,
-                  color: _isSaved ? const Color(0xFF0088CC) : Colors.grey[600]!,
-                  onTap: _toggleSave,
-                ),
-                const SizedBox(width: 16),
-                _buildActionButton(
-                  icon: Icons.share_outlined,
-                  color: Colors.grey[600]!,
-                  onTap: _sharePost,
-                ),
-              ],
-            ),
+              );
+            }
           ),
           
           const Divider(height: 1, color: Color(0xFFEEEEEE)),
@@ -357,7 +373,7 @@ class _PostCardState extends State<PostCard> {
     );
   }
 
-  Widget _buildActionButton({required IconData icon, String? label, required Color color, required VoidCallback onTap}) {
+  Widget _buildActionButton({required IconData icon, String? label, required Color iconColor, required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Container( 
@@ -365,10 +381,10 @@ class _PostCardState extends State<PostCard> {
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
           children: [
-            Icon(icon, color: color, size: 26),
-            if (label != null && label.isNotEmpty) ...[
+            Icon(icon, color: iconColor, size: 26),
+            if (label != null) ...[
               const SizedBox(width: 6),
-               Text(label, style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 14, color: color))
+               Text(label, style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.black87))
             ]
           ],
         ),

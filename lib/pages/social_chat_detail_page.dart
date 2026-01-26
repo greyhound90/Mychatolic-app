@@ -14,7 +14,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:mychatolic_app/core/app_colors.dart';
 import 'package:mychatolic_app/widgets/safe_network_image.dart';
 import 'package:mychatolic_app/services/chat_service.dart';
-import 'package:mychatolic_app/pages/profile_page.dart';
+import 'package:mychatolic_app/features/profile/pages/profile_page.dart';
 
 class SocialChatDetailPage extends StatefulWidget {
   final String chatId;

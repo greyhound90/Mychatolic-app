@@ -1,9 +1,11 @@
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:mychatolic_app/services/radar_service.dart';
 import 'package:mychatolic_app/pages/radars/radar_chat_page.dart';
 import 'package:mychatolic_app/widgets/safe_network_image.dart';
+import 'package:mychatolic_app/features/notifications/widgets/radar_invite_card.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -15,8 +17,9 @@ class NotificationScreen extends StatefulWidget {
 class _NotificationScreenState extends State<NotificationScreen> {
   final RadarService _radarService = RadarService();
   bool _isLoadingAction = false;
-  List<Map<String, dynamic>> _invites =
-      []; // Using generic map for now, until we fully migrate to MassInvitation model usage
+  List<Map<String, dynamic>> _invites = [];
+  
+  // Theme Colors
   static const Color _blue = Color(0xFF0088CC);
   static const Color _blueDark = Color(0xFF007AB8);
   static const Color _white = Color(0xFFFFFFFF);
@@ -34,7 +37,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   Future<void> _fetchInvites() async {
-    final invites = await _radarService.fetchMyInvites();
+    // UPDATED: Using fetchRadarInvites (Participant System) instead of fetchMyInvites (V2 Invite System)
+    // to align with CreatePersonalRadarPage which inserts into radar_participants directly.
+    final invites = await _radarService.fetchRadarInvites(); // This fetches INVITED participants
     if (mounted) {
       setState(() {
         _invites = invites;
@@ -47,19 +52,19 @@ class _NotificationScreenState extends State<NotificationScreen> {
     bool accepted,
   ) async {
     setState(() => _isLoadingAction = true);
+    
+    // Extract radarId correctly from the flattened map (fetchRadarInvites flattens event props)
+    // The structure returned by fetchRadarInvites puts 'id' of radar in 'id'.
+    // Wait, fetchRadarInvites map logic:
+    // return { ...event, schedule_time: ..., user_id: aspect ... }
+    // So 'id' is the radar_events.id
+    final radarId = (invite['id'] ?? '').toString();
+    final title = (invite['title'] ?? 'Misa Bersama').toString();
+
     if (accepted) {
       try {
-        final inviteId = (invite['id'] ?? '').toString();
-        await _radarService.respondToInvite(inviteId: inviteId, accept: true);
-        if (!mounted) return;
-
-        final event = invite['event'] is Map
-            ? Map<String, dynamic>.from(invite['event'] as Map)
-            : const <String, dynamic>{};
-        final radarId = (event['id'] ?? '').toString();
-        final title = (event['title'] ?? 'Grup Radar').toString();
-
-        final chatRoomId = await _radarService.prepareChatForRadar(radarId);
+        // Accept -> Join Radar
+        final result = await _radarService.joinRadar(radarId);
         if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -69,43 +74,61 @@ class _NotificationScreenState extends State<NotificationScreen> {
           ),
         );
 
-        if (chatRoomId != null && chatRoomId.trim().isNotEmpty) {
-          await Navigator.push(
+        if (result.chatRoomId != null && result.chatRoomId!.trim().isNotEmpty) {
+           // Navigate to Chat
+           // Ensure user is added to chat (joinRadar does this but verify)
+           await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) =>
-                  RadarChatPage(chatRoomId: chatRoomId, title: title),
+                  RadarChatPage(chatRoomId: result.chatRoomId!, title: title),
             ),
           );
+        } else {
+           // Fallback if chat room not ready yet (e.g. triggers slow)
+           // Maybe try prepareChatForRadar
+           final chatRoomId = await _radarService.prepareChatForRadar(radarId);
+           if (chatRoomId != null && mounted) {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      RadarChatPage(chatRoomId: chatRoomId, title: title),
+                ),
+              );
+           }
         }
+
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Gagal menerima undangan"),
+             SnackBar(
+              content: Text("Gagal menerima undangan: $e"),
               backgroundColor: _error,
             ),
           );
         }
       }
     } else {
+      // Decline
       try {
-        final inviteId = (invite['id'] ?? '').toString();
-        await _radarService.respondToInvite(inviteId: inviteId, accept: false);
-      } catch (_) {}
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Undangan ditolak"),
-            backgroundColor: _muted,
-          ),
-        );
+        await _radarService.declineRadar(radarId);
+        if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text("Undangan ditolak"),
+                backgroundColor: _muted,
+            ),
+            );
+        }
+      } catch (e) {
+         debugPrint("Error declining: $e");
       }
     }
 
     if (mounted) {
       setState(() {
-        _invites.removeWhere((element) => element['id'] == invite['id']);
+        _invites.removeWhere((element) => element['id'] == radarId); // radarId is the id in this map
         _isLoadingAction = false;
       });
     }
@@ -154,13 +177,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
                       )
                     else
                       ListView.separated(
-                        shrinkWrap:
-                            true, // Vital for nesting in SingleChildScrollView
+                        shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: _invites.length,
                         separatorBuilder: (_, _) => const SizedBox(height: 12),
-                        itemBuilder: (context, index) =>
-                            _buildInvitationCard(_invites[index]),
+                        itemBuilder: (context, index) => RadarInviteCard(
+                           invite: _invites[index],
+                           isLoading: _isLoadingAction,
+                           onRespond: (accepted) => _handleResponse(_invites[index], accepted),
+                        ),
                       ),
                     const SizedBox(height: 28),
                     _buildSectionHeader("Lainnya"),
@@ -311,171 +336,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       ],
     );
   }
-
-  Widget _buildInvitationCard(Map<String, dynamic> invite) {
-    final senderProfile = invite['profiles'] ?? {};
-    final event = invite['event'] is Map
-        ? Map<String, dynamic>.from(invite['event'] as Map)
-        : const <String, dynamic>{};
-    final churchName = event['church_name'] ?? 'Gereja';
-    final scheduleTimeStr = event['event_time'];
-    DateTime? scheduleTime;
-    if (scheduleTimeStr != null) {
-      scheduleTime = DateTime.tryParse(scheduleTimeStr);
-    }
-    final message = event['description'];
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _bg),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(25),
-                child: SafeNetworkImage(
-                  imageUrl: senderProfile['avatar_url'] ?? '',
-                  width: 50,
-                  height: 50,
-                  fit: BoxFit.cover,
-                  // Removed fallbackWidget as requested, rely on widget default
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    RichText(
-                      text: TextSpan(
-                        style: GoogleFonts.outfit(
-                          color: _black,
-                          fontSize: 14,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: senderProfile['full_name'] ?? 'Seseorang',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const TextSpan(text: " mengajak misa di "),
-                          TextSpan(
-                            text: churchName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: _blue,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    if (scheduleTime != null)
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.calendar_today,
-                            size: 12,
-                            color: _muted,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            DateFormat(
-                              'EEEE, d MMM HH:mm',
-                              'id_ID',
-                            ).format(scheduleTime),
-                            style: GoogleFonts.outfit(
-                              fontSize: 12,
-                              color: _textSecondary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    if (message != null && message.toString().isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: _bg,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '"$message"',
-                          style: GoogleFonts.outfit(
-                            fontSize: 12,
-                            fontStyle: FontStyle.italic,
-                            color: _textSecondary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _isLoadingAction
-                      ? null
-                      : () => _handleResponse(invite, false),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: _error),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: Text(
-                    "Tolak",
-                    style: GoogleFonts.outfit(color: _error),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _isLoadingAction
-                      ? null
-                      : () => _handleResponse(invite, true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _blue,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    "Terima",
-                    style: GoogleFonts.outfit(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
+ 
   Widget _buildGeneralNotificationItem(String title, String body) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

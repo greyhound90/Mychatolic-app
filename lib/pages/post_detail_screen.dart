@@ -322,9 +322,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     // 1. Post Content
                     PostCard(
                       post: _post,
-                      socialService: _socialService,
-                      onTap: () {}, // Disable navigation to self
-                      onPostUpdated: (updated) {
+                      onUpdate: (updated) {
                         // Update local _post state immediately when child PostCard changes (e.g. Like)
                         setState(() {
                           _post = updated;
@@ -332,7 +330,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         // Broadcast change upwards
                         SocialService.broadcastPostUpdate(updated);
                       },
-                      heroTagPrefix: 'detail',
                     ),
 
                     const Divider(

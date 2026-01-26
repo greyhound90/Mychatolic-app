@@ -21,7 +21,22 @@ class ScheduleService {
 
       // 2. Apply Filters
       if (dayOfWeek != null) query = query.eq('day_number', dayOfWeek);
-      if (churchId != null) query = query.eq('church_id', churchId);
+      
+      if (churchId != null) {
+        // Simple UUID check
+        final isUuid = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$').hasMatch(churchId);
+        
+        if (isUuid) {
+           query = query.eq('church_id', churchId);
+        } else {
+           // Fallback: If churchId is actually a Name (UI Bug workaround)
+           // We must Join with churches table to filter by name
+           // Note: changing select to support join filtering
+           query = _supabase.from('mass_schedules').select('*, churches!inner(name)');
+           query = query.eq('churches.name', churchId);
+           if (dayOfWeek != null) query = query.eq('day_number', dayOfWeek);
+        }
+      }
 
       // Note: dioceseId and countryId filters are ignored to prevent join errors
 

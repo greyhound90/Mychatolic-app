@@ -16,10 +16,6 @@ import 'package:mychatolic_app/pages/social_chat_detail_page.dart';
 import 'package:mychatolic_app/pages/story/story_view_page.dart';
 import 'package:mychatolic_app/pages/profile/edit_profile_page.dart';
 
-// --- VISUAL CONSTANTS ---
-const Color kBrownAccent = Color(0xFF8B5A2B); // Cokelat Emas/Tua
-const Color kScaffoldBg = Color(0xFFF5F5F5);
-
 class ProfilePage extends StatefulWidget {
   final String? userId; // If null, shows current user's profile
   final bool isBackButtonEnabled; // For navigation from other pages
@@ -67,14 +63,9 @@ class _ProfilePageState extends State<ProfilePage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    
-    // Check if current user
     _checkIsMe();
-    
-    // Fetch Real Data 
     _loadProfileData();
 
-    // Scroll Listener
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
               _scrollController.position.maxScrollExtent - 200 &&
@@ -131,7 +122,6 @@ class _ProfilePageState extends State<ProfilePage>
           _stats = data['stats'] as Map<String, int>;
           _userStories = stories;
         });
-        // Fetch posts after profile is loaded
         await _loadInitialPosts(targetUserId);
       }
     } catch (e) {
@@ -149,8 +139,6 @@ class _ProfilePageState extends State<ProfilePage>
       }
     }
   }
-
-  // --- PAGINATION LOGIC ---
 
   void _separatePosts(List<UserPost> posts) {
     List<UserPost> photos = [];
@@ -179,10 +167,8 @@ class _ProfilePageState extends State<ProfilePage>
         setState(() {
           if (posts.isNotEmpty) {
              _separatePosts(posts);
-             // Update posts count in stats based on actual valid posts
-             int totalPosts = _photoPosts.length + _textPosts.length;
-             // _stats['posts'] = totalPosts; // Optional: Override stats or keep DB count
           }
+           // Use actual post count if needed, or stick to DB stats
           if (posts.length < _limit) {
             _hasNextPage = false;
           }
@@ -227,8 +213,6 @@ class _ProfilePageState extends State<ProfilePage>
        setState(() => _isLoadMoreRunning = false);
     }
   }
-
-  // --- ACTIONS ---
 
   Future<void> _handleFollowToggle() async {
     if (_profile == null) return;
@@ -344,13 +328,13 @@ class _ProfilePageState extends State<ProfilePage>
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: Colors.white,
-        body: Center(child: CircularProgressIndicator(color: kBrownAccent)),
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_error != null || _profile == null) {
       return Scaffold(
-        backgroundColor: kScaffoldBg,
+        backgroundColor: Colors.white,
         appBar: AppBar(title: const Text("Profil")),
         body: Center(
           child: Column(
@@ -373,128 +357,50 @@ class _ProfilePageState extends State<ProfilePage>
     final displayProfile = _profile!;
 
     return Scaffold(
-      backgroundColor: kScaffoldBg,
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: Text(
+          displayProfile.fullName ?? "Profil",
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.black),
+        ),
+        centerTitle: false,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined, color: Colors.black),
+            onPressed: () => _isMe ? _openSettings() : _showReportDialog(context),
+          ),
+        ],
+      ),
       body: NestedScrollView(
         controller: _scrollController,
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
-            SliverAppBar(
-              expandedHeight: 280,
-              floating: false,
-              pinned: true,
-              stretch: true,
-              backgroundColor: Colors.black, // Dark bg for banner
-              leading: widget.isBackButtonEnabled
-                  ? Container(
-                      margin: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Colors.black26, 
-                        shape: BoxShape.circle
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    )
-                  : null,
-              flexibleSpace: FlexibleSpaceBar(
-                stretchModes: const [
-                  StretchMode.zoomBackground,
-                  StretchMode.blurBackground,
-                ],
-                background: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.network(
-                      "https://i.pinimg.com/originals/9a/b3/24/9ab324c3563fb3518bb9019379ca774b.jpg", // Heart Hand Sunset
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                         // Fallback if pinterest blocks request
-                         return Image.network(
-                           "https://images.unsplash.com/photo-1518621736915-f3b1c41bfd00?q=80&w=2000&auto=format&fit=crop",
-                           fit: BoxFit.cover
-                         );
-                      },
-                    ),
-                    const DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Colors.transparent, Colors.black38],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                  decoration: const BoxDecoration(
-                    color: Colors.black26,
-                    shape: BoxShape.circle,
-                  ),
-                  child: _isMe
-                      ? IconButton(
-                          icon: const Icon(Icons.settings, color: Colors.white),
-                          onPressed: _openSettings,
-                        )
-                      : PopupMenuButton<String>(
-                          icon: const Icon(Icons.more_vert, color: Colors.white),
-                          onSelected: (val) {
-                             if(val == 'report') _showReportDialog(context);
-                          },
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(
-                              value: 'report',
-                              child: Text("Report User"),
-                            ),
-                          ],
-                        ),
-                ),
-                const SizedBox(width: 8),
-              ],
-            ),
-
             SliverToBoxAdapter(
-              child: Transform.translate(
-                offset: const Offset(0, -50), 
-                child: ProfileHeader(
-                  profile: displayProfile,
-                  stats: _stats,
-                  isMe: _isMe,
-                  isFollowing: _isFollowing,
-                  onFollowToggle: _handleFollowToggle,
-                  onChatTap: _navigateToChat,
-                  onEditTap: _handleEditProfile,
-                  hasStories: _userStories.isNotEmpty,
-                  onAvatarTap: _handleAvatarTap,
-                ),
+              child: ProfileHeader(
+                profile: displayProfile,
+                stats: _stats,
+                isMe: _isMe,
+                isFollowing: _isFollowing,
+                onFollowToggle: _handleFollowToggle,
+                onChatTap: _navigateToChat,
+                onEditTap: _handleEditProfile,
+                hasStories: _userStories.isNotEmpty,
+                onAvatarTap: _handleAvatarTap,
               ),
             ),
-
             SliverPersistentHeader(
               delegate: _SliverTabBarDelegate(
                 TabBar(
                   controller: _tabController,
-                  indicatorColor: kBrownAccent, // Brown indicator
-                  labelColor: Colors.black, // Dark text for active tab
+                  indicatorColor: Colors.black,
+                  labelColor: Colors.black,
                   unselectedLabelColor: Colors.grey,
-                  indicatorWeight: 3,
-                  labelStyle: GoogleFonts.outfit(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                  ),
+                  indicatorWeight: 1,
                   tabs: const [
-                    Tab(
-                      icon: Icon(Icons.grid_on_rounded), 
-                      text: "Foto",
-                    ),
-                    Tab(
-                      icon: Icon(Icons.list_rounded), 
-                      text: "Status",
-                    ),
+                    Tab(icon: Icon(Icons.grid_on_outlined)),
+                    Tab(icon: Icon(Icons.list_alt_outlined)),
                   ],
                 ),
               ),
@@ -502,12 +408,9 @@ class _ProfilePageState extends State<ProfilePage>
             ),
           ];
         },
-        body: Container(
-          color: Colors.white,
-          child: TabBarView(
-            controller: _tabController,
-            children: [_buildGridPosts(), _buildListPosts()],
-          ),
+        body: TabBarView(
+          controller: _tabController,
+          children: [_buildGridPosts(), _buildListPosts()],
         ),
       ),
     );
@@ -524,8 +427,8 @@ class _ProfilePageState extends State<ProfilePage>
           padding: const EdgeInsets.all(2),
           sliver: SliverGrid(
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2, 
-              childAspectRatio: 0.8,
+              crossAxisCount: 3, // Instagram standard
+              childAspectRatio: 1.0, // Square
               crossAxisSpacing: 2,
               mainAxisSpacing: 2,
             ),
@@ -552,10 +455,9 @@ class _ProfilePageState extends State<ProfilePage>
           const SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.all(10),
-              child: Center(child: CircularProgressIndicator(color: kBrownAccent)),
+              child: Center(child: CircularProgressIndicator()),
             ),
           ),
-        const SliverPadding(padding: EdgeInsets.only(bottom: 50)),
       ],
     );
   }
@@ -573,13 +475,12 @@ class _ProfilePageState extends State<ProfilePage>
         if (index == _textPosts.length) {
           return const Padding(
               padding: EdgeInsets.all(20),
-              child: Center(child: CircularProgressIndicator(color: kBrownAccent)));
+              child: Center(child: CircularProgressIndicator()));
         }
         final post = _textPosts[index];
         return PostCard(
            post: post,
-           socialService: _socialService,
-           onPostUpdated: (updated) {
+           onUpdate: (updated) {
               setState(() {
                 _textPosts[index] = updated;
               });
@@ -594,9 +495,9 @@ class _ProfilePageState extends State<ProfilePage>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.filter_none, size: 48, color: Colors.grey[300]),
-          const SizedBox(height: 8),
-          Text(msg, style: GoogleFonts.outfit(color: Colors.grey)),
+          Icon(Icons.camera_alt_outlined, size: 64, color: Colors.grey[300]),
+          const SizedBox(height: 16),
+          Text(msg, style: GoogleFonts.outfit(color: Colors.grey, fontSize: 16)),
         ],
       ),
     );
@@ -612,17 +513,14 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   _SliverTabBarDelegate(this._tabBar);
 
   @override
-  double get minExtent => _tabBar.preferredSize.height + 1; // +1 for border
+  double get minExtent => _tabBar.preferredSize.height;
   @override
-  double get maxExtent => _tabBar.preferredSize.height + 1;
+  double get maxExtent => _tabBar.preferredSize.height;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Colors.black12, width: 0.5)),
-      ),
+      color: Colors.white,
       child: _tabBar,
     );
   }
@@ -657,238 +555,147 @@ class ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const double avatarRadius = 55; 
-    const double avatarDiameter = avatarRadius * 2;
-    
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          width: double.infinity,
-          margin: const EdgeInsets.only(top: 0), 
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(30),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 10,
-                offset: Offset(0, -4),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Row 1: Avatar + Stats
+          Row(
+            children: [
+              // Avatar with Story indicator if needed
+              GestureDetector(
+                onTap: onAvatarTap,
+                child: Container(
+                  decoration: hasStories
+                      ? BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.pink, width: 2),
+                        )
+                      : null,
+                  padding: const EdgeInsets.all(3),
+                  child: ClipOval(
+                    child: SafeNetworkImage(
+                      imageUrl: profile.avatarUrl ?? "",
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 20),
+              // Stats
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildStat(stats['posts'] ?? 0, "Post"),
+                    _buildStat(stats['followers'] ?? 0, "Followers"),
+                    _buildStat(stats['following'] ?? 0, "Following"),
+                  ],
+                ),
               ),
             ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                 // Info Row (Name & Bio)
-                 // NOTE: Spacer for avatar is needed because Avatar is floating
-                 Row(
-                   crossAxisAlignment: CrossAxisAlignment.start,
-                   children: [
-                     const SizedBox(width: 110), // Space for floating avatar
-                     Expanded(
-                       child: Column(
-                         crossAxisAlignment: CrossAxisAlignment.start,
-                         children: [
-                           Text(
-                             profile.fullName ?? "User",
-                             style: GoogleFonts.outfit(
-                               fontSize: 24, 
-                               fontWeight: FontWeight.bold, // Name Bold
-                               height: 1.2,
-                               color: Colors.black,
-                             ),
-                           ),
-                           const SizedBox(height: 4),
-                           Text(
-                             "Biografi", // Label "Biografi"
-                             style: GoogleFonts.outfit(
-                               fontSize: 16,
-                               fontWeight: FontWeight.bold, // Bold
-                               color: Colors.black,
-                             ),
-                           ),
-                         ],
-                       )
-                     )
-                   ],
-                 ),
-                 
-                 const SizedBox(height: 24),
-                 
-                 // Stats Row
-                 Padding(
-                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                   child: Row(
-                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                     children: [
-                       _buildStat(stats['posts'] ?? 0, "Post"),
-                       _buildStat(stats['followers'] ?? 0, "Followers"),
-                       _buildStat(stats['following'] ?? 0, "Following"),
-                     ],
-                   ),
-                 ),
-
-                 const SizedBox(height: 30),
-                 
-                 // Bottom Row: Location & Button
-                 Row(
-                   crossAxisAlignment: CrossAxisAlignment.end,
-                   children: [
-                     // Location (Left side)
-                     Expanded(
-                       flex: 4,
-                       child: Column(
-                         crossAxisAlignment: CrossAxisAlignment.start,
-                         children: [
-                           // Hardcoded Location Text to match reference
-                           Text(
-                             "INDONESIA,\n${(profile.diocese ?? 'Keuskupan').toUpperCase()}\n${(profile.parish ?? 'Paroki').toUpperCase()}",
-                             style: GoogleFonts.outfit(
-                               fontSize: 10, 
-                               fontWeight: FontWeight.w600, // Semi bold
-                               color: Colors.black87,
-                               height: 1.3
-                             ),
-                           ),
-                         ],
-                       ),
-                     ),
-                     const SizedBox(width: 16),
-                     
-                     // Button (Right side, expanded)
-                     Expanded(
-                       flex: 5,
-                       child: _buildActionButton(kBrownAccent),
-                     )
-                   ],
-                 )
-              ],
-            ),
+          const SizedBox(height: 12),
+          
+          // Name & Bio
+          Text(
+            profile.fullName ?? "User",
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
           ),
-        ),
-        
-        // Avatar (Floating)
-        Positioned(
-          top: -50,
-          left: 20,
-          child: GestureDetector(
-            onTap: onAvatarTap,
-            child: Container(
-              width: avatarDiameter,
-              height: avatarDiameter,
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0,4))
-                ]
-              ),
-              child: ClipOval(
-                child: SafeNetworkImage(
-                  imageUrl: profile.avatarUrl ?? "",
-                  fit: BoxFit.cover,
+          if (profile.bio != null && profile.bio!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              profile.bio!,
+              style: GoogleFonts.outfit(fontSize: 14),
+            ),
+          ],
+          
+          const SizedBox(height: 12),
+          
+          // Action Buttons
+          isMe
+              ? Row(
+                  children: [
+                    Expanded(
+                      child: _buildButton(
+                        text: "Edit Profil",
+                        onTap: onEditTap,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildButton(
+                        text: "Bagikan Profil",
+                        onTap: () {}, // TODO: Implement share
+                      ),
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(
+                      child: _buildButton(
+                        text: isFollowing ? "Mengikuti" : "Ikuti",
+                        isPrimary: !isFollowing,
+                        onTap: onFollowToggle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildButton(
+                        text: "Pesan",
+                        onTap: onChatTap,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ),
-          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStat(int count, String label) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          "$count",
+          style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        
-        // Badge "100% KATOLIK"
-        Positioned(
-          top: -20, // Overlapping height (20 above, 20 below approx)
-          right: 20,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: kBrownAccent, // Brown Gold
-              borderRadius: BorderRadius.circular(50), // Stadium / Pill
-              boxShadow: const [
-                BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0,2))
-              ]
-            ),
-            child: Text(
-              "100% KATOLIK",
-              style: GoogleFonts.outfit(
-                color: Colors.white, 
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
-            ),
-          ),
-        )
+        Text(
+          label,
+          style: GoogleFonts.outfit(fontSize: 14),
+        ),
       ],
     );
   }
   
-  Widget _buildActionButton(Color primaryColor) {
-    if (isMe) {
-      return SizedBox(
-        height: 48,
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: onEditTap,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: primaryColor,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            shape: const StadiumBorder() // Pill shape
-          ),
-          child: Text("EDIT PROFIL", style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 13)),
+  Widget _buildButton({
+    required String text, 
+    required VoidCallback? onTap, 
+    bool isPrimary = false
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        height: 32,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isPrimary ? Colors.blue : Colors.grey[200],
+          borderRadius: BorderRadius.circular(8),
         ),
-      );
-    } else {
-      return SizedBox(
-        height: 48,
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: onFollowToggle,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: isFollowing ? Colors.grey[300] : primaryColor,
-            foregroundColor: isFollowing ? Colors.black87 : Colors.white,
-            elevation: 0,
-            shape: const StadiumBorder()
-          ),
-          child: Text(isFollowing ? "MENGIKUTI" : "IKUTI", style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 13)),
-        ),
-      );
-    }
-  }
-
-  Widget _buildStat(int val, String label) {
-    String displayVal = val.toString();
-    // Simple formatter k
-    if (val >= 1000) {
-      double v = val / 1000;
-      // Remove decimal if .0
-      String s = v.toStringAsFixed(v.truncateToDouble() == v ? 0 : 1); 
-      displayVal = "${s}k";
-    }
-
-    return Column(
-      children: [
-        Text(
-          displayVal,
+        child: Text(
+          text,
           style: GoogleFonts.outfit(
-            fontSize: 24, 
-            fontWeight: FontWeight.w900, // Black/Extrabold
-            color: Colors.black
+            color: isPrimary ? Colors.white : Colors.black,
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
           ),
         ),
-        Text(
-          label,
-          style: GoogleFonts.outfit(
-            fontSize: 14, 
-            color: Colors.black, // Dark text
-            fontWeight: FontWeight.w600 // Semibold
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

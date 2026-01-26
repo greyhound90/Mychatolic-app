@@ -1,3 +1,4 @@
+
 // ignore_for_file: constant_identifier_names
 
 enum UserRole { umat, katekumen, pastor, bruder, suster, katekis, unknown }
@@ -17,6 +18,8 @@ class Profile {
   final String id;
   final String? fullName;
   final String? avatarUrl;
+  final String? bannerUrl;
+
 
   // Enums for strict typing
   final UserRole userRole;
@@ -33,6 +36,11 @@ class Profile {
   final String? diocese;
   final String? parish;
 
+  // Location IDs
+  final String? countryId;
+  final String? dioceseId;
+  final String? churchId;
+
   // Demographics
   final DateTime? birthDate;
   final String? ethnicity;
@@ -45,6 +53,7 @@ class Profile {
     required this.id,
     this.fullName,
     this.avatarUrl,
+    this.bannerUrl,
     this.userRole = UserRole.umat,
     this.accountStatus = AccountStatus.unverified,
     this.counselorStatus = CounselorStatus.offline,
@@ -53,6 +62,9 @@ class Profile {
     this.country,
     this.diocese,
     this.parish,
+    this.countryId,
+    this.dioceseId,
+    this.churchId,
     this.birthDate,
     this.ethnicity,
     this.showAge = false,
@@ -103,29 +115,18 @@ class Profile {
       case UserRole.katekumen:
         return "Katekumen";
       case UserRole.umat:
-        return "Umat";
       default:
         return "Umat";
     }
   }
 
-  // Age Getter
-  int? get age {
-    if (birthDate == null) return null;
-    final now = DateTime.now();
-    int val = now.year - birthDate!.year;
-    if (now.month < birthDate!.month ||
-        (now.month == birthDate!.month && now.day < birthDate!.day)) {
-      val--;
-    }
-    return val;
-  }
+  // --- JSON SERIALIZATION ---
 
-  // CopyWith
   Profile copyWith({
     String? id,
     String? fullName,
     String? avatarUrl,
+    String? bannerUrl,
     UserRole? userRole,
     AccountStatus? accountStatus,
     CounselorStatus? counselorStatus,
@@ -134,6 +135,9 @@ class Profile {
     String? country,
     String? diocese,
     String? parish,
+    String? countryId,
+    String? dioceseId,
+    String? churchId,
     DateTime? birthDate,
     String? ethnicity,
     bool? showAge,
@@ -143,6 +147,7 @@ class Profile {
       id: id ?? this.id,
       fullName: fullName ?? this.fullName,
       avatarUrl: avatarUrl ?? this.avatarUrl,
+      bannerUrl: bannerUrl ?? this.bannerUrl,
       userRole: userRole ?? this.userRole,
       accountStatus: accountStatus ?? this.accountStatus,
       counselorStatus: counselorStatus ?? this.counselorStatus,
@@ -151,6 +156,9 @@ class Profile {
       country: country ?? this.country,
       diocese: diocese ?? this.diocese,
       parish: parish ?? this.parish,
+      countryId: countryId ?? this.countryId,
+      dioceseId: dioceseId ?? this.dioceseId,
+      churchId: churchId ?? this.churchId,
       birthDate: birthDate ?? this.birthDate,
       ethnicity: ethnicity ?? this.ethnicity,
       showAge: showAge ?? this.showAge,
@@ -205,6 +213,7 @@ class Profile {
       id: json['id']?.toString() ?? '',
       fullName: json['full_name']?.toString(),
       avatarUrl: json['avatar_url']?.toString(),
+      bannerUrl: json['banner_url']?.toString(),
 
       // Parse Enums (Check new column names first, fall back to old)
       userRole: parseRole(
@@ -223,6 +232,10 @@ class Profile {
       country: json['country']?.toString(),
       diocese: json['diocese']?.toString(),
       parish: json['parish']?.toString(),
+      countryId: json['country_id']?.toString(),
+      dioceseId: json['diocese_id']?.toString(),
+      churchId: json['church_id']?.toString(),
+      
       ethnicity: json['ethnicity']?.toString(),
       birthDate: json['birth_date'] != null
           ? DateTime.tryParse(json['birth_date'].toString())
@@ -237,6 +250,7 @@ class Profile {
       'id': id,
       'full_name': fullName,
       'avatar_url': avatarUrl,
+      'banner_url': bannerUrl,
       'user_role': userRole.name,
       'role': userRole.name, // Keep for legacy
       'account_status': accountStatus.name,
@@ -247,6 +261,9 @@ class Profile {
       'country': country,
       'diocese': diocese,
       'parish': parish,
+      'country_id': countryId,
+      'diocese_id': dioceseId,
+      'church_id': churchId,
       'birth_date': birthDate != null
           ? "${birthDate!.year}-${birthDate!.month.toString().padLeft(2, '0')}-${birthDate!.day.toString().padLeft(2, '0')}"
           : null,

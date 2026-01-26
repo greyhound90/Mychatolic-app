@@ -7,7 +7,7 @@ import 'package:mychatolic_app/pages/create_post_screen.dart';
 // Replaced ChurchListPage with SchedulePage
 import 'package:mychatolic_app/pages/schedule_page.dart';
 
-import 'package:mychatolic_app/pages/profile_page.dart';
+import 'package:mychatolic_app/features/profile/pages/profile_page.dart';
 import 'package:mychatolic_app/bible/presentation/bible_library_screen.dart';
 import 'package:mychatolic_app/pages/radar_page.dart';
 import 'package:mychatolic_app/pages/social_inbox_page.dart';

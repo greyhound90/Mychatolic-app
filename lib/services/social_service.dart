@@ -467,4 +467,50 @@ class SocialService {
       return [];
     }
   }
+
+  // 3. Get Followers
+  Future<List<Map<String, dynamic>>> getFollowers(String userId) async {
+    try {
+      final response = await _supabase
+          .from('follows')
+          .select('follower_id, profiles!follows_follower_id_fkey(id, full_name, avatar_url, role)')
+          .eq('following_id', userId);
+
+      return List<Map<String, dynamic>>.from(response).map((row) {
+        final profile = row['profiles'] as Map<String, dynamic>;
+        return {
+          'id': profile['id'],
+          'full_name': profile['full_name'],
+          'avatar_url': profile['avatar_url'],
+          'role': profile['role'],
+        };
+      }).toList();
+    } catch (e) {
+      debugPrint("Error getting followers: $e");
+      return [];
+    }
+  }
+
+  // 4. Get Following
+  Future<List<Map<String, dynamic>>> getFollowing(String userId) async {
+    try {
+      final response = await _supabase
+          .from('follows')
+          .select('following_id, profiles!follows_following_id_fkey(id, full_name, avatar_url, role)')
+          .eq('follower_id', userId);
+      
+      return List<Map<String, dynamic>>.from(response).map((row) {
+        final profile = row['profiles'] as Map<String, dynamic>;
+        return {
+          'id': profile['id'],
+          'full_name': profile['full_name'],
+          'avatar_url': profile['avatar_url'],
+          'role': profile['role'],
+        };
+      }).toList();
+    } catch (e) {
+      debugPrint("Error getting following: $e");
+      return [];
+    }
+  }
 }

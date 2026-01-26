@@ -12,6 +12,7 @@ class UserPost {
   final int likesCount;
   final int commentsCount;
   final bool isLiked;
+  final bool isSaved;
 
   UserPost({
     required this.id,
@@ -25,6 +26,7 @@ class UserPost {
     this.likesCount = 0,
     this.commentsCount = 0,
     this.isLiked = false,
+    this.isSaved = false,
   });
 
   /// CopyWith for optimistic updates
@@ -40,6 +42,7 @@ class UserPost {
     int? likesCount,
     int? commentsCount,
     bool? isLiked,
+    bool? isSaved,
   }) {
     return UserPost(
       id: id ?? this.id,
@@ -53,6 +56,7 @@ class UserPost {
       likesCount: likesCount ?? this.likesCount,
       commentsCount: commentsCount ?? this.commentsCount,
       isLiked: isLiked ?? this.isLiked,
+      isSaved: isSaved ?? this.isSaved,
     );
   }
 
@@ -80,12 +84,20 @@ class UserPost {
     final int lCount = (json['likes_count'] as num?)?.toInt() ?? 0;
     final int cCount = (json['comments_count'] as num?)?.toInt() ?? 0;
 
-    // 4. Is Liked Logic (Check multiple possible keys from different query styles)
+    // 4. Is Liked Logic
     bool liked = false;
     if (json['is_liked'] != null) {
       liked = json['is_liked'];
     } else if (json['isLiked'] != null) {
       liked = json['isLiked'];
+    }
+
+    // 5. Is Saved Logic
+    bool saved = false;
+    if (json['is_saved'] != null) {
+      saved = json['is_saved'];
+    } else if (json['isSaved'] != null) {
+      saved = json['isSaved'];
     }
 
     return UserPost(
@@ -102,6 +114,7 @@ class UserPost {
       likesCount: lCount,
       commentsCount: cCount,
       isLiked: liked,
+      isSaved: saved,
     );
   }
 
