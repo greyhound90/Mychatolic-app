@@ -647,6 +647,8 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                   Navigator.push(
                     context,
                     MaterialPageRoute(
+                      // Unified Chat System: Direct to ChatPage with partnerId
+                      // This triggers the auto-redirect logic in ChatPage to open the specific room
                       builder: (_) => ChatPage(partnerId: _targetUserId),
                     ),
                   );

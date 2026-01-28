@@ -69,18 +69,23 @@ class SafeNetworkImage extends StatelessWidget {
   }
 
   Widget _buildFallback() {
+    final double safeIconSize = (width != null && width!.isFinite && width! > 0) 
+        ? width! * 0.4 
+        : 24.0;
+
     return Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: fallbackColor ?? Colors.grey[200], // Updated default background
+        color: fallbackColor ?? Colors.grey[200],
         borderRadius: borderRadius,
-        // Removed border as requested for cleaner look
       ),
-      child: Icon(
-        fallbackIcon, 
-        color: iconColor ?? Colors.grey, 
-        size: (width != null && height != null) ? (width! * 0.5) : 24,
+      child: Center(
+        child: Icon(
+          fallbackIcon,
+          color: iconColor ?? Colors.grey,
+          size: safeIconSize,
+        ),
       ),
     );
   }

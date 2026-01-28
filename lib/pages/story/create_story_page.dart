@@ -46,7 +46,6 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
   Future<void> _uploadStory() async {
     if (_selectedFile == null) return;
 
-    // Dismiss keyboard
     FocusScope.of(context).unfocus();
 
     setState(() => _isLoading = true);
@@ -99,99 +98,70 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
     if (_selectedFile == null) return _buildEmptyState();
 
     return Scaffold(
-      backgroundColor: Colors.black,
-      resizeToAvoidBottomInset: false, // Prevent reshaping, rely on Stack
+      backgroundColor: Colors.black, // Black background for letterbox
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
-          // LAYER 1: Full Screen Image (Interactive)
-          // Positioned.fill ensures it takes whole screen space
+          // LAYER 1: Image container with BoxFit.contain (Letterbox)
           Positioned.fill(
-            child: InteractiveViewer(
-              minScale: 0.5,
-              maxScale: 3.0,
-              child: Image.file(
-                _selectedFile!,
-                fit: BoxFit
-                    .cover, // STRICT: Cover to fill screen (no black bars in default view)
-                width: double.infinity,
-                height: double.infinity,
-              ),
-            ),
+             child: Container(
+               color: Colors.black,
+               alignment: Alignment.center,
+               child: Image.file(
+                 _selectedFile!,
+                 fit: BoxFit.contain, // Ensure full image is visible
+               ),
+             ),
           ),
-
-          // LAYER 2: Top Nav (Close Button)
-          // SafeArea top only
+          
+          // LAYER 2: Close Button (Clean UI)
           Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
+            top: 0, left: 0,
             child: SafeArea(
-              bottom: false,
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Close Button
-                    Container(
-                      decoration: const BoxDecoration(
-                        color: Colors.black45, // Transparent black
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white),
-                        onPressed: _resetSelection,
-                      ),
-                    ),
-                    // Optional: You could put other tools here (crop, stickers)
-                  ],
+                padding: const EdgeInsets.all(16.0),
+                child: CircleAvatar(
+                  backgroundColor: Colors.black45,
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white, size: 24),
+                    onPressed: _resetSelection,
+                  ),
                 ),
               ),
             ),
           ),
 
-          // LAYER 3: Bottom Caption Input
-          // SafeArea bottom only
+          // LAYER 3: Bottom Control (Caption & Share)
           Positioned(
-            bottom: MediaQuery.of(
-              context,
-            ).viewInsets.bottom, // Moves up with keyboard
-            left: 0,
-            right: 0,
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 0, right: 0,
             child: Container(
-              color: Colors
-                  .black54, // Semi-transparent black background for legibility
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+              color: Colors.transparent, // Let gradient usually handle, but here transparent
               child: SafeArea(
                 top: false,
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    // TextField
+                    // Transparent TextField
                     Expanded(
                       child: Container(
-                        constraints: const BoxConstraints(maxHeight: 100),
-                        child: TextField(
+                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                         decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(20)
+                         ),
+                         child: TextField(
                           controller: _captionController,
-                          style: GoogleFonts.outfit(
-                            color: Colors.white,
-                            fontSize: 16,
-                          ),
-                          maxLines: null, // Auto grow
+                          style: GoogleFonts.outfit(color: Colors.white, fontSize: 16),
+                          maxLines: null,
                           keyboardType: TextInputType.multiline,
                           decoration: InputDecoration(
-                            hintText: "Tulis keterangan...",
-                            hintStyle: GoogleFonts.outfit(
-                              color: Colors.white60,
-                            ),
-                            border: InputBorder.none, // No border as requested
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 10,
-                            ),
+                            hintText: "Review & Caption...",
+                            hintStyle: GoogleFonts.outfit(color: Colors.white70),
+                            border: InputBorder.none,
                             isDense: true,
+                            contentPadding: EdgeInsets.zero,
                           ),
                         ),
                       ),
@@ -199,21 +169,25 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
 
                     const SizedBox(width: 12),
 
-                    // Send Button
+                    // SHARE BUTTON
                     GestureDetector(
                       onTap: _isLoading ? null : _uploadStory,
                       child: Container(
-                        width: 48,
-                        height: 48,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF0088CC),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.send,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        height: 44,
+                        decoration: BoxDecoration(
                           color: Colors.white,
-                          size: 24,
+                          borderRadius: BorderRadius.circular(25),
                         ),
+                        child: _isLoading 
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) 
+                          : Row(
+                              children: [
+                                Text("Post", style: GoogleFonts.outfit(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 14)),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.arrow_forward_ios, color: Colors.black, size: 12)
+                              ],
+                            ),
                       ),
                     ),
                   ],
@@ -221,87 +195,71 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
               ),
             ),
           ),
-
-          // LAYER 4: Loading Overlay
-          if (_isLoading)
-            Positioned.fill(
-              child: Container(
-                color: Colors.black54, // Cover everything
-                child: const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
-                ),
-              ),
-            ),
         ],
       ),
     );
   }
 
-  // --- EMPTY STATE ---
+  // --- EMPTY STATE (VIEWFINDER MODE) ---
   Widget _buildEmptyState() {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              "Buat Cerita",
-              style: GoogleFonts.outfit(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+      body: Stack(
+        children: [
+          // Close Button (Top Left)
+          Positioned(
+            top: 0, left: 0,
+            child: SafeArea(
+              child: IconButton(
+                onPressed: () => Navigator.pop(context), 
+                icon: const Icon(Icons.close, color: Colors.white, size: 32)
+              ),
+            )
+          ),
+
+          // Controls (Bottom)
+          Positioned(
+            bottom: 0, left: 0, right: 0,
+            child: Container(
+              padding: const EdgeInsets.only(bottom: 50, top: 20, left: 24, right: 24),
+              color: Colors.transparent,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Gallery Picker (Left)
+                  GestureDetector(
+                    onTap: () => _pickImage(ImageSource.gallery),
+                    child: Container(
+                      width: 40, height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.white, width: 2)
+                      ),
+                      child: const Center(child: Icon(Icons.photo_library, color: Colors.white, size: 20)),
+                    ),
+                  ),
+
+                  // Shutter Button (Center - Camera)
+                  GestureDetector(
+                    onTap: () => _pickImage(ImageSource.camera),
+                    child: Container(
+                      width: 80, height: 80,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 6),
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+
+                  // Spacer for right side balance
+                  const SizedBox(width: 40),
+                ],
               ),
             ),
-            const SizedBox(height: 40),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildPickerButton(
-                  Icons.camera_alt,
-                  "Kamera",
-                  ImageSource.camera,
-                ),
-                const SizedBox(width: 40),
-                _buildPickerButton(
-                  Icons.photo_library,
-                  "Galeri",
-                  ImageSource.gallery,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPickerButton(IconData icon, String label, ImageSource source) {
-    return GestureDetector(
-      onTap: () => _pickImage(source),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white24),
-              color: Colors.white10,
-            ),
-            child: Icon(icon, color: Colors.white, size: 36),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            label,
-            style: GoogleFonts.outfit(color: Colors.white, fontSize: 16),
-          ),
+          )
         ],
       ),
     );

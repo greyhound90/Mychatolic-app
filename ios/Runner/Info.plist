@@ -45,5 +45,13 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Kami membutuhkan akses mikrofon untuk mengirim pesan suara.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Kami membutuhkan akses lokasi untuk mengirim lokasi saat ini.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Kami membutuhkan akses kamera untuk mengambil gambar.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Kami membutuhkan akses galeri untuk memilih gambar.</string>
 </dict>
 </plist>

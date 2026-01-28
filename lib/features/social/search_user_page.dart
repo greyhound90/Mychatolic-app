@@ -1,17 +1,10 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:mychatolic_app/core/app_colors.dart';
-import 'package:mychatolic_app/widgets/safe_network_image.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:mychatolic_app/pages/social_chat_detail_page.dart';
-import 'package:mychatolic_app/pages/profile_page.dart';
-import 'package:mychatolic_app/services/master_data_service.dart';
-import 'package:mychatolic_app/services/chat_service.dart';
-import 'package:mychatolic_app/models/country.dart';
-import 'package:mychatolic_app/models/diocese.dart';
-import 'package:mychatolic_app/models/church.dart';
-import 'package:mychatolic_app/services/social_service.dart';
-import 'package:mychatolic_app/models/profile.dart';
+import 'package:mychatolic_app/features/profile/pages/profile_page.dart';
+import 'package:mychatolic_app/widgets/safe_network_image.dart';
 
 class SearchUserPage extends StatefulWidget {
   const SearchUserPage({super.key});
@@ -21,515 +14,519 @@ class SearchUserPage extends StatefulWidget {
 }
 
 class _SearchUserPageState extends State<SearchUserPage> {
-  final MasterDataService _masterService = MasterDataService();
-  final ChatService _chatService = ChatService();
-  final SocialService _socialService = SocialService(); // Added SocialService
-  final TextEditingController _searchController = TextEditingController();
+  final SupabaseClient _supabase = Supabase.instance.client;
 
-  // Data
-  List<Profile> _searchResults = []; // Changed to Profile Model
+  // --- STATES ---
+  List<Map<String, dynamic>> _countries = [];
+  List<Map<String, dynamic>> _dioceses = [];
+  List<Map<String, dynamic>> _churches = [];
+
+  Map<String, dynamic>? _selectedCountry;
+  Map<String, dynamic>? _selectedDiocese;
+  Map<String, dynamic>? _selectedChurch;
+
+  final TextEditingController _nameController = TextEditingController();
+  List<Map<String, dynamic>> _users = [];
   bool _isLoading = false;
 
-  // Filters (Using Models)
-  List<Country> _countries = [];
-  List<Diocese> _dioceses = [];
-  List<Church> _churches = [];
-
-  String? _selectedCountryId;
-  String? _selectedDioceseId;
-  String? _selectedChurchId;
+  // Colors & Styles
+  final Color kPrimary = const Color(0xFF0088CC);
+  final Color kTextPrimary = const Color(0xFF0F172A);
+  final Color kTextSecondary = const Color(0xFF64748B);
 
   @override
   void initState() {
     super.initState();
     _fetchCountries();
-    _searchUsers("");
   }
 
-  /// Helper to fetch master data
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  // --- API LOGIC (MAINTAINED) ---
   Future<void> _fetchCountries() async {
     try {
-      final data = await _masterService.fetchCountries();
-      if (mounted) setState(() => _countries = data);
-    } catch (e) {
-      debugPrint("Error fetching countries: $e");
-    }
+      final data = await _supabase.from('countries').select('id, name').order('name');
+      if (mounted) setState(() => _countries = List<Map<String, dynamic>>.from(data));
+    } catch (e) { debugPrint("Error countries: $e"); }
   }
 
   Future<void> _fetchDioceses(String countryId) async {
     try {
-      final data = await _masterService.fetchDioceses(countryId);
-      if (mounted) setState(() => _dioceses = data);
-    } catch (e) {
-      debugPrint("Error fetching dioceses: $e");
-    }
+      final data = await _supabase.from('dioceses').select('id, name').eq('country_id', countryId).order('name');
+      if (mounted) setState(() => _dioceses = List<Map<String, dynamic>>.from(data));
+    } catch (e) { debugPrint("Error dioceses: $e"); }
   }
 
   Future<void> _fetchChurches(String dioceseId) async {
     try {
-      final data = await _masterService.fetchChurches(dioceseId);
-      if (mounted) setState(() => _churches = data);
-    } catch (e) {
-      debugPrint("Error fetching churches: $e");
+      final data = await _supabase.from('churches').select('id, name').eq('diocese_id', dioceseId).order('name');
+      if (mounted) setState(() => _churches = List<Map<String, dynamic>>.from(data));
+    } catch (e) { debugPrint("Error churches: $e"); }
+  }
+
+  Future<void> _searchUsers() async {
+    if (_selectedChurch == null) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Mohon pilih Gereja terlebih dahulu")));
+      return;
     }
-  }
-
-  void _onCountryChanged(String? countryId) {
-    setState(() {
-      _selectedCountryId = countryId;
-      _selectedDioceseId = null;
-      _selectedChurchId = null;
-      _dioceses = [];
-      _churches = [];
-    });
-    _searchUsers(_searchController.text);
-    if (countryId != null) _fetchDioceses(countryId);
-  }
-
-  void _onDioceseChanged(String? dioceseId) {
-    setState(() {
-      _selectedDioceseId = dioceseId;
-      _selectedChurchId = null;
-      _churches = [];
-    });
-    _searchUsers(_searchController.text);
-    if (dioceseId != null) _fetchChurches(dioceseId);
-  }
-
-  void _onChurchChanged(String? churchId) {
-    setState(() {
-      _selectedChurchId = churchId;
-    });
-    _searchUsers(_searchController.text);
-  }
-
-  Future<void> _searchUsers(String query) async {
+    
     setState(() => _isLoading = true);
-
     try {
-      final results = await _socialService.searchUsersAdvanced(
-        query: query,
-        countryId: _selectedCountryId,
-        dioceseId: _selectedDioceseId,
-        churchId: _selectedChurchId,
-      );
+      var query = _supabase
+          .from('profiles')
+          .select('id, full_name, avatar_url, church_id')
+          .eq('church_id', _selectedChurch!['id']);
 
-      if (mounted) {
-        setState(() {
-          _searchResults = results;
-          _isLoading = false;
-        });
+      final nameQuery = _nameController.text.trim();
+      if (nameQuery.isNotEmpty) {
+        query = query.ilike('full_name', '%$nameQuery%');
       }
+
+      final data = await query.limit(50);
+      
+      if (mounted) setState(() { _users = List<Map<String, dynamic>>.from(data); _isLoading = false; });
     } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        debugPrint("Search Error: $e");
-      }
+      debugPrint("Error search: $e");
+      if (mounted) setState(() { _isLoading = false; _users = []; });
     }
   }
 
-  Future<void> _startChat(Profile userProfile) async {
+  Future<void> _startChat(Map<String, dynamic> userProfile) async {
+    final myId = _supabase.auth.currentUser?.id;
+    final partnerId = userProfile['id'];
+    if (myId == null || partnerId == null) return;
     try {
-      final chatId = await _chatService.getOrCreatePrivateChat(userProfile.id);
-
-      if (!mounted) return;
-
-      // Navigate to chat detail
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => SocialChatDetailPage(
-            chatId: chatId,
-            opponentProfile: {
-              'id': userProfile.id,
-              'full_name': userProfile.fullName,
-              'avatar_url': userProfile.avatarUrl,
-            },
-            otherUserId: userProfile.id,
-          ),
-        ),
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error starting chat: $e")));
+      String chatId;
+      final existing = await _supabase.from('social_chats').select().contains('participants', [myId, partnerId]).maybeSingle();
+      if (existing != null) chatId = existing['id'];
+      else {
+        final newChat = await _supabase.from('social_chats').insert({'participants': [myId, partnerId], 'updated_at': DateTime.now().toIso8601String(), 'last_message': "Memulai percakapan"}).select().single();
+        chatId = newChat['id'];
       }
+      if (!mounted) return;
+      Navigator.push(context, MaterialPageRoute(builder: (_) => SocialChatDetailPage(chatId: chatId, opponentProfile: userProfile)));
+    } catch (e) { 
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Gagal membuka chat"))); 
     }
+  }
+
+  void _openSearchSheet(String title, List<Map<String, dynamic>> items, Function(Map<String, dynamic>) onSelect) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        String searchQuery = "";
+        return StatefulBuilder(
+          builder: (context, setStateSheet) {
+            final filtered = items.where((item) {
+               final name = (item['name'] ?? '').toString().toLowerCase();
+               return name.contains(searchQuery.toLowerCase());
+            }).toList();
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.85,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+              ),
+              child: Column(
+                children: [
+                    const SizedBox(height: 12),
+                    Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: TextField(
+                        autofocus: false,
+                        onChanged: (val) => setStateSheet(() => searchQuery = val),
+                        style: GoogleFonts.outfit(fontSize: 16, color: kTextPrimary),
+                        decoration: InputDecoration(
+                          hintText: "Cari $title...",
+                          prefixIcon: Icon(Icons.search, color: kPrimary),
+                          filled: true,
+                          fillColor: const Color(0xFFF5F5F5),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.separated(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        itemCount: filtered.length,
+                        separatorBuilder: (_,__) => const Divider(height: 1, color: Color(0xFFF0F0F0)),
+                        itemBuilder: (ctx, idx) {
+                           final item = filtered[idx];
+                           return ListTile(
+                             contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                             title: Text(item['name'] ?? '-', style: GoogleFonts.outfit(fontSize: 16, color: kTextPrimary)),
+                             trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
+                             onTap: () {
+                               Navigator.pop(context);
+                               onSelect(item);
+                             },
+                           );
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            );
+          }
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA), // Slightly off-white background
-      appBar: AppBar(
-        title: Text(
-          "Cari Teman",
-          style: GoogleFonts.outfit(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: Colors.white,
+       extendBodyBehindAppBar: true,
+       appBar: AppBar(
+        title: Text("Cari Sahabat", style: GoogleFonts.outfit(color: kTextPrimary, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white.withOpacity(0.8), 
         elevation: 0,
         centerTitle: true,
         leading: const BackButton(color: Colors.black),
       ),
-      body: Column(
-        children: [
-          // 1. FILTER SECTION
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(24),
-                bottomRight: Radius.circular(24),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Search Name
-                TextField(
-                  controller: _searchController,
-                  onChanged: (val) => _searchUsers(val),
-                  decoration: InputDecoration(
-                    labelText: "Cari Nama (Opsional)",
-                    labelStyle: GoogleFonts.outfit(color: Colors.grey[600]),
-                    prefixIcon: const Icon(
-                      Icons.search,
-                      color: AppColors.primaryBrand,
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[50],
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: AppColors.primaryBrand,
-                      ),
-                    ),
-                  ),
-                  style: GoogleFonts.outfit(),
-                ),
-                const SizedBox(height: 16),
+      body: Container(
+        color: Colors.white, 
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+               Expanded(
+                 child: SingleChildScrollView(
+                   padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+                   physics: const BouncingScrollPhysics(),
+                   child: Column(
+                     children: [
+                        // --- FILTER CARD ---
+                        Container(
+                           padding: const EdgeInsets.all(24),
+                           decoration: BoxDecoration(
+                             color: Colors.white,
+                             borderRadius: BorderRadius.circular(24),
+                             boxShadow: [
+                                BoxShadow(color: const Color(0xFF0088CC).withOpacity(0.08), blurRadius: 20, offset: const Offset(0, 10))
+                             ],
+                           ),
+                           child: Column(
+                             crossAxisAlignment: CrossAxisAlignment.stretch,
+                             children: [
+                               Text("Filter Wilayah", style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: kTextPrimary)),
+                               const SizedBox(height: 20),
+                               
+                               // 1. Country Selection (Blue pastel)
+                               _buildColorfulSelectField(
+                                 label: "Negara",
+                                 value: _selectedCountry?['name'],
+                                 icon: Icons.public,
+                                 themeColor: Colors.blue,
+                                 onTap: () => _openSearchSheet("Negara", _countries, (val) {
+                                    setState(() {
+                                       _selectedCountry = val;
+                                       _selectedDiocese = null; _selectedChurch = null;
+                                       _dioceses = []; _churches = [];
+                                    });
+                                    _fetchDioceses(val['id']);
+                                 }),
+                               ),
+                               const SizedBox(height: 16),
 
-                // Country Dropdown
-                DropdownButtonFormField<String>(
-                  key: ValueKey(_selectedCountryId),
-                  initialValue: _selectedCountryId,
-                  decoration: _inputDecoration("Pilih Negara", Icons.public),
-                  items: _countries.map((c) {
-                    return DropdownMenuItem(
-                      value: c.id,
-                      child: Text(c.name, overflow: TextOverflow.ellipsis),
-                    );
-                  }).toList(),
-                  onChanged: _onCountryChanged,
-                  isExpanded: true,
-                  style: GoogleFonts.outfit(color: Colors.black),
-                ),
-                const SizedBox(height: 16),
+                               // 2. Diocese Selection (Purple pastel)
+                               _buildColorfulSelectField(
+                                 label: "Keuskupan",
+                                 value: _selectedDiocese?['name'],
+                                 icon: Icons.account_balance,
+                                 themeColor: Colors.purple,
+                                 enabled: _selectedCountry != null,
+                                 onTap: () => _openSearchSheet("Keuskupan", _dioceses, (val) {
+                                    setState(() {
+                                       _selectedDiocese = val; _selectedChurch = null;
+                                       _churches = [];
+                                    });
+                                    _fetchChurches(val['id']);
+                                 }),
+                               ),
+                               const SizedBox(height: 16),
 
-                // Diocese Dropdown
-                DropdownButtonFormField<String>(
-                  key: ValueKey(_selectedDioceseId),
-                  initialValue: _selectedDioceseId,
-                  decoration: _inputDecoration(
-                    "Pilih Keuskupan",
-                    Icons.account_balance,
-                  ),
-                  items: _dioceses.map((d) {
-                    return DropdownMenuItem(
-                      value: d.id,
-                      child: Text(d.name, overflow: TextOverflow.ellipsis),
-                    );
-                  }).toList(),
-                  onChanged: _selectedCountryId == null
-                      ? null
-                      : _onDioceseChanged,
-                  isExpanded: true,
-                  style: GoogleFonts.outfit(color: Colors.black),
-                  hint: Text(
-                    "Pilih Keuskupan",
-                    style: GoogleFonts.outfit(color: Colors.grey),
-                  ),
-                  disabledHint: Text(
-                    "Pilih Negara Terlebih Dahulu",
-                    style: GoogleFonts.outfit(color: Colors.grey),
-                  ),
-                ),
-                const SizedBox(height: 16),
+                               // 3. Church Selection (Orange pastel)
+                               _buildColorfulSelectField(
+                                 label: "Gereja / Paroki",
+                                 value: _selectedChurch?['name'],
+                                 icon: Icons.church,
+                                 themeColor: Colors.orange,
+                                 enabled: _selectedDiocese != null,
+                                 onTap: () => _openSearchSheet("Gereja", _churches, (val) {
+                                    setState(() => _selectedChurch = val);
+                                 }),
+                               ),
+                               const SizedBox(height: 16),
 
-                // Church Dropdown
-                DropdownButtonFormField<String>(
-                  key: ValueKey(_selectedChurchId),
-                  initialValue: _selectedChurchId,
-                  decoration: _inputDecoration("Pilih Paroki", Icons.church),
-                  items: _churches.map((c) {
-                    return DropdownMenuItem(
-                      value: c.id,
-                      child: Text(c.name, overflow: TextOverflow.ellipsis),
-                    );
-                  }).toList(),
-                  onChanged: _selectedDioceseId == null
-                      ? null
-                      : _onChurchChanged,
-                  isExpanded: true,
-                  style: GoogleFonts.outfit(color: Colors.black),
-                  hint: Text(
-                    "Pilih Paroki",
-                    style: GoogleFonts.outfit(color: Colors.grey),
-                  ),
-                  disabledHint: Text(
-                    "Pilih Keuskupan Terlebih Dahulu",
-                    style: GoogleFonts.outfit(color: Colors.grey),
-                  ),
-                ),
-                const SizedBox(height: 20),
+                               // 4. Name Input
+                               TextField(
+                                  controller: _nameController,
+                                  style: GoogleFonts.outfit(color: kTextPrimary),
+                                  enabled: _selectedChurch != null,
+                                  decoration: InputDecoration(
+                                    hintText: "Cari Nama Umat (Opsional)",
+                                    prefixIcon: Icon(Icons.person_search_rounded, color: _selectedChurch != null ? kTextSecondary : Colors.grey[300]),
+                                    filled: true,
+                                    fillColor: Colors.grey[50], 
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                  ),
+                                  onSubmitted: (_) => _searchUsers(),
+                               ),
+                               const SizedBox(height: 24),
 
-                // Search Button (Explicit action if needed, though fields auto-search)
-                SizedBox(
-                  height: 50,
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => _searchUsers(_searchController.text),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryBrand,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 2,
-                    ),
-                    child: Text(
-                      "Cari Teman",
-                      style: GoogleFonts.outfit(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // 2. RESULTS LIST
-          Expanded(
-            child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.primaryBrand,
-                    ),
-                  )
-                : _searchResults.isEmpty
-                ? Center(
-                    child: Text(
-                      "Pengguna tidak ditemukan",
-                      style: GoogleFonts.outfit(color: Colors.grey),
-                    ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    itemCount: _searchResults.length,
-                    separatorBuilder: (context, index) => const Divider(
-                      height: 1,
-                      indent: 16,
-                      endIndent: 16,
-                      color: Color(0xFFEEEEEE),
-                    ),
-                    itemBuilder: (context, index) {
-                      final user = _searchResults[index];
-                      return ListTile(
-                        // Keep existing item builder logic but simplify call
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 8,
+                               // BUTTON: GRADIENT GLOWING
+                               GestureDetector(
+                                 onTap: _selectedChurch == null ? null : _searchUsers,
+                                 child: Container(
+                                   height: 56,
+                                   decoration: BoxDecoration(
+                                     gradient: LinearGradient(
+                                       colors: _selectedChurch != null 
+                                          ? [const Color(0xFF00C6FF), const Color(0xFF0072FF)] // Updated Gradient
+                                          : [Colors.grey.shade300, Colors.grey.shade400],
+                                     ),
+                                     borderRadius: BorderRadius.circular(30),
+                                     boxShadow: _selectedChurch != null 
+                                        ? [BoxShadow(color: const Color(0xFF0072FF).withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 6))]
+                                        : [],
+                                   ),
+                                   child: Center(
+                                     child: _isLoading 
+                                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                                        : Text(
+                                            "LIHAT UMAT", 
+                                            style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1.2)
+                                          ),
+                                   ),
+                                 ),
+                               ),
+                             ],
+                           ),
                         ),
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ProfilePage(
-                              userId: user.id,
-                              isBackButtonEnabled: true,
-                            ),
-                          ),
-                        ),
-                        leading: SafeNetworkImage(
-                          imageUrl: user.avatarUrl,
-                          width: 50,
-                          height: 50,
-                          borderRadius: BorderRadius.circular(25),
-                          fit: BoxFit.cover,
-                          fallbackIcon: Icons.person,
-                        ),
-                        title: Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                user.fullName ?? "User",
-                                style: GoogleFonts.outfit(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textPrimary,
-                                  fontSize: 16,
+
+                        // --- RESULT SECTION ---
+                        
+                        if (_users.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(4, 24, 4, 12),
+                            child: Row(
+                              children: [
+                                Text("Hasil Pencarian", style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: kTextPrimary)),
+                                const Spacer(),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(20)),
+                                  child: Text("${_users.length} Ditemukan", style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: kTextSecondary)),
                                 ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                              ],
                             ),
-                            const SizedBox(width: 8),
-                            _buildRoleBadge(user),
-                          ],
-                        ),
-                        subtitle: Text(
-                          "${user.parish ?? '-'}, ${user.diocese ?? '-'}",
-                          style: GoogleFonts.outfit(
-                            color: Colors.grey[600],
-                            fontSize: 13,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(
-                            Icons.chat_bubble_outline_rounded,
-                            color: AppColors.primaryBrand,
-                          ),
-                          onPressed: () => _startChat(user),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  InputDecoration _inputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: GoogleFonts.outfit(color: Colors.grey[600]),
-      prefixIcon: Icon(icon, color: Colors.grey[600], size: 20),
-      filled: true,
-      fillColor: Colors.grey[50],
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey[300]!),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey[300]!),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.primaryBrand),
-      ),
-    );
-  }
-
-  Widget _buildRoleBadge(Profile user) {
-    // 1. Special Roles
-    if (user.isClergy) {
-      // Using getter from model
-      Color badgeColor = const Color(0xFF0F0C29);
-      Color textColor = Colors.white;
-      IconData icon = Icons.verified_user;
-      String label =
-          (user.userRole.name.characters.first.toUpperCase()) +
-          user.userRole.name.substring(1);
-
-      if (user.userRole == UserRole.pastor) {
-        badgeColor = const Color(0xFF003366);
-        icon = Icons.health_and_safety_rounded;
-      } else if (user.userRole == UserRole.suster) {
-        badgeColor = const Color(0xFF5D4037);
-        icon = Icons.volunteer_activism;
-      }
-
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: badgeColor,
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (user.isVerified) ...[
-              Icon(icon, color: Colors.amber, size: 10),
-              const SizedBox(width: 4),
+                        if (_users.isNotEmpty)
+                          AnimationLimiter(
+                            child: ListView.separated(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: _users.length,
+                              separatorBuilder: (_,__) => const SizedBox(height: 12),
+                              itemBuilder: (context, index) {
+                                final user = _users[index];
+                                return AnimationConfiguration.staggeredList(
+                                   position: index,
+                                   duration: const Duration(milliseconds: 600),
+                                   child: SlideAnimation(
+                                     verticalOffset: 40.0,
+                                     child: FadeInAnimation(
+                                       child: _buildUserCard(user),
+                                     ),
+                                   ),
+                                );
+                              },
+                            ),
+                          )
+                        else if (!_isLoading && _selectedChurch != null && _users.isEmpty)
+                           Padding(
+                             padding: const EdgeInsets.only(top: 60),
+                             child: Column(
+                                children: [
+                                   Icon(Icons.person_off_rounded, size: 64, color: Colors.grey[300]),
+                                   const SizedBox(height: 12),
+                                   Text("Belum ada hasil", style: GoogleFonts.outfit(fontSize: 16, color: kTextSecondary, fontWeight: FontWeight.w500)),
+                                ],
+                             ),
+                           )
+                     ],
+                   ),
+                 ),
+               ),
             ],
-            Text(
-              label.toUpperCase(),
-              style: GoogleFonts.outfit(
-                fontSize: 9,
-                color: textColor,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+          ),
         ),
-      );
-    }
+      ),
+    );
+  }
 
-    // 2. Umat (100% Katolik)
-    if (user.isVerified) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+  Widget _buildColorfulSelectField({
+    required String label, 
+    required String? value, 
+    required IconData icon,
+    required MaterialColor themeColor,
+    required VoidCallback onTap,
+    bool enabled = true,
+  }) {
+    // Pastel background logic
+    final bgColor = enabled ? themeColor.shade50 : Colors.grey[50];
+    final iconColor = enabled ? themeColor.shade700 : Colors.grey[400];
+    final textColor = enabled ? kTextPrimary : Colors.grey[400];
+
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: Container(
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.green.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(4),
+          color: bgColor, // Colorful block background
+          borderRadius: BorderRadius.circular(16), // Rounded block
+          // No border for block style
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.verified, color: Colors.green, size: 10),
-            const SizedBox(width: 2),
-            Text(
-              "100% Katolik",
-              style: GoogleFonts.outfit(
-                fontSize: 9,
-                color: Colors.green,
-                fontWeight: FontWeight.bold,
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white, // White circle for icon to pop
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (value != null)
+                     Text(label, style: GoogleFonts.outfit(fontSize: 10, color: themeColor.shade300, fontWeight: FontWeight.w600)),
+                  Text(
+                    value ?? label, 
+                    style: GoogleFonts.outfit(
+                      color: textColor,
+                      fontSize: 14,
+                      fontWeight: value != null ? FontWeight.w600 : FontWeight.normal
+                    ),
+                    maxLines: 1, 
+                    overflow: TextOverflow.ellipsis
+                  ),
+                ],
               ),
             ),
+            Icon(Icons.keyboard_arrow_down_rounded, color: (iconColor ?? Colors.grey).withOpacity(0.5)),
+            const SizedBox(width: 4),
           ],
         ),
-      );
-    }
-
-    // 3. Unverified / Normal Umat
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: Colors.grey.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(4),
       ),
-      child: Text(
-        "Umat",
-        style: GoogleFonts.outfit(fontSize: 9, color: Colors.grey),
+    );
+  }
+
+  Widget _buildUserCard(Map<String, dynamic> user) {
+    return Container(
+      key: ValueKey(user['id']),
+      decoration: BoxDecoration(
+         color: Colors.white,
+         borderRadius: BorderRadius.circular(20),
+         border: Border.all(color: Colors.grey.shade100), // Subtle border
+         boxShadow: [
+           BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+         ]
+      ),
+      padding: const EdgeInsets.all(16),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+               builder: (_) => ProfilePage(userId: user['id'], isBackButtonEnabled: true), 
+            ),
+          );
+        },
+        child: Container(
+          color: Colors.transparent, 
+          child: Row(
+             children: [
+               // Avatar with Gradient Story-like Border
+               Container(
+                 padding: const EdgeInsets.all(2.5),
+                 decoration: BoxDecoration(
+                   shape: BoxShape.circle,
+                   gradient: LinearGradient(
+                     colors: [const Color(0xFF00C6FF), const Color(0xFF0072FF)],
+                     begin: Alignment.topLeft, 
+                     end: Alignment.bottomRight
+                   ),
+                 ),
+                 child: Container(
+                   decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+                   padding: const EdgeInsets.all(2),
+                   child: ClipOval(
+                      child: SafeNetworkImage(
+                        imageUrl: user['avatar_url'], 
+                        width: 46, 
+                        height: 46, 
+                        fit: BoxFit.cover,
+                        fallbackIcon: Icons.person,
+                      ),
+                   ),
+                 ),
+               ),
+               const SizedBox(width: 16),
+               
+               // Info
+               Expanded(
+                 child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user['full_name'] ?? 'Umat',
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: kTextPrimary),
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                         _selectedChurch?['name'] ?? 'Gereja',
+                         style: GoogleFonts.outfit(fontSize: 12, color: kTextSecondary),
+                         maxLines: 1, overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                 ),
+               ),
+               
+               // Chat Action
+               Material(
+                 color: Colors.transparent,
+                 child: InkWell(
+                   onTap: () => _startChat(user),
+                   borderRadius: BorderRadius.circular(12),
+                   child: Container(
+                     padding: const EdgeInsets.all(10),
+                     decoration: BoxDecoration(
+                       color: const Color(0xFF00C6FF).withOpacity(0.1),
+                       borderRadius: BorderRadius.circular(12),
+                     ),
+                     child: const Icon(Icons.send_rounded, color: Color(0xFF0072FF), size: 20),
+                   ),
+                 ),
+               ),
+             ],
+          ),
+        ),
       ),
     );
   }

@@ -1,314 +1,450 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:mychatolic_app/models/story_model.dart';
-import 'package:mychatolic_app/services/story_service.dart';
-import 'package:mychatolic_app/widgets/safe_network_image.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:video_player/video_player.dart';
 import 'package:timeago/timeago.dart' as timeago;
+
+import 'package:mychatolic_app/models/story_model.dart';
+import 'package:mychatolic_app/widgets/safe_network_image.dart';
+import 'package:mychatolic_app/services/story_service.dart';
 
 class StoryViewPage extends StatefulWidget {
   final List<Story> stories;
   final int initialIndex;
-  final Map<String, dynamic>?
-  userProfile; // Kept for compatibility with StoryRail
+  final Map<String, dynamic> userProfile;
 
   const StoryViewPage({
     super.key,
     required this.stories,
     this.initialIndex = 0,
-    this.userProfile,
+    required this.userProfile,
   });
 
   @override
   State<StoryViewPage> createState() => _StoryViewPageState();
 }
 
-class _StoryViewPageState extends State<StoryViewPage>
-    with TickerProviderStateMixin {
-  late PageController _pageController;
-  late AnimationController _animController;
-
-  int _currentIndex = 0;
+class _StoryViewPageState extends State<StoryViewPage> with SingleTickerProviderStateMixin {
+  final _supabase = Supabase.instance.client;
   final StoryService _storyService = StoryService();
+  final TextEditingController _messageController = TextEditingController();
+
+  late AnimationController _progressController;
+  late int _currentIndex;
+  
+  VideoPlayerController? _videoController;
+  bool _isPaused = false;
+  final Duration _imageDuration = const Duration(seconds: 5);
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
-    _pageController = PageController(initialPage: _currentIndex);
+    if (_currentIndex >= widget.stories.length) _currentIndex = 0;
 
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 5),
-    );
-
-    _animController.addStatusListener((status) {
+    _progressController = AnimationController(vsync: this);
+    _progressController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
-        _onNext();
+        _onStoryFinished();
       }
     });
 
-    _loadStory(index: _currentIndex);
+    _loadStory(_currentIndex);
   }
 
   @override
   void dispose() {
-    _pageController.dispose();
-    _animController.dispose();
+    _progressController.dispose();
+    _videoController?.dispose();
+    _messageController.dispose();
     super.dispose();
   }
 
-  void _loadStory({required int index, bool animatePage = false}) {
-    if (index >= widget.stories.length) return;
+  void _loadStory(int index) {
+    if (index < 0 || index >= widget.stories.length) return;
 
-    _currentIndex = index;
+    setState(() {
+      _currentIndex = index;
+      _videoController?.dispose();
+      _videoController = null;
+    });
 
-    // View Tracking
-    _storyService.viewStory(widget.stories[index].id);
+    final story = widget.stories[index];
 
-    // Reset & Start Timer
-    _animController.stop();
-    _animController.reset();
-    _animController.forward();
+    // Mark as viewed
+    _storyService.viewStory(story.id);
 
-    if (animatePage && _pageController.hasClients) {
-      _pageController.jumpToPage(index);
+    if (story.mediaType == 'video') {
+      _playVideo(story);
+    } else {
+      _playImage();
     }
-
-    if (mounted) setState(() {});
   }
 
-  // --- NAVIGATION LOGIC ---
+  void _playImage() {
+    _progressController.stop();
+    _progressController.duration = _imageDuration;
+    _progressController.forward(from: 0.0);
+  }
 
-  void _onNext() {
+  Future<void> _playVideo(Story story) async {
+    _videoController = VideoPlayerController.networkUrl(Uri.parse(story.mediaUrl));
+    try {
+      await _videoController!.initialize();
+      if (mounted) {
+        setState(() {}); 
+        _videoController!.play();
+        _progressController.duration = _videoController!.value.duration;
+        _progressController.forward(from: 0.0);
+      }
+    } catch (e) {
+      debugPrint("Video Error: $e");
+      _onStoryFinished(); // Skip on error
+    }
+  }
+
+  void _onStoryFinished() {
     if (_currentIndex < widget.stories.length - 1) {
-      setState(() => _currentIndex++);
-      _loadStory(index: _currentIndex, animatePage: true);
+      _loadStory(_currentIndex + 1);
+    } else {
+      Navigator.pop(context); // Close if last story finishes
+    }
+  }
+
+  void _onTapNext() {
+    if (_currentIndex < widget.stories.length - 1) {
+      _loadStory(_currentIndex + 1);
     } else {
       Navigator.pop(context);
     }
   }
 
-  void _onPrevious() {
+  void _onTapPrev() {
     if (_currentIndex > 0) {
-      setState(() => _currentIndex--);
-      _loadStory(index: _currentIndex, animatePage: true);
+      _loadStory(_currentIndex - 1);
     } else {
-      // If at first story, restart timer
-      _animController.reset();
-      _animController.forward();
-    }
-  }
-
-  void _onTapUp(TapUpDetails details) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final dx = details.globalPosition.dx;
-
-    // Requirements: Tap Left (30%) -> Prev, Tap Right (70%) -> Next
-    if (dx < screenWidth * 0.3) {
-      _onPrevious();
-    } else {
-      _onNext();
+      _loadStory(0); // Restart first story
     }
   }
 
   void _onLongPressStart() {
-    _animController.stop(); // Pause Timer
+    setState(() => _isPaused = true);
+    _progressController.stop();
+    _videoController?.pause();
   }
 
   void _onLongPressEnd() {
-    _animController.forward(); // Resume Timer
+    setState(() => _isPaused = false);
+    _progressController.forward();
+    _videoController?.play();
+  }
+
+  Future<void> _deleteStory() async {
+    final story = widget.stories[_currentIndex];
+    final myId = _supabase.auth.currentUser?.id;
+    
+    if (story.userId != myId) return;
+
+    try {
+      _onLongPressStart();
+      await _supabase.from('stories').delete().eq('id', story.id);
+
+      setState(() {
+        widget.stories.removeAt(_currentIndex);
+      });
+
+      if (widget.stories.isEmpty) {
+        if (mounted) Navigator.pop(context);
+      } else {
+        if (_currentIndex >= widget.stories.length) {
+          _currentIndex = widget.stories.length - 1;
+        }
+        _loadStory(_currentIndex);
+      }
+    } catch (e) {
+      debugPrint("Delete Err: $e");
+      _onLongPressEnd(); 
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Gagal menghapus story")));
+    }
+  }
+
+  Future<void> _sendMessage() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+    
+    _messageController.clear();
+    FocusScope.of(context).unfocus();
+
+    final story = widget.stories[_currentIndex];
+    final myId = _supabase.auth.currentUser?.id;
+    final ownerId = story.userId;
+
+    if (myId == null) return;
+
+    try {
+      var chatId = '';
+      final res = await _supabase.from('social_chats')
+          .select('id')
+          .contains('participants', [myId, ownerId])
+          .maybeSingle();
+
+      if (res != null) {
+        chatId = res['id'];
+      } else {
+        final newChat = await _supabase.from('social_chats').insert({
+          'participants': [myId, ownerId],
+          'last_message': 'New conversation',
+          'type': 'private' 
+        }).select().single();
+        chatId = newChat['id'];
+      }
+
+      final content = "$text\n\n[Balasan untuk Story]";
+      
+      await _supabase.from('social_messages').insert({
+        'chat_id': chatId,
+        'sender_id': myId,
+        'content': content,
+        'type': 'text', 
+        'reply_context': {
+           'story_id': story.id,
+           'story_url': story.mediaUrl,
+           'is_story_reply': true
+        }
+      });
+
+      await _supabase.from('social_chats').update({
+        'last_message': "💬 Membalas story",
+        'updated_at': DateTime.now().toIso8601String()
+      }).eq('id', chatId);
+
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Pesan terkirim!"), duration: Duration(seconds: 1)));
+    } catch (e) {
+      debugPrint("Send Reply Err: $e");
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal kirim: $e")));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final story = widget.stories[_currentIndex];
+    if (widget.stories.isEmpty) return const SizedBox();
 
-    // Determine Author Info
-    final name = story.authorName ?? widget.userProfile?['full_name'] ?? 'User';
-    final avatar = story.authorAvatar ?? widget.userProfile?['avatar_url'];
+    final story = widget.stories[_currentIndex];
+    final myId = _supabase.auth.currentUser?.id;
+    final isMe = story.userId == myId;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.black, // Background for letterbox
+      resizeToAvoidBottomInset: true,
       body: GestureDetector(
-        onTapUp: _onTapUp,
-        onLongPressStart: (_) => _onLongPressStart(),
+        onTapUp: (details) {
+          final width = MediaQuery.of(context).size.width;
+          if (details.globalPosition.dx < width / 3) {
+            _onTapPrev();
+          } else {
+            _onTapNext();
+          }
+        },
+        onLongPress: _onLongPressStart,
         onLongPressEnd: (_) => _onLongPressEnd(),
-        // Also handle cancel/up just in case
-        onLongPressCancel: () => _onLongPressEnd(),
         child: Stack(
           children: [
-            // 1. MAIN CONTENT (Image)
-            Center(
-              child: SizedBox(
-                width: double.infinity,
-                height: double.infinity,
-                child: SafeNetworkImage(
-                  imageUrl: story.mediaUrl,
-                  fit: BoxFit.contain, // Requirement: Contain
-                  fallbackIcon: Icons.broken_image,
-                  fallbackColor: Colors.grey[900],
-                ),
+            // 1. Media Layer (Letterbox)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black,
+                alignment: Alignment.center,
+                child: _buildMedia(story),
               ),
             ),
 
-            // 2. OVERLAYS (SafeArea)
-            SafeArea(
+            // 2. Gradient Overlay for Text Readability
+            Positioned.fill(
               child: Column(
                 children: [
-                  const SizedBox(height: 8),
-
-                  // A. PROGRESS BAR ROW
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: Row(
-                      children: widget.stories.asMap().entries.map((entry) {
-                        return _buildSegmentedProgressBar(entry.key);
-                      }).toList(),
-                    ),
+                  Container(
+                    height: 120, // Increase slightly to cover notch
+                    decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.black.withOpacity(0.8), Colors.transparent], begin: Alignment.topCenter, end: Alignment.bottomCenter)),
                   ),
-
-                  const SizedBox(height: 8),
-
-                  // B. HEADER INFO
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      children: [
-                        // Avatar
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.grey,
-                          ),
-                          child: ClipOval(
-                            child: SafeNetworkImage(
-                              imageUrl: avatar,
-                              width: 36,
-                              height: 36,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-
-                        // Name & Time
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              name,
-                              style: GoogleFonts.outfit(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                            Text(
-                              timeago.format(
-                                story.createdAt,
-                                locale: 'en_short',
-                              ),
-                              style: GoogleFonts.outfit(
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const Spacer(),
-
-                        // Close Button
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(
-                            Icons.close,
-                            color: Colors.white,
-                            size: 28,
-                          ),
-                        ),
-                      ],
-                    ),
+                  const Spacer(),
+                  Container(
+                    height: 120, 
+                    decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.transparent, Colors.black.withOpacity(0.8)], begin: Alignment.topCenter, end: Alignment.bottomCenter)),
                   ),
                 ],
               ),
             ),
 
-            // 3. CAPTION (Optional Overlay)
+            // 3. Caption Overlay (Bottom of media, above gradients)
             if (story.caption != null && story.caption!.isNotEmpty)
-              Positioned(
-                bottom: 40,
-                left: 20,
-                right: 20,
-                child: Text(
-                  story.caption!,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(
-                    color: Colors.white,
-                    fontSize: 16,
-                    shadows: [
-                      const Shadow(
-                        color: Colors.black,
-                        blurRadius: 4,
-                        offset: Offset(0, 1),
+               Positioned(
+                 bottom: 100, // Above reply area
+                 left: 20, right: 20,
+                 child: Text(
+                   story.caption!,
+                   textAlign: TextAlign.center,
+                   style: GoogleFonts.outfit(color: Colors.white, fontSize: 16, backgroundColor: Colors.black45),
+                 ),
+               ),
+
+            // 4. Header & Progress Bar (Top SafeArea)
+            Positioned(
+              top: 0, left: 0, right: 0,
+              child: SafeArea(
+                child: Column(
+                  children: [
+                    _buildProgressBar(),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          SafeNetworkImage(
+                            imageUrl: widget.userProfile['avatar_url'],
+                            width: 36, height: 36,
+                            borderRadius: BorderRadius.circular(18),
+                            fallbackIcon: Icons.person,
+                            fit: BoxFit.cover,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.userProfile['full_name'] ?? 'User',
+                                  style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, shadows: [Shadow(color: Colors.black54, blurRadius: 4)]),
+                                ),
+                                Text(
+                                  timeago.format(story.createdAt, locale: 'id'),
+                                  style: GoogleFonts.outfit(color: Colors.white70, fontSize: 11, shadows: [Shadow(color: Colors.black54, blurRadius: 4)]),
+                                )
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.close, color: Colors.white, size: 28, shadows: [Shadow(color: Colors.black54, blurRadius: 4)]),
+                          )
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
+            ),
+
+            // 5. Footer Interaction (Bottom SafeArea)
+            Positioned(
+              bottom: 0, left: 0, right: 0,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: isMe ? _buildDeleteButton() : _buildReplyInput(story),
+                ),
+              ),
+            )
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSegmentedProgressBar(int index) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2.0),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return Stack(
-              children: [
-                // Background (Grey)
-                Container(
-                  height: 3,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[700],
-                    borderRadius: BorderRadius.circular(1.5),
-                  ),
-                ),
+  Widget _buildMedia(Story story) {
+    if (story.mediaType == 'video') {
+      if (_videoController != null && _videoController!.value.isInitialized) {
+        return AspectRatio(
+          aspectRatio: _videoController!.value.aspectRatio,
+          child: VideoPlayer(_videoController!),
+        );
+      } else {
+        return const Center(child: CircularProgressIndicator(color: Colors.white));
+      }
+    } else {
+      return SafeNetworkImage(
+        imageUrl: story.mediaUrl,
+        fit: BoxFit.contain, // Key change for letterbox
+        // No infinity, let parent center it
+      );
+    }
+  }
 
-                // Foreground (White)
-                if (index < _currentIndex)
-                  Container(
-                    height: 3,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(1.5),
-                    ),
-                  )
-                else if (index == _currentIndex)
-                  AnimatedBuilder(
-                    animation: _animController,
-                    builder: (context, child) {
-                      return Container(
-                        height: 3,
-                        width: constraints.maxWidth * _animController.value,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(1.5),
-                        ),
-                      );
-                    },
-                  ),
-              ],
-            );
-          },
+  Widget _buildProgressBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Row(
+        children: widget.stories.asMap().entries.map((entry) {
+          final index = entry.key;
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: AnimatedBuilder(
+                animation: _progressController,
+                builder: (context, child) {
+                  double value = 0.0;
+                  if (index < _currentIndex) {
+                    value = 1.0;
+                  } else if (index == _currentIndex) {
+                    value = _progressController.value;
+                  }
+                  
+                  return LinearProgressIndicator(
+                    value: value,
+                    backgroundColor: Colors.white.withOpacity(0.3),
+                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                    minHeight: 2,
+                  );
+                },
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildDeleteButton() {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: GestureDetector(
+        onTap: _deleteStory,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(color: Colors.white24, shape: BoxShape.circle),
+          child: const Icon(Icons.delete_outline, color: Colors.white),
         ),
+      ),
+    );
+  }
+
+  Widget _buildReplyInput(Story story) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.5),
+        border: Border.all(color: Colors.white54),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _messageController,
+              style: GoogleFonts.outfit(color: Colors.white),
+              cursorColor: Colors.white,
+              decoration: InputDecoration(
+                hintText: "Kirim pesan...",
+                hintStyle: GoogleFonts.outfit(color: Colors.white70),
+                border: InputBorder.none,
+              ),
+              onSubmitted: (_) => _sendMessage(),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.send, color: Colors.white),
+            onPressed: _sendMessage,
+          )
+        ],
       ),
     );
   }

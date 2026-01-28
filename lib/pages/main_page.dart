@@ -10,7 +10,8 @@ import 'package:mychatolic_app/pages/schedule_page.dart';
 import 'package:mychatolic_app/features/profile/pages/profile_page.dart';
 import 'package:mychatolic_app/bible/presentation/bible_library_screen.dart';
 import 'package:mychatolic_app/pages/radar_page.dart';
-import 'package:mychatolic_app/pages/social_inbox_page.dart';
+// import 'package:mychatolic_app/pages/social_inbox_page.dart'; // Deleted
+import 'package:mychatolic_app/pages/chat/chat_page.dart'; // Unified Chat
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -73,11 +74,12 @@ class _HomePageState extends State<HomePage> {
     // List of pages for the bottom navigation
     final List<Widget> children = [
       HomeScreen(key: _homeScreenKey),
-      const SchedulePage(), // New Schedule Page
-      const BibleLibraryScreen(), // Bible Screen
-      const RadarPage(), // Radar Page
-      const SocialInboxPage(), // Social Inbox
-      ProfilePage(key: _profilePageKey), // Profile Page
+      const SchedulePage(),
+      const BibleLibraryScreen(),
+      const RadarPage(),
+      // Unified Chat Page (Replaces SocialInboxPage)
+      const ChatPage(), 
+      ProfilePage(key: _profilePageKey),
     ];
 
     return Scaffold(

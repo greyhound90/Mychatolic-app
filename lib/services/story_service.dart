@@ -43,10 +43,10 @@ class StoryService {
 
     try {
       // Fetch active stories with uploader profile info
-      // NOTE: Make sure 'stories' has a foreign key to 'profiles' named 'profiles' or 'user_id'
+      // NOTE: Using explicit foreign key constraint name to resolve ambiguity
       final response = await _supabase
           .from('stories')
-          .select('*, profiles:user_id(full_name, avatar_url)')
+          .select('*, profiles!fk_stories_profiles(full_name, avatar_url)')
           .gt('expires_at', DateTime.now().toIso8601String())
           .order('created_at', ascending: true);
 
@@ -112,7 +112,7 @@ class StoryService {
     try {
       final response = await _supabase
           .from('stories')
-          .select('*, profiles:user_id(full_name, avatar_url)')
+          .select('*, profiles!fk_stories_profiles(full_name, avatar_url)')
           .eq('user_id', userId)
           .gt('expires_at', DateTime.now().toIso8601String())
           .order('created_at', ascending: true);

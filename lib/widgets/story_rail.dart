@@ -18,103 +18,78 @@ class _StoryRailState extends State<StoryRail> {
   final _storyService = StoryService();
   final _supabase = Supabase.instance.client;
 
-  late Future<Map<String, dynamic>> _dataFuture;
+  late Future<List<UserStoryGroup>> _storiesFuture;
+  String? _myAvatarUrl;
+  bool _isNavigating = false; // Prevent double taps
 
   @override
   void initState() {
     super.initState();
-    _dataFuture = _fetchData();
-  }
-
-  Future<Map<String, dynamic>> _fetchData() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'stories': <UserStoryGroup>[], 'myAvatar': null};
-    }
-
-    try {
-      // 1. Fetch Stories
-      final stories = await _storyService.fetchActiveStories();
-
-      // 2. Check if current user has a story
-      final myStoryGroup = stories
-          .where((s) => s.userId == user.id)
-          .firstOrNull;
-
-      String? myAvatar;
-      if (myStoryGroup != null) {
-        myAvatar = myStoryGroup.userAvatar;
-      } else {
-        // 3. If no story, fetch profile avatar
-        final profile = await _supabase
-            .from('profiles')
-            .select('avatar_url')
-            .eq('id', user.id)
-            .maybeSingle();
-        myAvatar = profile?['avatar_url'];
-      }
-
-      return {'stories': stories, 'myAvatar': myAvatar};
-    } catch (e) {
-      debugPrint("Error loading story rail: $e");
-      return {'stories': <UserStoryGroup>[], 'myAvatar': null};
-    }
+    _refresh();
+    _fetchMyAvatar();
   }
 
   void _refresh() {
     setState(() {
-      _dataFuture = _fetchData();
+      _storiesFuture = _storyService.fetchActiveStories();
     });
+  }
+
+  Future<void> _fetchMyAvatar() async {
+    final user = _supabase.auth.currentUser;
+    if (user != null) {
+      final res = await _supabase.from('profiles').select('avatar_url').eq('id', user.id).maybeSingle();
+      if (mounted && res != null) {
+        setState(() {
+          _myAvatarUrl = res['avatar_url'];
+        });
+      }
+    }
+  }
+
+  Future<void> _handleNavigation(Future<void> Function() action) async {
+    if (_isNavigating) return;
+    setState(() => _isNavigating = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) setState(() => _isNavigating = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       height: 110,
-      color: Colors.grey[50],
-      child: FutureBuilder<Map<String, dynamic>>(
-        future: _dataFuture,
+      color: Colors.transparent, 
+      child: FutureBuilder<List<UserStoryGroup>>(
+        future: _storiesFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final data =
-              snapshot.data ??
-              {'stories': <UserStoryGroup>[], 'myAvatar': null};
-          final allStories = data['stories'] as List<UserStoryGroup>;
-          final myAvatar = data['myAvatar'] as String?;
+          final groups = snapshot.data ?? [];
           final user = _supabase.auth.currentUser;
 
           if (user == null) return const SizedBox.shrink();
 
-          // Separate My Story vs Friends
-          UserStoryGroup? myStoryGroup;
-          final List<UserStoryGroup> friendStories = [];
-
-          for (var group in allStories) {
-            if (group.userId == user.id) {
-              myStoryGroup = group;
-            } else {
-              friendStories.add(group);
-            }
+          // 1. Find My Story Group
+          UserStoryGroup? myGroup;
+          try {
+            myGroup = groups.firstWhere((g) => g.userId == user.id);
+          } catch (e) {
+            myGroup = null;
           }
 
-          final int itemCount =
-              1 + friendStories.length; // 1 for "My Story" + friends
+          // 2. Filter Friend Groups
+          final friendGroups = groups.where((g) => g.userId != user.id).toList();
 
           return ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            itemCount: itemCount,
+            itemCount: 1 + friendGroups.length, // 1 for MyStory
             itemBuilder: (context, index) {
               if (index == 0) {
-                // MY STORY ITEM
-                return _buildMyStoryItem(myStoryGroup, myAvatar);
+                return _buildMyStoryItem(myGroup);
               } else {
-                // FRIEND ITEM
-                final friendGroup = friendStories[index - 1];
-                return _buildFriendItem(friendGroup);
+                return _buildFriendItem(friendGroups[index - 1]);
               }
             },
           );
@@ -123,108 +98,106 @@ class _StoryRailState extends State<StoryRail> {
     );
   }
 
-  Widget _buildMyStoryItem(UserStoryGroup? group, String? avatarUrl) {
+  Widget _buildMyStoryItem(UserStoryGroup? group) {
     final bool hasStory = group != null && group.stories.isNotEmpty;
+    final avatar = hasStory ? group!.userAvatar : _myAvatarUrl;
 
     return GestureDetector(
-      onTap: () async {
+      onTap: () => _handleNavigation(() async {
         if (hasStory) {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => StoryViewPage(
-                stories: group.stories,
-                userProfile: {
-                  'full_name': 'Cerita Saya', // Placeholder name
-                  'avatar_url': avatarUrl,
-                },
+          await showModalBottomSheet(
+            context: context,
+            backgroundColor: Colors.white,
+            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+            builder: (ctx) => SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                   ListTile(
+                     leading: const Icon(Icons.visibility),
+                     title: const Text("Lihat Story"),
+                     onTap: () async {
+                        Navigator.pop(ctx);
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => StoryViewPage(stories: group!.stories, userProfile: {'full_name': 'Cerita Saya', 'avatar_url': avatar}),
+                          ),
+                        );
+                        _refresh();
+                     },
+                   ),
+                   ListTile(
+                     leading: const Icon(Icons.add_circle_outline),
+                     title: const Text("Tambah Story Baru"),
+                     onTap: () async {
+                       Navigator.pop(ctx);
+                       final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateStoryPage()));
+                       if (res == true) _refresh();
+                     },
+                   )
+                ],
               ),
             ),
           );
         } else {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const CreateStoryPage()),
-          );
-          if (result == true) _refresh(); // Refresh if story created
+          final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateStoryPage()));
+          if (res == true) _refresh();
         }
-      },
+      }),
       child: Container(
         width: 80,
-        margin: const EdgeInsets.only(right: 16),
+        margin: const EdgeInsets.only(right: 12),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(
-              width: 64,
-              height: 64,
-              child: Stack(
-                children: [
-                  // Avatar Border Ring
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: hasStory
-                          ? const LinearGradient(
-                              colors: [Colors.purple, Colors.orange],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            )
-                          : null,
-                      border: !hasStory
-                          ? Border.all(color: Colors.grey.shade300, width: 2)
-                          : null,
-                    ),
-                    padding: const EdgeInsets.all(3),
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white,
-                      ),
-                      padding: const EdgeInsets.all(2),
-                      child: ClipOval(
-                        child: SafeNetworkImage(
-                          imageUrl: avatarUrl,
-                          width: double.infinity,
-                          height: double.infinity,
-                          fit: BoxFit.cover,
-                          fallbackIcon: Icons.person,
-                        ),
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                // Gradient Border if has story
+                Container(
+                  width: 68, height: 68,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: hasStory 
+                      ? const LinearGradient(colors: [Colors.purple, Colors.orange, Colors.pink], begin: Alignment.topRight, end: Alignment.bottomLeft)
+                      : null,
+                    border: !hasStory ? Border.all(color: Colors.grey.shade300, width: 2) : null,
+                  ),
+                  padding: const EdgeInsets.all(3),
+                  child: Container(
+                    decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+                    padding: const EdgeInsets.all(2),
+                    child: ClipOval(
+                      child: SafeNetworkImage(
+                        imageUrl: avatar,
+                        fit: BoxFit.cover,
+                        width: double.infinity, height: double.infinity,
+                        fallbackIcon: Icons.person,
                       ),
                     ),
                   ),
-
-                  // "+" Badge if no story
-                  if (!hasStory)
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).primaryColor,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                        child: const Icon(
-                          Icons.add,
-                          size: 14,
-                          color: Colors.white,
-                        ),
+                ),
+                
+                if (!hasStory)
+                  Positioned(
+                    bottom: 0, right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.blue, 
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
                       ),
+                      child: const Icon(Icons.add, size: 14, color: Colors.white),
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
             const SizedBox(height: 6),
             Text(
               "Cerita Saya",
-              style: GoogleFonts.outfit(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.outfit(fontSize: 12, color: Colors.black87),
+              maxLines: 1, overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -234,8 +207,8 @@ class _StoryRailState extends State<StoryRail> {
 
   Widget _buildFriendItem(UserStoryGroup group) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: () => _handleNavigation(() async {
+        await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => StoryViewPage(
@@ -246,40 +219,29 @@ class _StoryRailState extends State<StoryRail> {
               },
             ),
           ),
-        ).then(
-          (_) => _refresh(),
-        ); // Refresh on return to update view status if needed
-      },
+        );
+        _refresh();
+      }),
       child: Container(
         width: 80,
-        margin: const EdgeInsets.only(right: 16),
+        margin: const EdgeInsets.only(right: 12),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 64,
-              height: 64,
-              padding: const EdgeInsets.all(3),
+              width: 68, height: 68,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [Colors.purple, Colors.orange, Colors.pink],
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                ),
+                gradient: LinearGradient(colors: [Colors.purple, Colors.orange, Colors.pink], begin: Alignment.topRight, end: Alignment.bottomLeft),
               ),
+              padding: const EdgeInsets.all(3),
               child: Container(
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white,
-                ),
+                decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
                 padding: const EdgeInsets.all(2),
                 child: ClipOval(
                   child: SafeNetworkImage(
                     imageUrl: group.userAvatar,
-                    width: double.infinity,
-                    height: double.infinity,
                     fit: BoxFit.cover,
+                    width: double.infinity, height: double.infinity,
                     fallbackIcon: Icons.person,
                   ),
                 ),
@@ -288,10 +250,8 @@ class _StoryRailState extends State<StoryRail> {
             const SizedBox(height: 6),
             Text(
               group.userName,
-              style: GoogleFonts.outfit(fontSize: 12),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(fontSize: 12, color: Colors.black87),
+              maxLines: 1, overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
