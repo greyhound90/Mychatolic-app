@@ -15,6 +15,8 @@ import 'package:mychatolic_app/widgets/my_catholic_app_bar.dart';
 
 import 'package:mychatolic_app/services/profile_service.dart';
 import 'package:mychatolic_app/pages/profile/edit_profile_page.dart';
+import 'package:mychatolic_app/services/check_in_service.dart';
+import 'package:mychatolic_app/widgets/radar/check_in_components.dart';
 
 class SchedulePage extends StatefulWidget {
   const SchedulePage({super.key});
@@ -29,6 +31,7 @@ class _SchedulePageState extends State<SchedulePage> {
   final LiturgyService _liturgyService = LiturgyService();
   final MasterDataService _masterService = MasterDataService();
   final ProfileService _profileService = ProfileService();
+  final CheckInService _checkInService = CheckInService();
   final _supabase = Supabase.instance.client;
 
   // State: Date & Liturgy
@@ -163,6 +166,47 @@ class _SchedulePageState extends State<SchedulePage> {
     } catch (e) {
       debugPrint("Search Error: $e");
       if (mounted) setState(() => _isLoadingSchedules = false);
+    }
+  }
+  
+  // --- HELPER LOGIC: CHECK ACTIVE MASS ---
+  bool _isMassActive(String timeStart) {
+    // Only active if the selected date is TODAY
+    final now = DateTime.now();
+    if (_selectedDate.year != now.year || _selectedDate.month != now.month || _selectedDate.day != now.day) {
+      return false;
+    }
+
+    try {
+      final parts = timeStart.split(':');
+      final hour = int.parse(parts[0]);
+      final minute = int.parse(parts[1]);
+      
+      final massTime = DateTime(now.year, now.month, now.day, hour, minute);
+      
+      // Active Window: 30 mins BEFORE start until 60 mins AFTER start
+      final startWindow = massTime.subtract(const Duration(minutes: 30));
+      final endWindow = massTime.add(const Duration(minutes: 60));
+      
+      return now.isAfter(startWindow) && now.isBefore(endWindow);
+    } catch (e) {
+      return false; 
+    }
+  }
+  
+  Future<void> _handleCheckIn(String churchId, String scheduleId) async {
+    // UPDATED: Use MassCheckInWizard in pre-filled mode
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent, 
+      builder: (_) => MassCheckInWizard(initialChurchId: churchId, initialScheduleId: scheduleId),
+    );
+    
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Berhasil Check-in! Lihat status di Radar Misa."))
+      );
     }
   }
 
@@ -709,6 +753,7 @@ class _SchedulePageState extends State<SchedulePage> {
   Widget _buildTicketCard(MassSchedule item, bool isDark) {
     // Show Day Name if in "Church Search Mode"
     final dayName = _getDayName(item.dayOfWeek);
+    final isActive = _isMassActive(item.timeStart);
 
     return Container(
       decoration: BoxDecoration(
@@ -725,11 +770,15 @@ class _SchedulePageState extends State<SchedulePage> {
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
+          // JAM / STATUS CONTAINER
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.primaryBrand.withValues(alpha: 0.1),
+              color: isActive 
+                  ? Colors.green.withOpacity(0.1) // Green for active
+                  : AppColors.primaryBrand.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
+              border: isActive ? Border.all(color: Colors.green, width: 1.5) : null
             ),
             child: Column(
               children: [
@@ -739,7 +788,7 @@ class _SchedulePageState extends State<SchedulePage> {
                     style: GoogleFonts.outfit(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.primaryBrand,
+                      color: isActive ? Colors.green : AppColors.primaryBrand,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -749,13 +798,15 @@ class _SchedulePageState extends State<SchedulePage> {
                   style: GoogleFonts.outfit(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.primaryBrand,
+                    color: isActive ? Colors.green : AppColors.primaryBrand,
                   ),
                 ),
               ],
             ),
           ),
+          
           const SizedBox(width: 16),
+          
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -800,7 +851,22 @@ class _SchedulePageState extends State<SchedulePage> {
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          
+          // CHECK-IN BUTTON (If Active)
+          if (isActive)
+             Padding(
+               padding: const EdgeInsets.only(left: 8.0),
+               child: ElevatedButton(
+                 onPressed: () => _handleCheckIn(item.churchId, item.id),
+                 style: ElevatedButton.styleFrom(
+                   backgroundColor: Colors.green,
+                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                   visualDensity: VisualDensity.compact
+                 ),
+                 child: Text("Check-in", style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold)),
+               ),
+             )
         ],
       ),
     );

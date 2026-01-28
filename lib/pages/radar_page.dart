@@ -12,6 +12,8 @@ import 'package:mychatolic_app/pages/radar_detail_page.dart';
 import 'package:mychatolic_app/pages/create_radar_screen.dart';
 import 'package:mychatolic_app/pages/radars/radar_chat_page.dart';
 import 'package:mychatolic_app/pages/radars/invite_inbox_page.dart';
+import 'package:mychatolic_app/services/check_in_service.dart';
+import 'package:mychatolic_app/widgets/radar/check_in_components.dart';
 
 class RadarPage extends StatefulWidget {
   const RadarPage({super.key});
@@ -24,6 +26,7 @@ class _RadarPageState extends State<RadarPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final RadarService _radarService = RadarService();
+  final CheckInService _checkInService = CheckInService();
   final String _myUserId = Supabase.instance.client.auth.currentUser?.id ?? '';
 
   static const int _pageSize = 10;
@@ -33,11 +36,54 @@ class _RadarPageState extends State<RadarPage>
   bool _hasMoreData = true;
   int _currentPage = 0;
 
+  // Check-In States
+  Map<String, dynamic>? _currentCheckIn;
+  bool _isLoadingCheckIn = true;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _refreshPublicRadars();
+    _refreshCheckInStatus();
+  }
+
+  // --- CHECK-IN LOGIC ---
+  Future<void> _refreshCheckInStatus() async {
+    try {
+      final data = await _checkInService.getCurrentCheckIn();
+      if (mounted) setState(() => _currentCheckIn = data);
+    } catch (e) {
+      debugPrint("Check-In Status Error: $e");
+    } finally {
+      if (mounted) setState(() => _isLoadingCheckIn = false);
+    }
+  }
+
+  Future<void> _handleCheckInPress() async {
+    // UPDATED: Use MassCheckInWizard instead of simple picker + CheckInDialog
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent, // Wizard handles layout
+      builder: (_) => const MassCheckInWizard(),
+    );
+
+    if (result == true) {
+      _refreshCheckInStatus();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Berhasil Check-in!")));
+    }
+  }
+
+  void _onCheckOut() async {
+    try {
+      await _checkInService.checkOut();
+      _refreshCheckInStatus();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Berhasil Check-out")));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal Check-out: $e")));
+    }
   }
 
   void _refreshPublicRadars() {
@@ -191,7 +237,7 @@ class _RadarPageState extends State<RadarPage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor:
-          Colors.grey[50], // Slightly off-white for better card contrast
+          Colors.grey[50],
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -226,9 +272,58 @@ class _RadarPageState extends State<RadarPage>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [_buildMyAgendaTab(), _buildPublicRadarTab()],
+      body: Column(
+        children: [
+          // --- CHECK-IN STATUS ---
+          if (_isLoadingCheckIn)
+             const LinearProgressIndicator(minHeight: 2),
+          
+          if (!_isLoadingCheckIn && _currentCheckIn != null) ...[
+             Padding(
+               padding: const EdgeInsets.all(16.0),
+               child: ActiveMassCard(
+                 checkInData: _currentCheckIn!, 
+                 onCheckOut: _onCheckOut
+               ),
+             ),
+             Padding(
+               padding: const EdgeInsets.symmetric(horizontal: 16),
+               child: CommunityPresenceList(churchId: _currentCheckIn!['church_id']),
+             ),
+          ] else if (!_isLoadingCheckIn) ...[
+             // Banner Invitation
+             Container(
+               margin: const EdgeInsets.all(16),
+               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+               decoration: BoxDecoration(
+                 color: Colors.white,
+                 borderRadius: BorderRadius.circular(12),
+                 border: Border.all(color: Colors.grey[200]!)
+               ),
+               child: Row(
+                 children: [
+                   const Icon(Icons.church_outlined, color: Colors.grey),
+                   const SizedBox(width: 12),
+                   Expanded(child: Text("Sedang Misa Sekarang?", style: GoogleFonts.outfit(fontWeight: FontWeight.w600, color: Colors.black87))),
+                   TextButton(
+                     onPressed: _handleCheckInPress, 
+                     child: Text("Check-in", style: GoogleFonts.outfit(fontWeight: FontWeight.bold))
+                   )
+                 ],
+               ),
+             )
+          ],
+          
+          const Divider(height: 1),
+
+          // --- EXISTING TABS ---
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [_buildMyAgendaTab(), _buildPublicRadarTab()],
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'radar_fab',
@@ -306,7 +401,7 @@ class _RadarPageState extends State<RadarPage>
       future: _radarService.fetchMyRadars(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const _RadarListSkeleton();
+          return _RadarListSkeleton();
         }
 
         final agendas = (snapshot.data ?? [])
@@ -430,7 +525,7 @@ class _RadarPageState extends State<RadarPage>
           return false;
         },
         child: _isLoadingPublic && _publicRadars.isEmpty
-            ? const _RadarListSkeleton()
+            ? _RadarListSkeleton()
             : _publicRadars.isEmpty
             ? const _RadarEmptyState(
                 icon: Icons.event_busy,
@@ -465,8 +560,6 @@ class _RadarPageState extends State<RadarPage>
 // --- WIDGETS ---
 
 class _RadarListSkeleton extends StatelessWidget {
-  const _RadarListSkeleton();
-
   @override
   Widget build(BuildContext context) {
     return Shimmer.fromColors(

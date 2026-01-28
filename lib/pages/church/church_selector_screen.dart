@@ -4,7 +4,7 @@ import 'package:mychatolic_app/core/theme.dart';
 import 'package:mychatolic_app/models/church.dart';
 import 'package:mychatolic_app/models/country.dart';
 import 'package:mychatolic_app/models/diocese.dart';
-import 'package:mychatolic_app/pages/church/church_detail_screen.dart'; // NEW
+import 'package:mychatolic_app/pages/church/church_detail_page.dart';
 import 'package:mychatolic_app/services/master_data_service.dart';
 
 class ChurchSelectorScreen extends StatefulWidget {
@@ -108,7 +108,7 @@ class _ChurchSelectorScreenState extends State<ChurchSelectorScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => ChurchDetailScreen(church: _selectedChurch!),
+          builder: (_) => ChurchDetailPage(churchData: _selectedChurch!.toJson()),
         ),
       );
     }

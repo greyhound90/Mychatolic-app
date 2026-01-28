@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:mychatolic_app/pages/profile/other_user_profile_page.dart';
+import 'package:mychatolic_app/pages/profile_page.dart';
 
 class SearchResultsPage extends StatelessWidget {
   final Map<String, dynamic> filters;
@@ -11,7 +11,7 @@ class SearchResultsPage extends StatelessWidget {
     // Dummy Data for Search Results
     final List<Map<String, dynamic>> dummyUsers = [
       {
-        "name": "Andreas",
+        "id": "1", "name": "Andreas",
         "age": 25,
         "parish": "Paroki St. Yoseph",
         "avatar": null, // Use default icon
@@ -80,7 +80,7 @@ class SearchResultsPage extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => OtherUserProfilePage(userData: user),
+                  builder: (_) => ProfilePage(userId: user['id'] as String?, isBackButtonEnabled: true),
                 ),
               );
             },

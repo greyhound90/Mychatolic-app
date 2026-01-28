@@ -64,8 +64,7 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
   late RealtimeChannel _roomChannel;
 
   static const Color kPrimaryBlue = Color(0xFF0088CC);
-  static const Color kSurface = Color(0xFFFFFFFF);
-
+  
   Map<String, String> _groupMemberNames = {};
   Map<String, dynamic>? _replyMessage;    
   String? _editingMessageId;              
@@ -74,6 +73,8 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
   bool _isOpponentOnline = false;
   bool _isOpponentTyping = false;
   Timer? _typingTimer;
+
+  bool _initialScrollDone = false;
 
   @override
   void initState() {
@@ -103,6 +104,7 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
   @override
   void dispose() {
     _supabase.removeChannel(_roomChannel);
+    // Be careful with listener removal if storing subscription object
     _uiAudioPlayer.dispose();
     _textController.dispose();
     _scrollController.dispose();
@@ -133,23 +135,29 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
 
   void _subscribeToMessages() {
     final myId = _supabase.auth.currentUser?.id;
+    // We only listen for side-effects here (Sound, Haptics). 
+    // Data update is handled by StreamBuilder.
     _supabase.channel('public:social_messages:chat_id=${widget.chatId}')
         .onPostgresChanges(
-          event: PostgresChangeEvent.all, schema: 'public', table: 'social_messages',
+          event: PostgresChangeEvent.insert, 
+          schema: 'public', 
+          table: 'social_messages',
           filter: PostgresChangeFilter(type: PostgresChangeFilterType.eq, column: 'chat_id', value: widget.chatId),
           callback: (payload) {
             if (!mounted) return;
-            if (payload.eventType == PostgresChangeEvent.insert) {
-              final newMsg = payload.newRecord;
-              if (newMsg['type'] == 'beeb' && newMsg['sender_id'] != myId) {
+            final newMsg = payload.newRecord;
+            
+            // Side Effects
+            if (newMsg['type'] == 'beeb' && newMsg['sender_id'] != myId) {
                  _playUiSound();
                  HapticFeedback.heavyImpact(); 
-              }
-              if (newMsg['sender_id'] != myId && newMsg['is_read'] == false) {
-                 _supabase.from('social_messages').update({'is_read': true}).match({'id': newMsg['id']}).then((_) {});
-              }
             }
-            setState(() {}); 
+            if (newMsg['sender_id'] != myId) {
+                 // Mark read
+                 _supabase.from('social_messages').update({'is_read': true}).match({'id': newMsg['id']}).then((_) {});
+            }
+             
+            // Note: No setState() needed here because StreamBuilder handles the UI update automatically.
           },
         ).subscribe();
   }
@@ -303,25 +311,22 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
       if (await _audioRecorder.hasPermission()) {
         HapticFeedback.mediumImpact();
         
-        // Optimistic UI update
         setState(() {
           _isRecording = true;
           _recordingDuration = 0;
           _dragOffset = 0.0;
         });
 
-        _isRecorderInitialised = false; // Reset flag before start
+        _isRecorderInitialised = false; 
         _recordStartTime = DateTime.now();
 
         final tempDir = await getTemporaryDirectory();
         final path = '${tempDir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
         
-        // Start Native Recorder
         await _audioRecorder.start(const RecordConfig(), path: path);
         
-        _isRecorderInitialised = true; // Mark as successfully started
+        _isRecorderInitialised = true; 
 
-        // Start Timer
         _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
           if (mounted) setState(() => _recordingDuration++);
         });
@@ -335,16 +340,13 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
   Future<void> _stopRecordingAndSend() async {
     if (!_isRecording) return;
     
-    // Safety check: Don't try to stop if it hasn't finished starting
     if (!_isRecorderInitialised) {
        _cancelRecording(); 
        return;
     }
 
-    // Safety check: Min Duration (Anti-Crash & Anti-Spam)
     final durationMs = DateTime.now().difference(_recordStartTime ?? DateTime.now()).inMilliseconds;
     if (durationMs < 600) {
-      // If less than 600ms, consider it a tap or mistake.
       _cancelRecording();
       return;
     }
@@ -354,7 +356,6 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
       _cleanupRecorderState();
       
       if (path != null) {
-        // Upload
         final file = File(path);
         final fileName = 'voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
         try {
@@ -378,9 +379,8 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
   Future<void> _cancelRecording() async {
     if (!_isRecording) return;
     
-    _cleanupRecorderState(); // Reset UI first
+    _cleanupRecorderState(); 
 
-    // Stop hardware if initialized
     if (_isRecorderInitialised) {
       try {
         final path = await _audioRecorder.stop();
@@ -404,33 +404,26 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
        _recordingDuration = 0;
        _dragOffset = 0.0;
      });
-     // Reset Trash Animation
      if (_trashScaleController.isCompleted) _trashScaleController.reverse();
   }
 
   void _handleDragUpdate(LongPressMoveUpdateDetails details) {
     if (!_isRecording) return;
     
-    // Use offsetFromOrigin for consistent relative drag from touch point
     final offset = details.offsetFromOrigin.dx;
 
     setState(() {
       _dragOffset = offset;
     });
 
-    // Tuning Thresholds
-    // Cancel: -50 (Easier to cancel)
-    // Warning: -25 (Early warning)
     if (offset < -50) {
       _cancelRecording();
     } else if (offset < -25) {
-       // "Will Cancel" Zone
       if (!_trashScaleController.isAnimating && _trashScaleController.status != AnimationStatus.completed) {
          HapticFeedback.mediumImpact(); 
          _trashScaleController.forward();
       }
     } else {
-       // Safe Zone
        if (_trashScaleController.status == AnimationStatus.completed) {
          _trashScaleController.reverse();
        }
@@ -506,7 +499,9 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
       }
       
       await _supabase.from('social_chats').update(updateData).eq('id', widget.chatId);
-      // _scrollToBottom(); // Not needed with reverse list
+      
+      // Scroll to bottom after sending
+      _scrollToBottom();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal kirim: $e")));
     }
@@ -515,7 +510,11 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(0.0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300), 
+          curve: Curves.easeOut
+        );
       }
     }); 
   }
@@ -561,7 +560,7 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
 
     return AppBar(
       backgroundColor: Colors.transparent, elevation: 0, foregroundColor: Colors.black, leading: const BackButton(),
-      flexibleSpace: ClipRect(child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10), child: Container(color: Colors.white.withOpacity(0.7)))),
+      flexibleSpace: ClipRect(child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10), child: Container(color: Colors.white.withValues(alpha: 0.7)))),
       title: GestureDetector(
         onTap: () {
           if (widget.isGroup) {
@@ -603,14 +602,26 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
   Widget _buildMessageList() {
     final myId = _supabase.auth.currentUser?.id;
     return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: _supabase.from('social_messages').stream(primaryKey: ['id']).eq('chat_id', widget.chatId).order('created_at', ascending: false),
+      // UPDATED TO ASCENDING as requested
+      stream: _supabase.from('social_messages')
+          .stream(primaryKey: ['id'])
+          .eq('chat_id', widget.chatId)
+          .order('created_at', ascending: true), 
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
         final msgs = snapshot.data!;
+        
         if (msgs.isEmpty) return Center(child: Text("Mulai percakapan...", style: GoogleFonts.outfit(color: Colors.grey)));
         
+        // Auto scroll on initial load or new message
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_scrollController.hasClients) {
+                _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+            }
+        });
+
         return ListView.builder(
-          reverse: true, // Newest at bottom visually
+          reverse: false, // Standard top-to-bottom
           controller: _scrollController, 
           padding: const EdgeInsets.fromLTRB(16, 120, 16, 20),
           itemCount: msgs.length,
@@ -618,11 +629,12 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
             final msg = msgs[index];
             final isMe = msg['sender_id'] == myId;
             bool showDate = false;
-            if (index == msgs.length - 1) {
+            
+            if (index == 0) {
                showDate = true;
             } else {
                final curr = DateTime.parse(msg['created_at']).toLocal();
-               final prev = DateTime.parse(msgs[index + 1]['created_at']).toLocal(); 
+               final prev = DateTime.parse(msgs[index - 1]['created_at']).toLocal(); 
                if (curr.day != prev.day) showDate = true;
             }
 
@@ -658,7 +670,7 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
         margin: const EdgeInsets.symmetric(vertical: 24),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: ShapeDecoration(
-          color: Colors.white.withOpacity(0.5), // Glassmorphism Date
+          color: Colors.white.withOpacity(0.5), 
           shape: const StadiumBorder(),
           shadows: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4)]
         ),
@@ -735,7 +747,7 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12), // Spacing between bubbles
+        margin: const EdgeInsets.only(bottom: 12), 
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
         child: Column(
           crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -775,12 +787,12 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
 
   Widget _buildTextBubble(bool isMe, String content, String? timeStr, bool isEdited, bool isRead) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Comfortable padding
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), 
       decoration: BoxDecoration(
         gradient: isMe 
-           ? const LinearGradient(colors: [Color(0xFF0088CC), Color(0xFF2575FC)]) // Sender Gradient
+           ? const LinearGradient(colors: [Color(0xFF0088CC), Color(0xFF2575FC)]) 
            : null, 
-        color: isMe ? null : Colors.white, // Receiver White
+        color: isMe ? null : Colors.white, 
         boxShadow: [
            BoxShadow(color: Colors.black.withOpacity(isMe ? 0.2 : 0.05), blurRadius: 4, offset: const Offset(0, 2))
         ],
@@ -795,311 +807,168 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
           Text(
             content, 
             style: GoogleFonts.outfit(
-              color: isMe ? Colors.white : Colors.black87, // High contrast
+              color: isMe ? Colors.white : Colors.black87, 
               fontSize: 15,
               height: 1.4,
-            )
-          ), 
-          const SizedBox(height: 4),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (isEdited)
-                Padding(
-                  padding: const EdgeInsets.only(right: 4),
-                  child: Text("(edit)", style: GoogleFonts.outfit(color: isMe ? Colors.white70 : Colors.grey, fontSize: 10, fontStyle: FontStyle.italic)),
-                ),
-              _buildTimestampWithTick(timeStr, isMe, isRead, isTextBubble: true),
-            ],
+            ),
           ),
+          const SizedBox(height: 4),
+          _buildTimestampWithTick(timeStr, isMe, isRead, isEdited: isEdited),
         ],
       ),
     );
   }
 
-  Widget _buildTimestampWithTick(String? timeStr, bool isMe, bool isRead, {bool isTextBubble = false}) {
-    final time = timeStr != null ? DateFormat('HH:mm').format(DateTime.parse(timeStr).toLocal()) : '';
-    final color = (isMe && isTextBubble) ? Colors.white70 : Colors.grey;
-    final iconColor = isRead ? Colors.lightBlueAccent : ((isMe && isTextBubble) ? Colors.white70 : Colors.grey);
+  Widget _buildImageBubble(bool isMe, String content, String? timeStr) {
+    return GestureDetector(
+      onTap: () => _showDialogImage(content),
+      child: Container(
+        width: 200,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.withOpacity(0.2)),
+          image: DecorationImage(image: NetworkImage(content), fit: BoxFit.cover)
+        ),
+        child: AspectRatio(aspectRatio: 1),
+      ),
+    );
+  }
+
+  Widget _buildLocationBubble(bool isMe, String content) {
+    return GestureDetector(
+      onTap: () async {
+         final uri = Uri.parse(content);
+         if (await canLaunchUrl(uri)) launchUrl(uri);
+      },
+      child: Container(
+        width: 200,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+        child: Row(
+          children: [
+            const Icon(Icons.location_on, color: Colors.red),
+            const SizedBox(width: 8),
+            Expanded(child: Text("Lihat Lokasi", style: GoogleFonts.outfit(color: Colors.blue, decoration: TextDecoration.underline)))
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimestampWithTick(String? timeStr, bool isMe, bool isRead, {bool isEdited = false}) {
+    if (timeStr == null) return const SizedBox.shrink();
+    final date = DateTime.parse(timeStr).toLocal();
+    final time = DateFormat('HH:mm').format(date);
     
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(time, style: GoogleFonts.outfit(color: color, fontSize: 10)),
+        if (isEdited) Text("edited ", style: GoogleFonts.outfit(fontSize: 9, color: isMe ? Colors.white70 : Colors.black38)),
+        Text(time, style: GoogleFonts.outfit(fontSize: 10, color: isMe ? Colors.white70 : Colors.black38)),
         if (isMe) ...[
-          const SizedBox(width: 4),
-          Icon(
-            Icons.done_all, 
-            size: 14, 
-            color: iconColor
-          ),
+           const SizedBox(width: 4),
+           Icon(Icons.done_all, size: 14, color: isRead ? Colors.greenAccent : Colors.white70),
         ]
       ],
     );
   }
 
-  Widget _buildImageBubble(bool isMe, String url, String? time) {
-    return GestureDetector(
-      onTap: () => _showDialogImage(url),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: SafeNetworkImage(imageUrl: url, width: 220, height: 280, fit: BoxFit.cover),
-      ),
-    );
-  }
-  
-  Widget _buildLocationBubble(bool isMe, String url) {
-    return GestureDetector(
-      onTap: () => launchUrl(Uri.parse(url)),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(12)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.location_on, color: Colors.red),
-          const SizedBox(width: 8),
-          Text("Lihat Lokasi", style: GoogleFonts.outfit(color: Colors.blue, fontWeight: FontWeight.bold)),
-        ]),
-      ),
-    );
-  }
-
   Widget _buildFloatingInputArea() {
-    // -------------------------------------------------------------
-    // RECORDING UI
-    // -------------------------------------------------------------
-    if (_isRecording) {
-      final isDangerZone = _dragOffset < -25; // Visual Warning at -25
-      return Container(
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-        decoration: BoxDecoration(
-          color: Colors.white, 
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 10)]
-        ),
-        child: Row(
-          children: [
-            // Trash Icon
-            ScaleTransition(
-              scale: _trashScaleController,
-              child: Icon(Icons.delete_outline, color: isDangerZone ? Colors.red : Colors.grey, size: 28),
-            ),
-            
-            // Duration & Slide Text
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    Text(
-                      _formatDuration(_recordingDuration), 
-                      style: GoogleFonts.outfit(color: isDangerZone ? Colors.red : Colors.black, fontWeight: FontWeight.bold, fontSize: 16)
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        isDangerZone ? "Lepas untuk batal" : "< Geser untuk membatalkan", 
-                        style: GoogleFonts.outfit(color: isDangerZone ? Colors.red : Colors.grey, fontSize: 13),
-                        maxLines: 1, overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Blinking Mic Icon
-            ScaleTransition(
-               scale: _micScaleController,
-               child: _gestureMicIcon(),
-            )
-          ],
-        ),
-      );
-    }
-    
-    // -------------------------------------------------------------
-    // NORMAL INPUT UI
-    // -------------------------------------------------------------
     return Container(
-      margin: const EdgeInsets.all(16), // Floating Margin
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
       decoration: BoxDecoration(
-         color: kSurface, 
-         borderRadius: BorderRadius.circular(30), // Capsule Shape
-         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))]
+        color: Colors.white,
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))]
       ),
       child: Column(
         children: [
           if (_replyMessage != null)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Colors.grey[100], borderRadius: const BorderRadius.vertical(top: Radius.circular(30))),
-              child: Row(
-                children: [
-                  Container(width: 4, height: 40, color: kPrimaryBlue),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("Membalas ke ${_getSenderName(_replyMessage!['sender_id'])}", style: GoogleFonts.outfit(color: kPrimaryBlue, fontWeight: FontWeight.bold, fontSize: 12)),
-                        Text(_replyMessage!['content'] ?? 'Media', maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.outfit(color: Colors.grey[700], fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                  IconButton(icon: const Icon(Icons.close, size: 20), onPressed: _cancelReply),
-                ],
-              ),
-            ),
-          
-          if (_editingMessageId != null)
              Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Colors.blue[50], borderRadius: const BorderRadius.vertical(top: Radius.circular(30))),
-              child: Row(
-                children: [
-                  const Icon(Icons.edit, color: Colors.blue, size: 18),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text("Sedang mengedit pesan...", style: GoogleFonts.outfit(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 12)),
-                  ),
-                  IconButton(icon: const Icon(Icons.close, size: 20, color: Colors.blue), onPressed: _cancelEdit),
-                ],
-              ),
-            ),
+               margin: const EdgeInsets.only(bottom: 12),
+               padding: const EdgeInsets.all(12),
+               decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12), border: Border(left: BorderSide(color: kPrimaryBlue, width: 4))),
+               child: Row(children: [
+                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                       Text("Membalas ${_getSenderName(_replyMessage!['sender_id'])}", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 12, color: kPrimaryBlue)),
+                       Text(_replyMessage!['content'] ?? '...', maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.outfit(fontSize: 12))
+                   ])),
+                   IconButton(icon: const Icon(Icons.close, size: 20), onPressed: _cancelReply)
+               ]),
+             ),
           
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Row(
+          if (_isRecording) 
+            _buildRecordingUI()
+          else
+            Row(
               children: [
-                 IconButton(icon: const Icon(Icons.add_circle_outline, color: Colors.grey), onPressed: _showAttachmentSheet),
+                 IconButton(icon: const Icon(Icons.add, color: kPrimaryBlue), onPressed: _showAttachmentSheet),
                  Expanded(
-                  child: TextField(
-                    controller: _textController,
-                    focusNode: _focusNode,
-                    onChanged: _onTypingChanged,
-                    decoration: const InputDecoration(hintText: "Tulis pesan...", border: InputBorder.none),
-                  ),
-                ),
-                
-                // MIC BUTTON (GESTURE)
-                _gestureMicIcon(),
-
-                if (!_isRecording) 
-                  GestureDetector(
-                    onTap: _sendBeeb, 
-                    onLongPress: _sendBeeb, 
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0), 
-                      child: Image.asset('assets/beep.png', width: 28, height: 28)
-                    )
-                  ),
-                
-                if (!_isRecording && _textController.text.isNotEmpty)
-                   IconButton(
-                     icon: Icon(_editingMessageId != null ? Icons.check : Icons.send, color: kPrimaryBlue), 
-                     onPressed: () => _sendMessage(type: 'text')
+                   child: Container(
+                     padding: const EdgeInsets.symmetric(horizontal: 16),
+                     decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(24)),
+                     child: TextField(
+                       controller: _textController,
+                       focusNode: _focusNode,
+                       onChanged: _onTypingChanged,
+                       minLines: 1, maxLines: 4,
+                       decoration: const InputDecoration(hintText: "Tulis pesan...", border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.symmetric(vertical: 12)),
+                     ),
                    ),
+                 ),
+                 const SizedBox(width: 8),
+                 if (_textController.text.trim().isNotEmpty) // Send text
+                    GestureDetector(
+                      onTap: () => _sendMessage(type: 'text'),
+                      child: CircleAvatar(backgroundColor: kPrimaryBlue, child: const Icon(Icons.send, color: Colors.white, size: 20)),
+                    )
+                 else // Mic or Beeb
+                    GestureDetector(
+                      onTap: _sendBeeb,
+                      onLongPress: _startRecording,
+                      onLongPressMoveUpdate: _handleDragUpdate,
+                      onLongPressEnd: (details) => _stopRecordingAndSend(),
+                      child: CircleAvatar(backgroundColor: Colors.orange, child: Image.asset('assets/beep.png', width: 24)),
+                    )
               ],
             ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _gestureMicIcon() {
-    return GestureDetector(
-      onLongPress: _startRecording,
-      onLongPressMoveUpdate: _handleDragUpdate, // TRIGGER SLIDE TO CANCEL
-      onLongPressUp: _stopRecordingAndSend,
-      onLongPressEnd: (details) {
-         if (_isRecording) _stopRecordingAndSend();
-      },
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: _isRecording ? const BoxDecoration(shape: BoxShape.circle, color: Colors.red) : null,
-        child: Icon(Icons.mic, color: _isRecording ? Colors.white : Colors.grey, size: 28),
-      ),
+  Widget _buildRecordingUI() {
+    return Row(
+      children: [
+         ScaleTransition(
+           scale: _trashScaleController,
+           child: const Icon(Icons.delete, color: Colors.red),
+         ),
+         const SizedBox(width: 12),
+         Expanded(child: Text(_dragOffset < -50 ? "Lepas untuk batalkan" : "Merekam: ${_formatDuration(_recordingDuration)}...", style: GoogleFonts.outfit(color: _dragOffset < -50 ? Colors.red : Colors.black))),
+         ScaleTransition(scale: _micScaleController, child: const CircleAvatar(backgroundColor: Colors.red, child: Icon(Icons.mic, color: Colors.white)))
+      ],
     );
   }
-}
+} // End State
 
-class BeebBubble extends StatefulWidget {
+// SUB-WIDGETS (Beeb & Audio) to keep file clean-ish
+class BeebBubble extends StatelessWidget {
   final bool isMe;
   const BeebBubble({super.key, required this.isMe});
-
-  @override
-  State<BeebBubble> createState() => _BeebBubbleState();
-}
-
-class _BeebBubbleState extends State<BeebBubble> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  final AudioPlayer _player = AudioPlayer();
-  static const Color kBeebColor = Color(0xFFFF2D55); 
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(duration: const Duration(milliseconds: 500), vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _player.dispose();
-    super.dispose();
-  }
-
-  void _triggerEffect() async {
-    _controller.forward(from: 0.0).then((_) => _controller.reset());
-    try {
-      if (_player.state == PlayerState.playing) await _player.stop();
-      await _player.play(AssetSource('beeb.mp3'));
-      HapticFeedback.heavyImpact(); 
-    } catch (e) { debugPrint("Sound Error: $e"); }
-  }
-
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _triggerEffect,
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          final double offset = sin(_controller.value * 10 * pi) * 6; 
-          return Transform.translate(offset: Offset(offset, 0), child: child);
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFE4E9),
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFC2185B).withOpacity(0.1),
-                blurRadius: 6,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min, 
-            children: [
-              Image.asset('assets/beep.png', width: 18, height: 18), 
-              const SizedBox(width: 6),
-              Text(
-                "BEEB!", 
-                style: GoogleFonts.outfit(
-                  color: const Color(0xFFC2185B),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13, 
-                )
-              ),
-            ],
-          ),
-        ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.2), 
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.orange)
       ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Image.asset('assets/beep.png', width: 20),
+          const SizedBox(width: 8),
+          Text("BEEB!", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.orange, fontSize: 16))
+      ]),
     );
   }
 }
@@ -1108,7 +977,6 @@ class _AudioPlayerBubble extends StatefulWidget {
   final String url;
   final bool isMe;
   const _AudioPlayerBubble({required this.url, required this.isMe});
-
   @override
   State<_AudioPlayerBubble> createState() => _AudioPlayerBubbleState();
 }
@@ -1122,107 +990,50 @@ class _AudioPlayerBubbleState extends State<_AudioPlayerBubble> {
   @override
   void initState() {
     super.initState();
-    _player.onPlayerStateChanged.listen((state) {
-      if (mounted) setState(() => _isPlaying = state == PlayerState.playing);
+    _player.onPlayerStateChanged.listen((s) {
+       if (mounted) setState(() => _isPlaying = s == PlayerState.playing);
     });
     _player.onDurationChanged.listen((d) {
-      if (mounted) setState(() => _duration = d);
+       if (mounted) setState(() => _duration = d);
     });
     _player.onPositionChanged.listen((p) {
-      if (mounted) setState(() => _position = p);
+       if (mounted) setState(() => _position = p);
     });
   }
 
   @override
-  void dispose() {
-    _player.dispose();
-    super.dispose();
-  }
+  void dispose() { _player.dispose(); super.dispose(); }
 
-  Future<void> _togglePlay() async {
-    if (_isPlaying) {
-      await _player.pause();
-    } else {
-      await _player.play(UrlSource(widget.url));
-    }
-  }
-
-  String _formatDual(Duration d) {
-    String twoDigits(int n) => n.toString().padLeft(2, "0");
-    return "${d.inMinutes}:${twoDigits(d.inSeconds.remainder(60))}";
+  String _fmt(Duration d) {
+    final m = d.inMinutes.toString().padLeft(2, '0');
+    final s = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return "$m:$s";
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: widget.isMe ? const Color(0xFF0088CC).withOpacity(0.1) : const Color(0xFFF5F5F5), // Softer background for audio
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: widget.isMe ? const Color(0xFF0088CC).withOpacity(0.3) : Colors.transparent)
-      ),
-      width: 240, // Fixed width for consistent look
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Play Button
+       width: 200, padding: const EdgeInsets.all(12),
+       decoration: BoxDecoration(
+          color: widget.isMe ? Colors.white.withOpacity(0.2) : Colors.grey[100],
+          borderRadius: BorderRadius.circular(16)
+       ),
+       child: Row(children: [
           GestureDetector(
-            onTap: _togglePlay,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFF0088CC), // Primary
-              ),
-              child: Icon(
-                _isPlaying ? Icons.pause : Icons.play_arrow,
-                color: Colors.white,
-                size: 20,
-              ),
+            onTap: () async {
+               if (_isPlaying) await _player.pause();
+               else await _player.play(UrlSource(widget.url));
+            },
+            child: CircleAvatar(
+              backgroundColor: widget.isMe ? Colors.white : Colors.blue,
+              foregroundColor: widget.isMe ? Colors.blue : Colors.white,
+              radius: 20,
+              child: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
             ),
           ),
           const SizedBox(width: 12),
-          
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Slider
-                SizedBox(
-                  height: 24,
-                  child: SliderTheme(
-                    data: SliderTheme.of(context).copyWith(
-                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                      trackHeight: 3,
-                      activeTrackColor: const Color(0xFF0088CC),
-                      inactiveTrackColor: Colors.grey[300],
-                      thumbColor: const Color(0xFF0088CC)
-                    ),
-                    child: Slider(
-                      value: (_position.inSeconds.toDouble()).clamp(0.0, (_duration.inSeconds.toDouble() + 0.1)),
-                      max: _duration.inSeconds.toDouble() + 0.1, // Avoid div by zero visual
-                      onChanged: (val) {
-                         _player.seek(Duration(seconds: val.toInt()));
-                      },
-                    ),
-                  ),
-                ),
-                // Time Text
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(_formatDual(_position), style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey[600])),
-                      Text(_formatDual(_duration), style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey[600])),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+          Text("${_fmt(_position)} / ${_fmt(_duration)}", style: GoogleFonts.outfit(color: widget.isMe ? Colors.white : Colors.black))
+       ]),
     );
   }
 }

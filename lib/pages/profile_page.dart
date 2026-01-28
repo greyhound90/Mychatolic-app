@@ -15,6 +15,7 @@ import 'package:mychatolic_app/pages/settings_page.dart';
 import 'package:mychatolic_app/pages/social_chat_detail_page.dart';
 import 'package:mychatolic_app/pages/story/story_view_page.dart';
 import 'package:mychatolic_app/pages/profile/edit_profile_page.dart';
+import 'package:mychatolic_app/widgets/profile/mass_history_list.dart';
 
 class ProfilePage extends StatefulWidget {
   final String? userId; // If null, shows current user's profile
@@ -652,6 +653,17 @@ class ProfileHeader extends StatelessWidget {
                     ),
                   ],
                 ),
+          
+          const SizedBox(height: 16),
+          const Divider(),
+          const SizedBox(height: 8),
+          Text("Riwayat Misa", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14)),
+          const SizedBox(height: 8),
+          MassHistoryList(
+             userId: profile.id, 
+             isMyProfile: isMe,
+          ),
+
         ],
       ),
     );
