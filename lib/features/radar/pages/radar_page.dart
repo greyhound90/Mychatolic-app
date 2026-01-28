@@ -7,13 +7,13 @@ import 'package:shimmer/shimmer.dart';
 import 'package:mychatolic_app/core/theme.dart';
 import 'package:mychatolic_app/models/radar_event.dart';
 import 'package:mychatolic_app/services/radar_service.dart';
-import 'package:mychatolic_app/widgets/radar_event_card.dart';
+import 'package:mychatolic_app/features/radar/widgets/radar_event_card.dart';
 import 'package:mychatolic_app/pages/radar_detail_page.dart';
 import 'package:mychatolic_app/pages/create_radar_screen.dart';
 import 'package:mychatolic_app/pages/radars/radar_chat_page.dart';
 import 'package:mychatolic_app/pages/radars/invite_inbox_page.dart';
 import 'package:mychatolic_app/services/check_in_service.dart';
-import 'package:mychatolic_app/widgets/radar/check_in_components.dart';
+import 'package:mychatolic_app/features/radar/widgets/check_in_components.dart';
 
 class RadarPage extends StatefulWidget {
   const RadarPage({super.key});

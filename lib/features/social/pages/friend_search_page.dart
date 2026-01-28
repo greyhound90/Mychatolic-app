@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mychatolic_app/models/profile.dart';
-import 'package:mychatolic_app/pages/profile_page.dart';
+import 'package:mychatolic_app/features/profile/pages/profile_page.dart';
 import 'package:mychatolic_app/services/master_data_service.dart';
 import 'package:mychatolic_app/services/profile_service.dart';
 import 'package:mychatolic_app/widgets/safe_network_image.dart';

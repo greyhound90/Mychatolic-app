@@ -5,12 +5,12 @@ import 'package:mychatolic_app/services/social_service.dart';
 import 'package:mychatolic_app/features/feed/widgets/post_card.dart';
 import 'package:mychatolic_app/pages/notification_screen.dart';
 import 'package:mychatolic_app/pages/create_post_screen.dart';
-import 'package:mychatolic_app/pages/radar_page.dart';
+import 'package:mychatolic_app/features/radar/pages/radar_page.dart';
 import 'package:mychatolic_app/pages/radar_detail_page.dart';
 import 'package:mychatolic_app/pages/radars/radar_chat_page.dart';
 import 'package:mychatolic_app/models/radar_event.dart';
 import 'package:mychatolic_app/services/radar_service.dart';
-import 'package:mychatolic_app/widgets/radar_event_card.dart';
+import 'package:mychatolic_app/features/radar/widgets/radar_event_card.dart';
 // Filter dependencies
 import 'package:mychatolic_app/services/master_data_service.dart';
 import 'package:mychatolic_app/models/country.dart';

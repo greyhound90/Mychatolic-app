@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 
 import 'package:mychatolic_app/main.dart';
 import 'package:mychatolic_app/models/radar_event.dart';
-import 'package:mychatolic_app/pages/social_chat_detail_page.dart';
+import 'package:mychatolic_app/features/social/pages/social_chat_detail_page.dart';
 import 'package:mychatolic_app/services/social_service.dart';
 import 'package:mychatolic_app/pages/post_detail_screen.dart';
 

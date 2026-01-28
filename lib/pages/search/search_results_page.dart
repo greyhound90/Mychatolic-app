@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:mychatolic_app/pages/profile_page.dart';
+import 'package:mychatolic_app/features/profile/pages/profile_page.dart';
 
 class SearchResultsPage extends StatelessWidget {
   final Map<String, dynamic> filters;

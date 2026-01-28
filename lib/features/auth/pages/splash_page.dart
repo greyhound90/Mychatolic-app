@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:math' as math;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'package:mychatolic_app/pages/login_page.dart';
+import 'package:mychatolic_app/features/auth/pages/login_page.dart';
 import 'package:mychatolic_app/pages/main_page.dart';
 
 class SplashPage extends StatefulWidget {

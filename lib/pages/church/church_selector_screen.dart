@@ -4,7 +4,7 @@ import 'package:mychatolic_app/core/theme.dart';
 import 'package:mychatolic_app/models/church.dart';
 import 'package:mychatolic_app/models/country.dart';
 import 'package:mychatolic_app/models/diocese.dart';
-import 'package:mychatolic_app/pages/church/church_detail_page.dart';
+import 'package:mychatolic_app/features/church/pages/church_detail_page.dart';
 import 'package:mychatolic_app/services/master_data_service.dart';
 
 class ChurchSelectorScreen extends StatefulWidget {

@@ -163,7 +163,7 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
               child: PostCard(
                 post: post,
                 socialService: _socialService,
-                heroTagPrefix: 'feed',
+
                 // Pass callback if PostCard supports it, or it handles internal state?
                 // NOTE: Ideally PostCard should just display data.
                 // If PostCard handles logic internally, 'optimistic' here is moot unless we pass a key or callback.

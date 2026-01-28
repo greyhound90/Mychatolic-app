@@ -14,9 +14,9 @@ import 'package:mychatolic_app/services/master_data_service.dart';
 import 'package:mychatolic_app/widgets/my_catholic_app_bar.dart';
 
 import 'package:mychatolic_app/services/profile_service.dart';
-import 'package:mychatolic_app/pages/profile/edit_profile_page.dart';
+import 'package:mychatolic_app/features/profile/pages/edit_profile_page.dart';
 import 'package:mychatolic_app/services/check_in_service.dart';
-import 'package:mychatolic_app/widgets/radar/check_in_components.dart';
+import 'package:mychatolic_app/features/radar/widgets/check_in_components.dart';
 
 class SchedulePage extends StatefulWidget {
   const SchedulePage({super.key});

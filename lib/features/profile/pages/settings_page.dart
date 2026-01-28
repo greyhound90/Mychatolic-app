@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:mychatolic_app/pages/login_page.dart';
+import 'package:mychatolic_app/features/auth/pages/login_page.dart';
 import 'package:mychatolic_app/providers/theme_provider.dart';
 import 'package:mychatolic_app/widgets/my_catholic_app_bar.dart';
 

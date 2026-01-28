@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mychatolic_app/features/profile/pages/edit_profile_page.dart';
 import 'package:mychatolic_app/features/verification/pages/verification_page.dart';
-import 'package:mychatolic_app/pages/login_page.dart';
+import 'package:mychatolic_app/features/auth/pages/login_page.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});

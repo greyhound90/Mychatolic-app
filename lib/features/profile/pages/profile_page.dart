@@ -1,79 +1,81 @@
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:mychatolic_app/models/profile.dart'; // UserRole, AccountStatus
+import 'package:mychatolic_app/models/profile.dart';
 import 'package:mychatolic_app/models/user_post.dart';
+import 'package:mychatolic_app/models/story_model.dart';
 import 'package:mychatolic_app/services/profile_service.dart';
-import 'package:mychatolic_app/services/post_service.dart'; // New Post Service
-import 'package:mychatolic_app/features/radar/pages/create_personal_radar_page.dart';
+import 'package:mychatolic_app/services/story_service.dart';
+import 'package:mychatolic_app/services/chat_service.dart';
+import 'package:mychatolic_app/services/social_service.dart';
+import 'package:mychatolic_app/widgets/safe_network_image.dart';
+import 'package:mychatolic_app/widgets/post_card.dart';
+import 'package:mychatolic_app/pages/post_detail_screen.dart';
+import 'package:mychatolic_app/features/profile/pages/settings_page.dart';
+import 'package:mychatolic_app/features/social/pages/social_chat_detail_page.dart';
+import 'package:mychatolic_app/pages/story/story_view_page.dart';
 import 'package:mychatolic_app/features/profile/pages/edit_profile_page.dart';
-import 'package:mychatolic_app/features/settings/pages/settings_page.dart';
-import 'package:mychatolic_app/features/profile/pages/follow_list_page.dart';
-import 'package:mychatolic_app/features/feed/widgets/post_card.dart'; // Re-use PostCard
-import 'package:mychatolic_app/widgets/secure_image_loader.dart';
-import 'package:mychatolic_app/features/feed/pages/post_detail_page.dart';
-import 'package:mychatolic_app/pages/chat/chat_page.dart'; // Chat Import
+import 'package:mychatolic_app/features/profile/widgets/mass_history_list.dart';
 
 class ProfilePage extends StatefulWidget {
-  final String? userId; // Optional, null means "Me"
-  final bool isBackButtonEnabled;
+  final String? userId; // If null, shows current user's profile
+  final bool isBackButtonEnabled; // For navigation from other pages
 
-  const ProfilePage({
-    Key? key,
-    this.userId,
-    this.isBackButtonEnabled = false,
-  }) : super(key: key);
+  const ProfilePage({super.key, this.userId, this.isBackButtonEnabled = false});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStateMixin {
+class _ProfilePageState extends State<ProfilePage>
+    with SingleTickerProviderStateMixin {
   final ProfileService _profileService = ProfileService();
-  final PostService _postService = PostService(); // Use new PostService
+  final StoryService _storyService = StoryService();
+  final ChatService _chatService = ChatService();
+  final SocialService _socialService = SocialService();
   final _supabase = Supabase.instance.client;
- 
-  late Future<void> _loadDataFuture;
+
   late TabController _tabController;
   final ScrollController _scrollController = ScrollController();
 
+  // State Variables
+  bool _isLoading = true; 
+  String? _error;
+
   Profile? _profile;
   Map<String, int> _stats = {'followers': 0, 'following': 0, 'posts': 0};
-  
-  // Split data
-  List<UserPost> _photoPosts = [];
-  List<UserPost> _textPosts = [];
-  List<UserPost> _savedPosts = []; 
-  
   bool _isFollowing = false;
   bool _isMe = false;
-  
-  String? _countryName;
-  String? _dioceseName;
-  String? _churchName;
 
-  final Color _primaryColor = const Color(0xFF0088CC);
-  final Color _gradientEnd = const Color(0xFF007AB8);
-  final Color _bgColor = const Color(0xFFF5F5F5);
+  // Post Lists (Pagination State)
+  List<UserPost> _photoPosts = [];
+  List<UserPost> _textPosts = [];
 
-  String get _targetUserId {
-    return widget.userId ?? _supabase.auth.currentUser?.id ?? '';
-  }
+  bool _isFirstLoadRunning = false;
+  bool _isLoadMoreRunning = false;
+  bool _hasNextPage = true;
+  int _currentPage = 0;
+  final int _limit = 12;
+
+  // Stories
+  List<Story> _userStories = [];
 
   @override
   void initState() {
     super.initState();
-    final currentUserId = _supabase.auth.currentUser?.id;
-    final target = _targetUserId;
-    _isMe = target.isNotEmpty && target == currentUserId;
+    _tabController = TabController(length: 2, vsync: this);
+    _checkIsMe();
+    _loadProfileData();
 
-    // Logic for Tab Length
-    // if _isMe: 3 Tabs (Galeri, Status, Disimpan)
-    // else: 2 Tabs (Galeri, Status)
-    _tabController = TabController(length: _isMe ? 3 : 2, vsync: this);
-    
-    _loadDataFuture = _loadData();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent - 200 &&
+          !_isFirstLoadRunning &&
+          !_isLoadMoreRunning &&
+          _hasNextPage) {
+        _loadMorePosts();
+      }
+    });
   }
 
   @override
@@ -83,693 +85,629 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     super.dispose();
   }
 
-  Future<void> _loadData() async {
-    final target = _targetUserId;
-    if (target.isEmpty) return;
+  void _checkIsMe() {
+    final currentUserId = _supabase.auth.currentUser?.id;
+    if (widget.userId == null || widget.userId == currentUserId) {
+      _isMe = true;
+    } else {
+      _isMe = false;
+    }
+  }
+
+  Future<void> _loadProfileData() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
 
     try {
-      // 1. Fetch Profile Data (Critical)
-      final profileResponse = await _supabase
-          .from('profiles')
-          .select('*, countries:country_id(name), dioceses:diocese_id(name), churches:church_id(name)')
-          .eq('id', target)
-          .single();
-
-      final profile = Profile.fromJson(profileResponse);
-      
-      final countryData = profileResponse['countries'];
-      final dioceseData = profileResponse['dioceses'];
-      final churchData = profileResponse['churches'];
-      
-      String? cName = (countryData != null) ? countryData['name'] : profile.country;
-      String? dName = (dioceseData != null) ? dioceseData['name'] : profile.diocese;
-      String? chName = (churchData != null) ? churchData['name'] : profile.parish;
-
-      // 2. Fetch Stats
-      Map<String, int> stats = {'followers': 0, 'following': 0, 'posts': 0};
-      try {
-        stats = await _profileService.fetchFollowCounts(target);
-      } catch (e) {
-        debugPrint("Error stats: $e");
+      final targetUserId = widget.userId ?? _supabase.auth.currentUser?.id;
+      if (targetUserId == null) {
+        setState(() {
+          _error = "User not found";
+          _isLoading = false;
+        });
+        return;
       }
 
-      bool isFollowing = false;
+      final data = await _profileService.fetchUserProfile(targetUserId);
+      final stories = await _storyService.fetchUserStories(targetUserId);
+
       if (!_isMe) {
-        try {
-          isFollowing = await _profileService.isFollowing(target);
-        } catch (e) { debugPrint("Error isFollowing: $e"); }
+        _isFollowing = await _profileService.checkIsFollowing(targetUserId);
       }
 
-      // 3. Update State with Base Info First (Optimization)
       if (mounted) {
-         setState(() {
-           _profile = profile;
-           _countryName = cName;
-           _dioceseName = dName;
-           _churchName = chName;
-           _stats = stats;
-           _isFollowing = isFollowing;
-         });
+        setState(() {
+          _profile = data['profile'] as Profile;
+          _stats = data['stats'] as Map<String, int>;
+          _userStories = stories;
+        });
+        await _loadInitialPosts(targetUserId);
       }
-
-      // 4. Fetch Posts independently (non-blocking if one fails)
-      
-      // A. Photos (Galeri)
-      try {
-         final photos = await _postService.fetchUserPhotoPosts(target);
-         if (mounted) setState(() => _photoPosts = photos);
-      } catch (e) {
-         debugPrint("Error fetching photos: $e");
-      }
-      
-      // B. Text (Status)
-      try {
-         final texts = await _postService.fetchUserTextPosts(target);
-         if (mounted) setState(() => _textPosts = texts);
-      } catch (e) {
-         debugPrint("Error fetching texts: $e");
-      }
-
-      // C. Saved (Only if Me)
-      if (_isMe) {
-         try {
-            // Verify session before call
-            if (_supabase.auth.currentUser?.id == target) {
-               final saved = await _postService.fetchSavedPosts();
-               if (mounted) setState(() => _savedPosts = saved);
-            }
-         } catch (e) {
-            debugPrint("Error fetching saved: $e");
-         }
-      }
-
-      // Update total posts count
-      if (mounted) {
-         setState(() {
-            _stats['posts'] = _photoPosts.length + _textPosts.length;
-         });
-      }
-
     } catch (e) {
-      debugPrint("Critical Error loading profile: $e");
+      debugPrint("Error loading profile: $e");
+      if (mounted) {
+        setState(() {
+          _error = "Gagal memuat profil. Silakan coba lagi.";
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  Future<void> _toggleFollow() async {
-    if (_isMe) return;
-    try {
-      if (_isFollowing) {
-        await _profileService.unfollowUser(_targetUserId);
-        setState(() => _isFollowing = false);
+  void _separatePosts(List<UserPost> posts) {
+    List<UserPost> photos = [];
+    List<UserPost> texts = [];
+    for (var p in posts) {
+      bool isPhoto = p.type == 'photo' || p.imageUrls.isNotEmpty;
+      if (isPhoto) {
+        photos.add(p);
       } else {
-        await _profileService.followUser(_targetUserId);
-        setState(() => _isFollowing = true);
+        texts.add(p);
       }
-      final stats = await _profileService.fetchFollowCounts(_targetUserId);
-      setState(() => _stats = stats);
+    }
+     _photoPosts = photos; 
+     _textPosts = texts;
+  }
+
+  Future<void> _loadInitialPosts(String userId) async {
+    try {
+      final posts = await _socialService.fetchPosts(
+        userId: userId,
+        page: 0,
+        limit: _limit,
+      );
+
+      if (mounted) {
+        setState(() {
+          if (posts.isNotEmpty) {
+             _separatePosts(posts);
+          }
+           // Use actual post count if needed, or stick to DB stats
+          if (posts.length < _limit) {
+            _hasNextPage = false;
+          }
+        });
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("$e")));
+      debugPrint("Error loading posts: $e");
     }
   }
 
-  void _navigateToFollowList(int initialIndex) {
+  Future<void> _loadMorePosts() async {
+    if (_isLoadMoreRunning || !_hasNextPage || _profile == null) return;
+    setState(() => _isLoadMoreRunning = true);
+    
+    try {
+      final nextPage = _currentPage + 1;
+      final posts = await _socialService.fetchPosts(
+        userId: _profile!.id,
+        page: nextPage,
+        limit: _limit,
+      );
+
+      if (mounted) {
+        setState(() {
+          if (posts.isNotEmpty) {
+            for (var p in posts) {
+               if (p.type == 'photo' || p.imageUrls.isNotEmpty) {
+                 _photoPosts.add(p);
+               } else {
+                 _textPosts.add(p);
+               }
+            }
+            _currentPage = nextPage;
+          }
+          if (posts.length < _limit) {
+            _hasNextPage = false;
+          }
+          _isLoadMoreRunning = false;
+        });
+      }
+    } catch (e) {
+       setState(() => _isLoadMoreRunning = false);
+    }
+  }
+
+  Future<void> _handleFollowToggle() async {
     if (_profile == null) return;
-    Navigator.push(
+    final bool previousState = _isFollowing;
+    final int previousCount = _stats['followers'] ?? 0;
+
+    setState(() {
+      if (previousState) {
+        _isFollowing = false;
+        _stats['followers'] = (previousCount > 0) ? previousCount - 1 : 0;
+      } else {
+        _isFollowing = true;
+        _stats['followers'] = previousCount + 1;
+      }
+    });
+
+    try {
+      if (previousState) {
+        await _profileService.unfollowUser(_profile!.id);
+      } else {
+        await _profileService.followUser(_profile!.id);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isFollowing = previousState;
+          _stats['followers'] = previousCount;
+        });
+      }
+    }
+  }
+
+  Future<void> _navigateToChat() async {
+    if (_profile != null) {
+      try {
+        final chatId = await _chatService.getOrCreatePrivateChat(_profile!.id);
+        if (!mounted) return;
+        
+        final Map<String, dynamic> opponentProfileMap = {
+          'id': _profile!.id,
+          'full_name': _profile!.fullName ?? "User",
+          'avatar_url': _profile!.avatarUrl,
+          'role': _profile!.role,
+        };
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SocialChatDetailPage(
+              chatId: chatId,
+              opponentProfile: opponentProfileMap,
+            ),
+          ),
+        );
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+        }
+      }
+    }
+  }
+
+  Future<void> _handleEditProfile() async {
+    final bool? result = await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => FollowListPage(userId: _targetUserId, initialTabIndex: initialIndex),
-      ),
+      MaterialPageRoute(builder: (_) => const EditProfilePage()),
+    );
+    if (result == true) {
+      _loadProfileData();
+    }
+  }
+
+  Future<void> _openSettings() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SettingsPage()),
+    );
+     _loadProfileData();
+  }
+
+  void _handleAvatarTap() {
+    if (_userStories.isNotEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => StoryViewPage(
+            stories: _userStories,
+            userProfile: {
+              'full_name': _profile?.fullName,
+              'avatar_url': _profile?.avatarUrl,
+            },
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _showReportDialog(BuildContext context) async {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Report User"),
+        content: const Text("Fitur pelaporan user akan segara hadir."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("OK"))
+        ],
+      )
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final double bannerHeight = 220.0;
-    final double whiteContentTopMargin = 180.0; 
-    final double avatarRadius = 65.0;
-    final double avatarTop = whiteContentTopMargin - avatarRadius; 
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_error != null || _profile == null) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(title: const Text("Profil")),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.grey),
+              const SizedBox(height: 16),
+              Text(_error ?? "Data profil tidak ditemukan.", style: GoogleFonts.outfit(color: Colors.black54)),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadProfileData,
+                child: const Text("Coba Lagi"),
+              )
+            ],
+          ),
+        ),
+      );
+    }
+
+    final displayProfile = _profile!;
 
     return Scaffold(
-      backgroundColor: _bgColor,
-      body: FutureBuilder(
-        future: _loadDataFuture, // Keeping this, though logic now does incremental setStates
-        builder: (context, snapshot) {
-           // We can rely on _profile being null or not
-           if (_profile == null && snapshot.connectionState == ConnectionState.waiting) {
-             return const Center(child: CircularProgressIndicator());
-           }
-           if (_profile == null) {
-              return const Center(child: Text("Gagal memuat profil"));
-           }
-
-          return Stack(
-            children: [
-              NestedScrollView(
-                controller: _scrollController,
-                headerSliverBuilder: (context, innerBoxIsScrolled) {
-                  return [
-                    SliverToBoxAdapter(
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          // A. BANNER
-                          Container(
-                             height: bannerHeight,
-                             width: double.infinity,
-                             decoration: BoxDecoration(
-                               gradient: LinearGradient(
-                                  colors: [_primaryColor, _gradientEnd],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight
-                               ), 
-                             ),
-                             child: _profile?.bannerUrl != null 
-                                 ? SecureImageLoader(imageUrl: _profile!.bannerUrl!, fit: BoxFit.cover)
-                                 : const Center(child: Icon(Icons.church_outlined, size: 60, color: Colors.white24)),
-                           ),
-                           
-                           // B. BODY CONTENT
-                           Column(
-                             children: [
-                               SizedBox(height: whiteContentTopMargin),
-                               Container(
-                                 width: double.infinity,
-                                 decoration: const BoxDecoration(
-                                   color: Color(0xFFF5F5F5), 
-                                   borderRadius: BorderRadius.vertical(top: Radius.circular(30))
-                                 ),
-                                 child: Column(
-                                   children: [
-                                      const SizedBox(height: 75), 
-                                      
-                                      // 1. NAME & ROLE
-                                      Text(
-                                        _profile!.fullName ?? "User",
-                                        textAlign: TextAlign.center,
-                                        style: GoogleFonts.outfit(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                      if (_profile!.isClergy)
-                                        Container(
-                                          margin: const EdgeInsets.only(top: 8),
-                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: Colors.blue.shade50,
-                                            borderRadius: BorderRadius.circular(20),
-                                            border: Border.all(color: _primaryColor.withValues(alpha: 0.3)),
-                                          ),
-                                          child: Text(
-                                            _profile!.roleLabel,
-                                            style: GoogleFonts.outfit(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.bold,
-                                              color: _primaryColor,
-                                            ),
-                                          ),
-                                        ),
-                                        
-                                      // 2. BIO
-                                      const SizedBox(height: 8),
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                                        child: Text(
-                                          _profile!.bio ?? "Belum ada bio.",
-                                          textAlign: TextAlign.center,
-                                          style: GoogleFonts.outfit(
-                                            fontSize: 14,
-                                            color: Colors.grey[600],
-                                            height: 1.4,
-                                          ),
-                                        ),
-                                      ),
-
-                                      // 3. LOCATION INFO
-                                      const SizedBox(height: 16),
-                                      if (_countryName != null || _churchName != null) 
-                                        Container(
-                                          margin: const EdgeInsets.symmetric(horizontal: 30),
-                                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(12),
-                                            border: Border.all(color: Colors.grey.shade200)
-                                          ),
-                                          child: Column(
-                                            children: [
-                                              if (_countryName != null)
-                                                Padding(
-                                                  padding: const EdgeInsets.only(bottom: 4),
-                                                  child: Row(
-                                                    mainAxisAlignment: MainAxisAlignment.center,
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      Icon(Icons.location_on_outlined, size: 16, color: Colors.grey[600]),
-                                                      const SizedBox(width: 6),
-                                                      Text(
-                                                        "$_countryName${_dioceseName != null ? ', $_dioceseName' : ''}",
-                                                        style: GoogleFonts.outfit(fontSize: 13, color: Colors.grey[700]),
-                                                        textAlign: TextAlign.center,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              if (_churchName != null)
-                                                Row(
-                                                  mainAxisAlignment: MainAxisAlignment.center,
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    Icon(Icons.church_outlined, size: 16, color: Colors.grey[600]),
-                                                    const SizedBox(width: 6),
-                                                    Flexible(
-                                                      child: Text(
-                                                        _churchName!,
-                                                        style: GoogleFonts.outfit(fontSize: 13, color: Colors.grey[700]),
-                                                        textAlign: TextAlign.center,
-                                                        overflow: TextOverflow.ellipsis,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                      
-                                      const SizedBox(height: 24),
-                                      _buildActionButtons(),
-                                      const SizedBox(height: 24),
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                                        child: _buildStatsCard(),
-                                      ),
-                                      const SizedBox(height: 24),
-                                   ],
-                                 ),
-                               ),
-                             ],
-                           ),
-                           
-                           // C. AVATAR
-                           Positioned(
-                             top: avatarTop, 
-                             left: 0,
-                             right: 0,
-                             child: Center(
-                               child: Stack(
-                                 children: [
-                                   Container(
-                                     width: avatarRadius * 2,
-                                     height: avatarRadius * 2,
-                                     decoration: BoxDecoration(
-                                       shape: BoxShape.circle,
-                                       border: Border.all(color: Colors.white, width: 4), 
-                                       boxShadow: [
-                                         BoxShadow(
-                                            color: Colors.black.withValues(alpha: 0.15),
-                                            blurRadius: 10,
-                                            offset: const Offset(0, 5),
-                                         )
-                                       ],
-                                     ),
-                                     child: ClipOval(
-                                       child: SecureImageLoader(
-                                         imageUrl: _profile?.avatarUrl ?? '',
-                                         fit: BoxFit.cover,
-                                       ),
-                                     ),
-                                   ),
-                                   if (_profile?.isVerified == true)
-                                      Positioned(
-                                        bottom: 6,
-                                        right: 6,
-                                        child: Container(
-                                          padding: const EdgeInsets.all(4),
-                                          decoration: const BoxDecoration(
-                                            color: Colors.white,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: const Icon(Icons.verified, color: Colors.blue, size: 24),
-                                        ),
-                                      ),
-                                 ],
-                               ),
-                             ),
-                           ),
-                        ],
-                      ),
-                    ),
-                    
-                    SliverPersistentHeader(
-                      delegate: _StickyTabBarDelegate(
-                        TabBar(
-                          controller: _tabController,
-                          labelColor: _primaryColor,
-                          unselectedLabelColor: Colors.grey,
-                          indicatorColor: _primaryColor,
-                          indicatorWeight: 3,
-                          labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-                          tabs: [
-                            const Tab(text: "GALERI"),
-                            const Tab(text: "STATUS"),
-                            if (_isMe) const Tab(text: "DISIMPAN"), 
-                          ],
-                        ),
-                        color: _bgColor,
-                      ),
-                      pinned: true,
-                    ),
-                  ];
-                },
-                body: TabBarView(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: Text(
+          displayProfile.fullName ?? "Profil",
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.black),
+        ),
+        centerTitle: false,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined, color: Colors.black),
+            onPressed: () => _isMe ? _openSettings() : _showReportDialog(context),
+          ),
+        ],
+      ),
+      body: NestedScrollView(
+        controller: _scrollController,
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            SliverToBoxAdapter(
+              child: ProfileHeader(
+                profile: displayProfile,
+                stats: _stats,
+                isMe: _isMe,
+                isFollowing: _isFollowing,
+                onFollowToggle: _handleFollowToggle,
+                onChatTap: _navigateToChat,
+                onEditTap: _handleEditProfile,
+                hasStories: _userStories.isNotEmpty,
+                onAvatarTap: _handleAvatarTap,
+              ),
+            ),
+            SliverPersistentHeader(
+              delegate: _SliverTabBarDelegate(
+                TabBar(
                   controller: _tabController,
-                  children: [
-                    _buildPhotoGrid(),
-                    _buildTextList(),
-                    if (_isMe) _buildSavedList(), 
+                  indicatorColor: Colors.black,
+                  labelColor: Colors.black,
+                  unselectedLabelColor: Colors.grey,
+                  indicatorWeight: 1,
+                  tabs: const [
+                    Tab(icon: Icon(Icons.grid_on_outlined)),
+                    Tab(icon: Icon(Icons.list_alt_outlined)),
                   ],
                 ),
               ),
-
-              // Floating Nav
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        widget.isBackButtonEnabled
-                            ? CircleAvatar(
-                                backgroundColor: Colors.black.withValues(alpha: 0.3),
-                                child: IconButton(
-                                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                                  onPressed: () => Navigator.pop(context),
-                                ),
-                              )
-                            : const SizedBox.shrink(),
-                        
-                        _isMe
-                            ? CircleAvatar(
-                                backgroundColor: Colors.black.withValues(alpha: 0.3),
-                                child: IconButton(
-                                  icon: const Icon(Icons.settings_outlined, color: Colors.white),
-                                  onPressed: () {
-                                     Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()));
-                                  },
-                                ),
-                              )
-                            : CircleAvatar(
-                                backgroundColor: Colors.black.withValues(alpha: 0.3),
-                                child: IconButton(
-                                  icon: const Icon(Icons.more_vert, color: Colors.white),
-                                  onPressed: () {},
-                                ),
-                              ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          );
+              pinned: true,
+            ),
+          ];
         },
+        body: TabBarView(
+          controller: _tabController,
+          children: [_buildGridPosts(), _buildListPosts()],
+        ),
       ),
     );
   }
 
-  // Helpers
-  Widget _buildStatsCard() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.05),
-            offset: const Offset(0, 5),
-            blurRadius: 15,
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildStatItem("Post", _stats['posts'] ?? 0),
-          _buildVerticalDivider(),
-          InkWell(
-            onTap: () => _navigateToFollowList(0),
-            child: _buildStatItem("Pengikut", _stats['followers'] ?? 0),
-          ),
-          _buildVerticalDivider(),
-          InkWell(
-            onTap: () => _navigateToFollowList(1),
-            child: _buildStatItem("Mengikuti", _stats['following'] ?? 0),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVerticalDivider() {
-    return Container(
-      height: 30,
-      width: 1,
-      color: Colors.grey.withValues(alpha: 0.2),
-    );
-  }
-
-  Widget _buildStatItem(String label, int count) {
-    return Column(
-      children: [
-        Text(
-          count.toString(),
-          style: GoogleFonts.outfit(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
+  Widget _buildGridPosts() {
+    if (_photoPosts.isEmpty) {
+      return _buildEmptyState("Belum ada foto");
+    }
+    return CustomScrollView(
+      key: const PageStorageKey<String>('grid'),
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.all(2),
+          sliver: SliverGrid(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3, // Instagram standard
+              childAspectRatio: 1.0, // Square
+              crossAxisSpacing: 2,
+              mainAxisSpacing: 2,
+            ),
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final post = _photoPosts[index];
+              return GestureDetector(
+                onTap: () {
+                   Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PostDetailScreen(post: post),
+                    ),
+                  );
+                },
+                child: SafeNetworkImage(
+                  imageUrl: post.imageUrl ?? "",
+                  fit: BoxFit.cover,
+                ),
+              );
+            }, childCount: _photoPosts.length),
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: GoogleFonts.outfit(
-            fontSize: 12,
-            color: Colors.grey,
+        if (_isLoadMoreRunning)
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.all(10),
+              child: Center(child: CircularProgressIndicator()),
+            ),
           ),
-        ),
       ],
     );
   }
 
-  Widget _buildActionButtons() {
-    // Jika Profil Saya (Edit & Share)
-    if (_isMe) {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          ElevatedButton.icon(
-            onPressed: () async {
-              final reload = await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const EditProfilePage())
-              );
-              if (reload == true) _loadData();
-            },
-            icon: const Icon(Icons.edit, size: 18),
-            label: Text("Edit Profil", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _primaryColor,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-            ),
-          ),
-          const SizedBox(width: 12),
-          OutlinedButton.icon(
-            onPressed: () { /* Share Logic */ },
-            icon: const Icon(Icons.share, size: 18),
-            label: Text("Share", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.black87,
-              side: BorderSide(color: Colors.grey.shade300),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-            ),
-          ),
-        ],
-      );
-    } 
-    
-    // Jika Profil Orang Lain (Ikuti, Pesan, Ajak Misa)
-    else {
-      // Warna Hijau untuk tombol Ajak Misa
-      final Color colorGreen = const Color(0xFF2ECC71); 
-
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16), 
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // 1. Tombol Ikuti
-            Expanded(
-              child: ElevatedButton(
-                onPressed: _toggleFollow,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _isFollowing ? Colors.grey.shade200 : _primaryColor,
-                  foregroundColor: _isFollowing ? Colors.black : Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                ),
-                child: Text(
-                  _isFollowing ? "Mengikuti" : "Ikuti",
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
-            
-            const SizedBox(width: 8),
-
-            // 2. Tombol Pesan (Chat)
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      // Unified Chat System: Direct to ChatPage with partnerId
-                      // This triggers the auto-redirect logic in ChatPage to open the specific room
-                      builder: (_) => ChatPage(partnerId: _targetUserId),
-                    ),
-                  );
-                },
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: _primaryColor,
-                  side: BorderSide(color: _primaryColor),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                  backgroundColor: Colors.white,
-                ),
-                child: Text(
-                  "Pesan", 
-                  style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-
-            const SizedBox(width: 8),
-
-            // 3. Tombol Ajak Misa (Fitur Radar)
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () {
-                   if (_profile != null) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => CreatePersonalRadarPage(targetUser: _profile!),
-                        ),
-                      );
-                   }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorGreen, 
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                ),
-                child: Text(
-                  "Ajak Misa",
-                  style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
+  Widget _buildListPosts() {
+     if (_textPosts.isEmpty) {
+      return _buildEmptyState("Belum ada postingan teks");
     }
-  }
-
-  Widget _buildPhotoGrid() {
-    if (_photoPosts.isEmpty) { 
-       return Center(child: Text("Belum ada foto", style: GoogleFonts.outfit(color: Colors.grey)));
-    }
-    return GridView.builder(
+    return ListView.separated(
+      key: const PageStorageKey<String>('list'),
       padding: EdgeInsets.zero,
-      itemCount: _photoPosts.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 2,
-        mainAxisSpacing: 2,
-      ),
+      itemCount: _textPosts.length + (_isLoadMoreRunning ? 1 : 0),
+      separatorBuilder: (c, i) => Divider(height: 1, color: Colors.grey[200]),
       itemBuilder: (context, index) {
-        final post = _photoPosts[index];
-        final imageUrl = post.imageUrls.isNotEmpty ? post.imageUrls.first : null;
-        return GestureDetector(
-          onTap: () {
-             Navigator.push(context, MaterialPageRoute(builder: (_) => PostDetailPage(post: post)));
-          },
-          child: Container(
-            color: Colors.grey.shade200,
-            child: imageUrl != null 
-               ? SecureImageLoader(imageUrl: imageUrl, fit: BoxFit.cover)
-               : const Center(child: Icon(Icons.image)),
-          ),
+        if (index == _textPosts.length) {
+          return const Padding(
+              padding: EdgeInsets.all(20),
+              child: Center(child: CircularProgressIndicator()));
+        }
+        final post = _textPosts[index];
+        return PostCard(
+           post: post,
+           onUpdate: (updated) {
+              setState(() {
+                _textPosts[index] = updated;
+              });
+           },
         );
       },
     );
   }
 
-  Widget _buildTextList() {
-    if (_textPosts.isEmpty) { 
-       return Center(child: Text("Belum ada status", style: GoogleFonts.outfit(color: Colors.grey)));
-    }
-    return ListView.builder(
-      padding: const EdgeInsets.only(top: 0, bottom: 20),
-      itemCount: _textPosts.length,
-      itemBuilder: (context, index) {
-         final post = _textPosts[index];
-         return PostCard(post: post);
-      },
-    );
-  }
-
-  Widget _buildSavedList() {
-    if (_savedPosts.isEmpty) { 
-       return Center(child: Text("Belum ada yang disimpan atau akun diprivate", style: GoogleFonts.outfit(color: Colors.grey)));
-    }
-    return ListView.builder(
-      padding: const EdgeInsets.only(top: 0, bottom: 20),
-      itemCount: _savedPosts.length,
-      itemBuilder: (context, index) {
-         final post = _savedPosts[index];
-         return PostCard(post: post);
-      },
+  Widget _buildEmptyState(String msg) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.camera_alt_outlined, size: 64, color: Colors.grey[300]),
+          const SizedBox(height: 16),
+          Text(msg, style: GoogleFonts.outfit(color: Colors.grey, fontSize: 16)),
+        ],
+      ),
     );
   }
 }
 
-class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
-  final TabBar tabBar;
-  final Color color;
-  _StickyTabBarDelegate(this.tabBar, {this.color = Colors.white});
-  @override Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) => Container(color: color, child: tabBar);
-  @override double get maxExtent => tabBar.preferredSize.height;
-  @override double get minExtent => tabBar.preferredSize.height;
-  @override bool shouldRebuild(_StickyTabBarDelegate oldDelegate) => tabBar != oldDelegate.tabBar;
+// ---------------------------------------------------------------------------
+// HELPER CLASSES
+// ---------------------------------------------------------------------------
+
+class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
+  final TabBar _tabBar;
+  _SliverTabBarDelegate(this._tabBar);
+
+  @override
+  double get minExtent => _tabBar.preferredSize.height;
+  @override
+  double get maxExtent => _tabBar.preferredSize.height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: Colors.white,
+      child: _tabBar,
+    );
+  }
+
+  @override
+  bool shouldRebuild(_SliverTabBarDelegate oldDelegate) => false;
+}
+
+class ProfileHeader extends StatelessWidget {
+  final Profile profile;
+  final Map<String, int> stats;
+  final bool isMe;
+  final bool isFollowing;
+  final VoidCallback onFollowToggle;
+  final VoidCallback onChatTap;
+  final VoidCallback? onEditTap;
+  final bool hasStories;
+  final VoidCallback? onAvatarTap;
+
+  const ProfileHeader({
+    super.key,
+    required this.profile,
+    required this.stats,
+    required this.isMe,
+    required this.isFollowing,
+    required this.onFollowToggle,
+    required this.onChatTap,
+    this.onEditTap,
+    this.hasStories = false,
+    this.onAvatarTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Row 1: Avatar + Stats
+          Row(
+            children: [
+              // Avatar with Story indicator if needed
+              GestureDetector(
+                onTap: onAvatarTap,
+                child: Container(
+                  decoration: hasStories
+                      ? BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.pink, width: 2),
+                        )
+                      : null,
+                  padding: const EdgeInsets.all(3),
+                  child: ClipOval(
+                    child: SafeNetworkImage(
+                      imageUrl: profile.avatarUrl ?? "",
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 20),
+              // Stats
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildStat(stats['posts'] ?? 0, "Post"),
+                    _buildStat(stats['followers'] ?? 0, "Followers"),
+                    _buildStat(stats['following'] ?? 0, "Following"),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          
+          // Name & Bio
+          Text(
+            profile.fullName ?? "User",
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          if (profile.bio != null && profile.bio!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              profile.bio!,
+              style: GoogleFonts.outfit(fontSize: 14),
+            ),
+          ],
+          
+          const SizedBox(height: 12),
+          
+          // Action Buttons
+          isMe
+              ? Row(
+                  children: [
+                    Expanded(
+                      child: _buildButton(
+                        text: "Edit Profil",
+                        onTap: onEditTap,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildButton(
+                        text: "Bagikan Profil",
+                        onTap: () {}, // TODO: Implement share
+                      ),
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(
+                      child: _buildButton(
+                        text: isFollowing ? "Mengikuti" : "Ikuti",
+                        isPrimary: !isFollowing,
+                        onTap: onFollowToggle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildButton(
+                        text: "Pesan",
+                        onTap: onChatTap,
+                      ),
+                    ),
+                  ],
+                ),
+          
+          const SizedBox(height: 16),
+          const Divider(),
+          const SizedBox(height: 8),
+          Text("Riwayat Misa", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14)),
+          const SizedBox(height: 8),
+          MassHistoryList(
+             userId: profile.id, 
+             isMyProfile: isMe,
+          ),
+
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStat(int count, String label) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          "$count",
+          style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.outfit(fontSize: 14),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildButton({
+    required String text, 
+    required VoidCallback? onTap, 
+    bool isPrimary = false
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        height: 32,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isPrimary ? Colors.blue : Colors.grey[200],
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          text,
+          style: GoogleFonts.outfit(
+            color: isPrimary ? Colors.white : Colors.black,
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
 }

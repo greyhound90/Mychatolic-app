@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:mychatolic_app/pages/church/church_detail_page.dart';
+import 'package:mychatolic_app/features/church/pages/church_detail_page.dart';
 import 'package:mychatolic_app/services/master_data_service.dart'; // Import
 import 'package:mychatolic_app/widgets/safe_network_image.dart';
 import 'package:mychatolic_app/widgets/my_catholic_app_bar.dart';

@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mychatolic_app/services/check_in_service.dart';
 import 'package:mychatolic_app/widgets/safe_network_image.dart';
-import 'package:mychatolic_app/pages/social_chat_detail_page.dart';
+import 'package:mychatolic_app/features/social/pages/social_chat_detail_page.dart';
 
 const Color kPrimaryBlue = Color(0xFF0088CC);
 

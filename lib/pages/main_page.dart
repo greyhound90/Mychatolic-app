@@ -5,13 +5,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mychatolic_app/pages/home_screen.dart';
 import 'package:mychatolic_app/pages/create_post_screen.dart';
 // Replaced ChurchListPage with SchedulePage
-import 'package:mychatolic_app/pages/schedule_page.dart';
+import 'package:mychatolic_app/features/church/pages/schedule_page.dart';
 
 import 'package:mychatolic_app/features/profile/pages/profile_page.dart';
 import 'package:mychatolic_app/bible/presentation/bible_library_screen.dart';
-import 'package:mychatolic_app/pages/radar_page.dart';
+import 'package:mychatolic_app/features/radar/pages/radar_page.dart';
 // import 'package:mychatolic_app/pages/social_inbox_page.dart'; // Deleted
-import 'package:mychatolic_app/pages/chat/chat_page.dart'; // Unified Chat
+import 'package:mychatolic_app/features/social/pages/chat_page.dart'; // Unified Chat
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
