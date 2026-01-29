@@ -38,18 +38,107 @@ class _SplashPageState extends State<SplashPage>
     super.dispose();
   }
 
-  void _navigateToNextPage() {
-    final session = Supabase.instance.client.auth.currentSession;
-    if (session != null) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
-      );
-    } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginPage()),
-      );
+  Future<void> _navigateToNextPage() async {
+    final supabase = Supabase.instance.client;
+    final session = supabase.auth.currentSession;
+
+    // 1. NO SESSION -> LOGIN
+    if (session == null) {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+        );
+      }
+      return;
+    }
+
+    try {
+      // 2. HAS SESSION -> CHECK PROFILE
+      // We need to ensure the user actually has a valid profile in the database.
+      final user = session.user;
+      final profileData = await supabase
+          .from('profiles')
+          .select()
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (profileData == null) {
+        // CONDITION 1: ORPHANED USER (Auth exists, but no Profile)
+        // This is a critical data error. Force logout to prevent app crash.
+        await supabase.auth.signOut();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Profil tidak ditemukan. Silakan login ulang."),
+              backgroundColor: Colors.red,
+            ),
+          );
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+          );
+        }
+        return;
+      }
+
+      // CONDITION 2: ACCOUNT STATUS CHECK (Banned/Rejected)
+      final statusRaw = profileData['account_status']?.toString().toLowerCase();
+      final isBanned = statusRaw == 'banned' || statusRaw == 'rejected';
+
+      if (isBanned) {
+        // Show Banned Dialog
+        if (mounted) {
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              title: const Text("Akun Ditangguhkan"),
+              content: const Text(
+                "Maaf, akun Anda telah dinonaktifkan atau ditolak karena melanggar kebijakan komunitas.",
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                  },
+                  child: const Text("OK"),
+                ),
+              ],
+            ),
+          );
+
+          // Sign out and go to login
+          await supabase.auth.signOut();
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const LoginPage()),
+            );
+          }
+        }
+        return;
+      }
+
+      // CONDITION 3: NORMAL -> GO HOME
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomePage()),
+        );
+      }
+    } catch (e) {
+      // Fallback on error (e.g. network issue during profile fetch)
+      // For safety, let's keep them on splash or go to login.
+      // Going to login is safer to force retry.
+      debugPrint("Splash Gatekeeper Error: $e");
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+        );
+      }
     }
   }
 

@@ -57,7 +57,29 @@ class _LoginPageState extends State<LoginPage> {
         password: password,
       );
 
-      if (response.user != null) {
+      final user = response.user;
+
+      if (user != null) {
+        // GHOST BUSTER: Check if email is verified
+        // Note: For newer Supabase versions, 'email_confirmed_at' is used.
+        if (user.emailConfirmedAt == null) {
+          // USER IS A GHOST (Unverified) -> KICK THEM OUT
+          await Supabase.instance.client.auth.signOut();
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content:
+                    Text("Email belum diverifikasi. Silakan cek inbox/spam Anda."),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 4),
+              ),
+            );
+          }
+          return;
+        }
+
+        // USER IS CLEAN -> PROCEED
         if (mounted) {
           Navigator.pushReplacement(
             context,
@@ -69,7 +91,7 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
 
       String message = e.message;
-      // Humanize Supabase Auth Errors
+      // Humanize Supabase Auth Errors (Indonesian)
       if (message.toLowerCase().contains("invalid login credentials")) {
         message = "Email atau kata sandi salah.";
       } else if (message.toLowerCase().contains("email not confirmed")) {

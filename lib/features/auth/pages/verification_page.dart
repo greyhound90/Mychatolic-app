@@ -4,12 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mychatolic_app/widgets/safe_network_image.dart';
-// import 'package:mychatolic_app/main.dart';
 
 class VerificationPage extends StatefulWidget {
-  final String userRole; // 'umat', 'pastor', 'suster', 'bruder', 'katekis'
-
-  const VerificationPage({super.key, required this.userRole});
+  const VerificationPage({super.key});
 
   @override
   State<VerificationPage> createState() => _VerificationPageState();
@@ -18,7 +15,11 @@ class VerificationPage extends StatefulWidget {
 class _VerificationPageState extends State<VerificationPage> {
   final ImagePicker _picker = ImagePicker();
 
-  bool _isSubmitting = false;
+  // State Variables
+  bool _isLoadingProfile = true;
+  bool _isSubmitting = false; // Initial loading state for profile fetch
+  String? _userRole; // 'umat', 'pastor', 'katekumen', etc.
+  bool _isCatechumen = false;
 
   // Track file paths: Key = DocType, Value = Supabase Path
   final Map<String, String?> _documents = {};
@@ -34,22 +35,74 @@ class _VerificationPageState extends State<VerificationPage> {
   static const String docKrisma = 'Surat Krisma';
   static const String docTugas = 'Surat Tugas Resmi';
 
-  // Getters for specific role logic
-  bool get _isUmat => widget.userRole.toLowerCase() == 'umat';
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserData();
+  }
 
-  List<String> get _requiredDocs {
-    if (_isUmat) {
-      return [docKtp, docBaptis];
-    } else {
-      return [docTugas];
+  Future<void> _fetchUserData() async {
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) throw "User not logged in";
+
+      final response = await Supabase.instance.client
+          .from('profiles')
+          .select('role, user_role') // Fetch both possible columns
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (response != null && mounted) {
+        // Prioritize 'user_role' (new schema), fallback to 'role'
+        final String roleRaw =
+            (response['user_role'] ?? response['role'] ?? 'umat')
+                .toString()
+                .toLowerCase();
+
+        setState(() {
+          _userRole = roleRaw;
+          // Check if explicitly katekumen
+          _isCatechumen = roleRaw == 'katekumen'; 
+          _isLoadingProfile = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching profile: $e");
+      if (mounted) {
+        setState(() => _isLoadingProfile = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Gagal memuat data profil: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
+  // --- LOGIC GETTERS ---
+
+  // Case A: UMAT (Exclude Katekumen)
+  bool get _isUmatLegacy =>
+      (_userRole == 'umat' || _userRole == 'umat_katolik') && !_isCatechumen;
+
+  // Case B: CLERGY
+  bool get _isClergy {
+    final clergyRoles = ['pastor', 'suster', 'bruder', 'frater', 'katekis'];
+    return clergyRoles.contains(_userRole);
+  }
+
+  // Determine Required Docs based on Role
+  List<String> get _requiredDocs {
+    if (_isCatechumen) return []; // Case C
+    if (_isClergy) return [docTugas]; // Case B
+    return [docKtp, docBaptis]; // Case A (Default/Umat)
+  }
+
+  // Determine Optional Docs based on Role
   List<String> get _optionalDocs {
-    if (_isUmat) {
-      return [docKrisma];
-    }
-    return [];
+    if (_isCatechumen || _isClergy) return [];
+    return [docKrisma]; // Only Umat has optional Krisma
   }
 
   List<String> get _allDocTypes => [..._requiredDocs, ..._optionalDocs];
@@ -60,20 +113,25 @@ class _VerificationPageState extends State<VerificationPage> {
     for (var doc in _requiredDocs) {
       if (_documents[doc] == null) return false;
     }
-    // 2. Check Mandatory Selfie
+    // 2. Check Mandatory Selfie (Always required except Katekumen?)
+    // Logic: Katekumen doesn't need verification docs, so maybe no selfie either?
+    // User Rules: "CASE C... Sembunyikan SEMUA form upload."
+    if (_isCatechumen) return true; 
+
     if (_faceImagePath == null) return false;
 
     return true;
   }
 
-  // Generic Image Picker & Uploader
+  // --- UPLOAD HANDLERS ---
+
   Future<void> _pickAndUploadImage(String docType, ImageSource source) async {
     try {
       final XFile? image = await _picker.pickImage(
         source: source,
         maxWidth: 1024,
         maxHeight: 1024,
-        imageQuality: 70, // Optimized
+        imageQuality: 70,
       );
 
       if (image == null) return;
@@ -130,7 +188,6 @@ class _VerificationPageState extends State<VerificationPage> {
     }
   }
 
-  // Shared Upload Function
   Future<String?> _uploadToSupabase(File file, String docTag) async {
     final String userId =
         Supabase.instance.client.auth.currentUser?.id ?? 'temp_user';
@@ -150,6 +207,8 @@ class _VerificationPageState extends State<VerificationPage> {
     return fileName;
   }
 
+  // --- SUBMIT LOGIC ---
+
   Future<void> _submitVerification() async {
     setState(() => _isSubmitting = true);
 
@@ -162,12 +221,16 @@ class _VerificationPageState extends State<VerificationPage> {
       // Prepare Update Data
       Map<String, dynamic> updates = {
         'verification_status': 'pending',
-        'selfie_url':
-            _faceImagePath, // Assuming this column exists or user requested this logic
+        'account_status': 'pending', 
         'updated_at': DateTime.now().toIso8601String(),
       };
 
-      // Map dynamic docs to columns
+      // Ensure selfie is saved if present
+      if (_faceImagePath != null) {
+        updates['selfie_url'] = _faceImagePath;
+      }
+
+      // Map dynamic docs to columns based on what was uploaded
       if (_documents[docKtp] != null) {
         updates['ktp_url'] = _documents[docKtp];
       }
@@ -192,6 +255,8 @@ class _VerificationPageState extends State<VerificationPage> {
       setState(() => _isSubmitting = false);
     }
   }
+
+  // --- UI HELPERS ---
 
   void _showSuccessDialog() {
     showDialog(
@@ -278,6 +343,21 @@ class _VerificationPageState extends State<VerificationPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoadingProfile) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF0F172A),
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFF8B5CF6)),
+        ),
+      );
+    }
+
+    // CASE C: KATEKUMEN -> No Forms, just Message
+    if (_isCatechumen) {
+      return _buildCatechumenView();
+    }
+
+    // CASE A & B: Standard Upload Flow
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
@@ -301,7 +381,9 @@ class _VerificationPageState extends State<VerificationPage> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
             child: Text(
-              "Lengkapi dokumen berikut untuk mendapatkan lencana terverifikasi.",
+              _isClergy
+                  ? "Mohon lampirkan Surat Tugas resmi dan Foto Selfie untuk verifikasi status klerus Anda."
+                  : "Lengkapi dokumen berikut untuk mendapatkan lencana terverifikasi.",
               textAlign: TextAlign.center,
               style: GoogleFonts.outfit(color: Colors.white70, fontSize: 14),
             ),
@@ -332,7 +414,7 @@ class _VerificationPageState extends State<VerificationPage> {
 
                   const SizedBox(height: 30),
 
-                  // 2. Selfie Card (Mandatory)
+                  // 2. Selfie Card (Mandatory for NON-Katekumen)
                   _buildFaceVerificationCard(),
                 ],
               ),
@@ -400,6 +482,86 @@ class _VerificationPageState extends State<VerificationPage> {
       ),
     );
   }
+
+  // --- SPECIAL VIEWS ---
+
+  Widget _buildCatechumenView() {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F172A),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E293B),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF8B5CF6).withValues(alpha: 0.3),
+                      blurRadius: 30,
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.favorite,
+                  color: Color(0xFF8B5CF6),
+                  size: 64,
+                ),
+              ),
+              const SizedBox(height: 32),
+              Text(
+                "Halo Katekumen!",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "Status Anda tidak memerlukan verifikasi dokumen sakramen saat ini. Silakan lanjutkan eksplorasi aplikasi.",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  color: Colors.white70,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 48),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF8B5CF6),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: Text(
+                    "KEMBALI KE BERANDA",
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- WIDGET COMPONENTS ---
 
   Widget _buildDocumentCard(String docType, {bool isOptional = false}) {
     final String? uploadedPath = _documents[docType];
@@ -471,7 +633,7 @@ class _VerificationPageState extends State<VerificationPage> {
                           fallbackIcon: Icons.broken_image,
                           iconColor: Colors.white24,
                           fallbackColor: Colors
-                              .transparent, // Or keep dark theme consistent
+                              .transparent,
                         ),
                       ),
 
