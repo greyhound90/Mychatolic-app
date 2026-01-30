@@ -25,12 +25,14 @@ class ProfileService {
 
       final data = Map<String, dynamic>.from(response);
 
-      debugPrint("=== AUDIT PROFIL ===");
-      debugPrint("NAMA BAPTIS DB: ${data['baptism_name']}");
-      debugPrint("ID NEGARA: ${data['country_id']}");
-      debugPrint("DATA JOIN NEGARA: ${data['countries']}");
-      debugPrint("DATA JOIN GEREJA: ${data['churches']}");
-      debugPrint("====================");
+      if (kDebugMode) {
+        debugPrint("=== AUDIT PROFIL ===");
+        debugPrint("NAMA BAPTIS DB: ${data['baptism_name']}");
+        debugPrint("ID NEGARA: ${data['country_id']}");
+        debugPrint("DATA JOIN NEGARA: ${data['countries']}");
+        debugPrint("DATA JOIN GEREJA: ${data['churches']}");
+        debugPrint("====================");
+      }
 
       // Manual Flattening / Safety Check for Nested JSON
       // This ensures we prioritize the Relation Data if available, matching user request.
@@ -46,7 +48,9 @@ class ProfileService {
 
       return Profile.fromJson(data);
     } catch (e) {
-      debugPrint("Fetch User Profile Error: $e");
+      if (kDebugMode) {
+        debugPrint("Fetch User Profile Error: $e");
+      }
       throw Exception('Gagal mengambil data profil: ${e.toString()}');
     }
   }
@@ -204,7 +208,9 @@ class ProfileService {
       final imageUrl = _supabase.storage.from(bucketName).getPublicUrl(path);
       return imageUrl;
     } catch (e) {
-      debugPrint("Upload Storage Error: $e");
+      if (kDebugMode) {
+        debugPrint("Upload Storage Error: $e");
+      }
       throw Exception("Gagal upload image ke storage: $e");
     }
   }

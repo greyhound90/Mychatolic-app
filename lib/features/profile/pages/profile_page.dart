@@ -1,6 +1,9 @@
 import 'dart:io';
+import 'dart:ui';
 import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mychatolic_app/models/profile.dart';
@@ -147,7 +150,9 @@ class _ProfilePageState extends State<ProfilePage>
         }
       }
     } catch (e) {
-      debugPrint("Error loading profile: $e");
+      if (kDebugMode) {
+        debugPrint("Error loading profile: $e");
+      }
       if (mounted) {
         setState(() {
           _error = "Gagal memuat profil. Silakan coba lagi.";
@@ -171,7 +176,9 @@ class _ProfilePageState extends State<ProfilePage>
         });
       }
     } catch (e) {
-      debugPrint("Error loading saved posts: $e");
+      if (kDebugMode) {
+        debugPrint("Error loading saved posts: $e");
+      }
     }
   }
 
@@ -210,7 +217,9 @@ class _ProfilePageState extends State<ProfilePage>
         });
       }
     } catch (e) {
-      debugPrint("Error loading posts: $e");
+      if (kDebugMode) {
+        debugPrint("Error loading posts: $e");
+      }
     }
   }
 
@@ -479,7 +488,9 @@ class _ProfilePageState extends State<ProfilePage>
         await _loadProfileData(); // Refresh UI
       }
     } catch (e) {
-      debugPrint("Upload Avatar Failed: $e");
+      if (kDebugMode) {
+        debugPrint("Upload Avatar Failed: $e");
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Gagal upload foto: $e")),
@@ -495,11 +506,31 @@ class _ProfilePageState extends State<ProfilePage>
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked == null) return;
 
+    final croppedFile = await ImageCropper().cropImage(
+      sourcePath: picked.path,
+      aspectRatio: const CropAspectRatio(ratioX: 16, ratioY: 9),
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: 'Atur Banner',
+          toolbarColor: AppColors.primary,
+          toolbarWidgetColor: Colors.white,
+          initAspectRatio: CropAspectRatioPreset.ratio16x9,
+          lockAspectRatio: true,
+        ),
+        IOSUiSettings(
+          title: 'Atur Banner',
+          aspectRatioLockEnabled: true,
+        ),
+      ],
+    );
+
+    if (croppedFile == null) return;
+
     if (!mounted) return;
     setState(() => _isLoading = true);
 
     try {
-      final File imageFile = File(picked.path);
+      final File imageFile = File(croppedFile.path);
       final String publicUrl = await _profileService.uploadBanner(imageFile);
       
       if (_profile != null) {
@@ -510,7 +541,9 @@ class _ProfilePageState extends State<ProfilePage>
         await _loadProfileData(); // Refresh UI
       }
     } catch (e) {
-      debugPrint("Upload Banner Failed: $e");
+      if (kDebugMode) {
+        debugPrint("Upload Banner Failed: $e");
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Gagal upload banner: $e")),
@@ -546,7 +579,9 @@ class _ProfilePageState extends State<ProfilePage>
 
     // DEBUG: Check Status
     if (_profile != null) {
-      debugPrint('Current Verification Status by ENUM: ${_profile!.verificationStatus}');
+      if (kDebugMode) {
+        debugPrint('Current Verification Status by ENUM: ${_profile!.verificationStatus}');
+      }
     }
 
     if (_error != null || _profile == null) {
@@ -644,6 +679,8 @@ class _ProfilePageState extends State<ProfilePage>
           ? "Belum ada postingan disimpan" 
           : "Belum ada foto");
     }
+    final bottomPadding =
+        16 + MediaQuery.of(context).padding.bottom + 72;
     return CustomScrollView(
       key: PageStorageKey<String>(isSavedView ? 'saved' : 'grid'),
       slivers: [
@@ -652,7 +689,7 @@ class _ProfilePageState extends State<ProfilePage>
           sliver: SliverGrid(
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3, // Instagram standard
-              childAspectRatio: 1.0, // Square
+              childAspectRatio: 4 / 5, // 4:5 portrait
               crossAxisSpacing: 2,
               mainAxisSpacing: 2,
             ),
@@ -667,9 +704,12 @@ class _ProfilePageState extends State<ProfilePage>
                     ),
                   );
                 },
-                child: SafeNetworkImage(
-                  imageUrl: post.imageUrl ?? "",
-                  fit: BoxFit.cover,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: SafeNetworkImage(
+                    imageUrl: post.imageUrl ?? "",
+                    fit: BoxFit.cover,
+                  ),
                 ),
               );
             }, childCount: posts.length),
@@ -682,6 +722,9 @@ class _ProfilePageState extends State<ProfilePage>
               child: Center(child: CircularProgressIndicator()),
             ),
           ),
+        SliverToBoxAdapter(
+          child: SizedBox(height: bottomPadding),
+        ),
       ],
     );
   }
@@ -715,16 +758,25 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   Widget _buildEmptyState(String msg) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.camera_alt_outlined, size: 64, color: AppColors.backgroundAlt),
-          const SizedBox(height: 16),
-          Text(msg,
-              style: GoogleFonts.outfit(color: AppColors.disabled, fontSize: 16)),
-        ],
-      ),
+    return CustomScrollView(
+      slivers: [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.camera_alt_outlined, size: 64, color: AppColors.backgroundAlt),
+                const SizedBox(height: 16),
+                Text(
+                  msg,
+                  style: GoogleFonts.outfit(color: AppColors.disabled, fontSize: 16),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -856,6 +908,55 @@ class ProfileHeader extends StatelessWidget {
             ),
     );
 
+    Widget animateSection(Widget child) {
+      return TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOut,
+        child: child,
+        builder: (context, value, child) {
+          return Opacity(
+            opacity: value,
+            child: Transform.translate(
+              offset: Offset(0, 12 * (1 - value)),
+              child: child,
+            ),
+          );
+        },
+      );
+    }
+
+    Widget glassIconButton({
+      required VoidCallback? onTap,
+      required Widget icon,
+      EdgeInsets padding = const EdgeInsets.all(8),
+    }) {
+      return GestureDetector(
+        onTap: onTap,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              child: Container(
+                padding: padding,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: AppColors.background.withValues(alpha: 0.35),
+                  ),
+                ),
+                child: icon,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Container(
       color: AppColors.backgroundAlt,
       child: Stack(
@@ -888,9 +989,8 @@ class ProfileHeader extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withValues(alpha: 0.35),
                     Colors.black.withValues(alpha: 0.0),
-                    Colors.black.withValues(alpha: 0.15),
+                    Colors.black.withValues(alpha: 0.12),
                   ],
                 ),
               ),
@@ -898,19 +998,26 @@ class ProfileHeader extends StatelessWidget {
           ),
         ),
 
-        // Settings / Back Button (Overlay on Banner)
+        // Settings / Camera Buttons (Overlay on Banner)
         Positioned(
-          top: MediaQuery.of(context).padding.top + 8,
-          right: 16,
-          child: GestureDetector(
-            onTap: onSettingsTap,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.3),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.settings, color: AppColors.background, size: 24),
+          top: 0,
+          right: 12,
+          child: SafeArea(
+            minimum: const EdgeInsets.only(top: 8, right: 4),
+            child: Column(
+              children: [
+                glassIconButton(
+                  onTap: onSettingsTap,
+                  icon: const Icon(Icons.settings, color: AppColors.background, size: 22),
+                ),
+                if (isMe) ...[
+                  const SizedBox(height: 10),
+                  glassIconButton(
+                    onTap: onBannerTap,
+                    icon: const Icon(Icons.photo_camera, size: 22, color: AppColors.background),
+                  ),
+                ],
+              ],
             ),
           ),
         ),
@@ -918,17 +1025,9 @@ class ProfileHeader extends StatelessWidget {
           Positioned(
             top: MediaQuery.of(context).padding.top + 8,
             left: 16,
-            child: GestureDetector(
+            child: glassIconButton(
               onTap: () => Navigator.pop(context),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  shape: BoxShape.circle,
-                ),
-                child:
-                    const Icon(Icons.arrow_back, color: AppColors.background, size: 24),
-              ),
+              icon: const Icon(Icons.arrow_back, color: AppColors.background, size: 24),
             ),
           ),
         // 2. WHITE CARD BODY
@@ -950,16 +1049,20 @@ class ProfileHeader extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Section 1: Identity + badges
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: AppColors.backgroundAlt,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+              animateSection(
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
@@ -1028,7 +1131,8 @@ class ProfileHeader extends StatelessWidget {
                           ),
                         ),
                       ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
 
@@ -1103,15 +1207,16 @@ class ProfileHeader extends StatelessWidget {
               const SizedBox(height: 12),
 
               // Section 3: Action buttons
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: AppColors.backgroundAlt,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
+              animateSection(
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: AppColors.backgroundAlt,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
                     final bool isNarrow = constraints.maxWidth < 360;
                     if (isMe) {
                       return Row(
@@ -1197,7 +1302,8 @@ class ProfileHeader extends StatelessWidget {
                         Expanded(child: inviteButton),
                       ],
                     );
-                  },
+                    },
+                  ),
                 ),
               ),
 
@@ -1206,51 +1312,28 @@ class ProfileHeader extends StatelessWidget {
               const SizedBox(height: 12),
 
               // Section 4: Stats
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.backgroundAlt,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildStatItem("${stats['posts'] ?? 0}", "Post"),
-                    _buildStatItem("${stats['followers'] ?? 0}", "Pengikut"),
-                    _buildStatItem("${stats['following'] ?? 0}", "Mengikuti"),
-                  ],
+              animateSection(
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.backgroundAlt,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildStatItem("${stats['posts'] ?? 0}", "Post"),
+                      _buildStatItem("${stats['followers'] ?? 0}", "Pengikut"),
+                      _buildStatItem("${stats['following'] ?? 0}", "Mengikuti"),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
             ],
           ),
         ),
-
-        if (isMe)
-          Positioned(
-            right: 16,
-            top: cardTopMargin - 52,
-            child: GestureDetector(
-              onTap: onBannerTap,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.background, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: const Icon(Icons.photo_camera, size: 16, color: AppColors.background),
-              ),
-            ),
-          ),
 
         // 3. AVATAR (Positioned to overlap)
         Positioned(
