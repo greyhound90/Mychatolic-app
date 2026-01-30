@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mychatolic_app/pages/main_page.dart';
 import 'package:mychatolic_app/features/auth/pages/register_page.dart';
 import 'package:mychatolic_app/features/profile/pages/edit_profile_page.dart';
+import 'package:mychatolic_app/features/auth/pages/forgot_password_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -252,7 +253,12 @@ class _LoginPageState extends State<LoginPage> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {
-                      // TODO: Navigate to Forgot Password
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ForgotPasswordPage(),
+                        ),
+                      );
                     },
                     child: Text(
                       "Lupa Password?",

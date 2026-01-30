@@ -679,8 +679,9 @@ class _ProfilePageState extends State<ProfilePage>
           ? "Belum ada postingan disimpan" 
           : "Belum ada foto");
     }
+    final basePadding = 16 + MediaQuery.of(context).padding.bottom;
     final bottomPadding =
-        16 + MediaQuery.of(context).padding.bottom + 72;
+        posts.length <= 3 ? basePadding : basePadding + kBottomNavigationBarHeight;
     return CustomScrollView(
       key: PageStorageKey<String>(isSavedView ? 'saved' : 'grid'),
       slivers: [
@@ -1063,74 +1064,76 @@ class ProfileHeader extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            profile.fullName ?? "User",
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.outfit(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.text,
-                            ),
-                          ),
-                        ),
-                        if (profile.isVerified)
-                          const Padding(
-                            padding: EdgeInsets.only(left: 6),
-                            child: Icon(Icons.verified,
-                                color: AppColors.primary, size: 20),
-                          ),
-                      ],
-                    ),
-                    if (profile.baptismName != null &&
-                        profile.baptismName!.trim().isNotEmpty &&
-                        profile.baptismName != "null")
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.water_drop,
-                                size: 14, color: AppColors.muted),
-                            const SizedBox(width: 4),
-                            Text(
-                              "Nama Baptis: ${profile.baptismName}",
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              profile.fullName ?? "User",
+                              textAlign: TextAlign.center,
                               style: GoogleFonts.outfit(
-                                fontSize: 14,
-                                color: AppColors.muted,
-                                fontWeight: FontWeight.w500,
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.text,
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: 10),
-                    _buildTrustBadge(context),
-                    if (profile.shouldShowAge && profile.age != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.muted.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.muted.withValues(alpha: 0.4)),
                           ),
-                          child: Text(
-                            "${profile.age} Tahun",
-                            style: GoogleFonts.outfit(
-                              fontSize: 12,
-                              color: AppColors.primaryDark,
-                              fontWeight: FontWeight.bold,
+                          if (profile.isVerified)
+                            const Padding(
+                              padding: EdgeInsets.only(left: 6),
+                              child: Icon(Icons.verified,
+                                  color: AppColors.primary, size: 20),
+                            ),
+                        ],
+                      ),
+                      if (profile.baptismName != null &&
+                          profile.baptismName!.trim().isNotEmpty &&
+                          profile.baptismName != "null")
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.water_drop,
+                                  size: 14, color: AppColors.muted),
+                              const SizedBox(width: 4),
+                              Text(
+                                "Nama Baptis: ${profile.baptismName}",
+                                style: GoogleFonts.outfit(
+                                  fontSize: 14,
+                                  color: AppColors.muted,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 10),
+                      _buildTrustBadge(context),
+                      if (profile.shouldShowAge && profile.age != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.muted.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                  color: AppColors.muted.withValues(alpha: 0.4)),
+                            ),
+                            child: Text(
+                              "${profile.age} Tahun",
+                              style: GoogleFonts.outfit(
+                                fontSize: 12,
+                                color: AppColors.primaryDark,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -1175,7 +1178,8 @@ class ProfileHeader extends StatelessWidget {
                           child: Text(
                             "${profile.country ?? '-'}, ${profile.diocese ?? '-'}",
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.outfit(fontSize: 12, color: AppColors.mutedText),
+                            style: GoogleFonts.outfit(
+                                fontSize: 12, color: AppColors.mutedText),
                           ),
                         ),
                       ],
@@ -1191,7 +1195,8 @@ class ProfileHeader extends StatelessWidget {
                           child: Text(
                             profile.parish ?? "Paroki -",
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.outfit(fontSize: 12, color: AppColors.mutedText),
+                            style: GoogleFonts.outfit(
+                                fontSize: 12, color: AppColors.mutedText),
                           ),
                         ),
                       ],

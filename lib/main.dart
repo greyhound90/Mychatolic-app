@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:mychatolic_app/features/auth/pages/splash_page.dart';
+import 'package:mychatolic_app/features/auth/pages/reset_password_page.dart';
 import 'package:mychatolic_app/core/theme.dart';
 import 'package:mychatolic_app/providers/theme_provider.dart';
 
@@ -39,11 +41,39 @@ void main() async {
   );
 }
 
-class MyChatolicApp extends StatelessWidget {
+class MyChatolicApp extends StatefulWidget {
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
 
   const MyChatolicApp({super.key});
+
+  @override
+  State<MyChatolicApp> createState() => _MyChatolicAppState();
+}
+
+class _MyChatolicAppState extends State<MyChatolicApp> {
+  StreamSubscription<AuthState>? _authSub;
+  bool _recoveryPushed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.passwordRecovery) {
+        if (_recoveryPushed) return;
+        _recoveryPushed = true;
+        MyChatolicApp.navigatorKey.currentState
+            ?.push(MaterialPageRoute(builder: (_) => const ResetPasswordPage()))
+            .then((_) => _recoveryPushed = false);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
