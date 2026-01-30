@@ -3,6 +3,17 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 
+const Color _kBg = Color(0xFF121212);
+const Color _kSurface = Color(0xFF1C1C1C);
+const Color _kBorder = Color(0xFF2A2A2A);
+const Color _kText = Color(0xFFFFFFFF);
+const Color _kTextSecondary = Color(0xFFBBBBBB);
+const Color _kTextMuted = Color(0xFF9E9E9E);
+const Color _kPrimary = Color(0xFF0088CC);
+const Color _kPrimaryDark = Color(0xFF007AB8);
+const Color _kError = Color(0xFFE74C3C);
+const Color _kSuccess = Color(0xFF2ECC71);
+
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
@@ -11,17 +22,6 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
-  // ---------------------------------------------------------------------------
-  // 1. CONST COLOR PALETTE
-  // ---------------------------------------------------------------------------
-  static const Color kPrimaryColor = Color(0xFF0088CC);
-  static const Color kSecondaryColor = Color(0xFF007AB8);
-  static const Color kBackgroundColor = Color(0xFFFFFFFF);
-  static const Color kInputFillColor = Color(0xFFF5F5F5);
-  static const Color kBorderColor = Color(0xFF9E9E9E);
-  static const Color kSuccessColor = Color(0xFF2ECC71);
-  static const Color kErrorColor = Color(0xFFE74C3C);
-
   // ---------------------------------------------------------------------------
   // 2. CONTROLLERS
   // ---------------------------------------------------------------------------
@@ -41,7 +41,10 @@ class _RegisterPageState extends State<RegisterPage> {
   // 3. STATE VARIABLES
   // ---------------------------------------------------------------------------
   int _currentStep = 1;
+  bool _stepForward = true;
   bool _isLoading = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirm = true;
 
   final _supabase = Supabase.instance.client;
 
@@ -281,7 +284,7 @@ class _RegisterPageState extends State<RegisterPage> {
           message, 
           style: GoogleFonts.outfit(color: Colors.white),
         ),
-        backgroundColor: kErrorColor,
+        backgroundColor: _kError,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -293,15 +296,18 @@ class _RegisterPageState extends State<RegisterPage> {
       barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: kBackgroundColor,
+          backgroundColor: _kSurface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
             "Registrasi Berhasil",
-            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.black),
+            style: GoogleFonts.outfit(
+              fontWeight: FontWeight.bold,
+              color: _kText,
+            ),
           ),
           content: Text(
             "Akun Anda telah dibuat. Silakan verifikasi email terlebih dahulu, lalu login kembali.",
-            style: GoogleFonts.outfit(color: Colors.black87),
+            style: GoogleFonts.outfit(color: _kTextSecondary),
           ),
           actions: [
             TextButton(
@@ -312,7 +318,7 @@ class _RegisterPageState extends State<RegisterPage> {
               child: Text(
                 "Masuk Aplikasi",
                 style: GoogleFonts.outfit(
-                  color: kPrimaryColor, 
+                  color: _kPrimary, 
                   fontWeight: FontWeight.bold
                 ),
               ),
@@ -333,56 +339,109 @@ class _RegisterPageState extends State<RegisterPage> {
     required TextEditingController controller,
     IconData? icon,
     bool isObscure = false,
+    VoidCallback? toggleObscure,
     TextInputType keyboardType = TextInputType.text,
     bool isReadOnly = false,
     VoidCallback? onTap,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: GoogleFonts.outfit(
-            color: kBorderColor,
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: IgnorePointer(
-            ignoring: isReadOnly && onTap != null,
-            child: TextField(
-              controller: controller,
-              obscureText: isObscure,
-              keyboardType: keyboardType,
-              readOnly: isReadOnly,
-              style: GoogleFonts.outfit(
-                color: Colors.black87,
-                fontWeight: FontWeight.w600,
-              ),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: kInputFillColor,
-                contentPadding: const EdgeInsets.all(16),
-                hintText: hint,
-                hintStyle: GoogleFonts.outfit(color: Colors.grey),
-                prefixIcon: icon != null ? Icon(icon, color: Colors.grey) : null,
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.transparent),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: kPrimaryColor),
+    return Focus(
+      onFocusChange: (_) => setState(() {}),
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label.toUpperCase(),
+                style: GoogleFonts.outfit(
+                  color: _kTextSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-          ),
-        ),
-      ],
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(16),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 240),
+                  curve: Curves.easeOutCubic,
+                  decoration: BoxDecoration(
+                    color: _kSurface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isFocused ? _kPrimary : _kBorder,
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      if (isFocused)
+                        BoxShadow(
+                          color: _kPrimary.withOpacity(0.25),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        )
+                      else
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 8),
+                        ),
+                    ],
+                  ),
+                  child: IgnorePointer(
+                    ignoring: isReadOnly && onTap != null,
+                    child: TextField(
+                      controller: controller,
+                      obscureText: isObscure,
+                      keyboardType: keyboardType,
+                      readOnly: isReadOnly,
+                      style: GoogleFonts.outfit(
+                        color: _kText,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.transparent,
+                        contentPadding: const EdgeInsets.all(16),
+                        hintText: hint,
+                        hintStyle: GoogleFonts.outfit(color: _kTextMuted),
+                        prefixIcon: icon != null
+                            ? Icon(
+                                icon,
+                                color: isFocused ? _kPrimary : _kTextSecondary,
+                              )
+                            : null,
+                        suffixIcon: toggleObscure != null
+                            ? IconButton(
+                                icon: Icon(
+                                  isObscure ? Icons.visibility_off : Icons.visibility,
+                                  color: _kTextSecondary,
+                                ),
+                                onPressed: toggleObscure,
+                              )
+                            : null,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -401,7 +460,7 @@ class _RegisterPageState extends State<RegisterPage> {
         Text(
           label.toUpperCase(),
           style: GoogleFonts.outfit(
-            color: kBorderColor,
+            color: _kTextSecondary,
             fontSize: 12,
             fontWeight: FontWeight.bold,
           ),
@@ -413,6 +472,16 @@ class _RegisterPageState extends State<RegisterPage> {
           items: (filter, loadProps) => onFind(filter),
           // 2. Tampilan item
           itemAsString: (item) => item['name']?.toString() ?? '',
+          dropdownBuilder: (context, selectedItem) {
+            final text = selectedItem?['name']?.toString() ?? '';
+            return Text(
+              text,
+              style: GoogleFonts.outfit(
+                color: _kText,
+                fontWeight: FontWeight.w600,
+              ),
+            );
+          },
           selectedItem: selectedItem,
           onChanged: onChanged,
           enabled: enabled,
@@ -422,41 +491,55 @@ class _RegisterPageState extends State<RegisterPage> {
           decoratorProps: DropDownDecoratorProps(
             decoration: InputDecoration(
               filled: true,
-              fillColor: enabled ? kInputFillColor : Colors.grey[200],
+              fillColor: enabled ? _kSurface : _kBorder,
               hintText: hint,
-              hintStyle: GoogleFonts.outfit(color: Colors.grey),
+              hintStyle: GoogleFonts.outfit(color: _kTextMuted),
               contentPadding: const EdgeInsets.fromLTRB(16, 12, 0, 12),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.transparent),
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: _kBorder),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: kPrimaryColor),
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: _kPrimary),
               ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.transparent),
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: _kBorder),
               ),
               disabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                 borderSide: BorderSide(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: _kBorder),
               ),
             ),
           ),
           // 5. Config Popup
           popupProps: PopupProps.modalBottomSheet(
             showSearchBox: true,
+            itemBuilder: (context, item, isSelected) {
+              return ListTile(
+                title: Text(
+                  item['name']?.toString() ?? '',
+                  style: GoogleFonts.outfit(
+                    color: _kText,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              );
+            },
             searchFieldProps: TextFieldProps(
               decoration: InputDecoration(
                 hintText: "Cari $label...",
-                prefixIcon: const Icon(Icons.search),
+                prefixIcon: const Icon(Icons.search, color: _kTextSecondary),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: _kSurface,
+                hintStyle: GoogleFonts.outfit(color: _kTextMuted),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16),
               ),
             ),
             modalBottomSheetProps: const ModalBottomSheetProps(
-              backgroundColor: Colors.white,
+              backgroundColor: _kSurface,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
               ),
@@ -465,7 +548,11 @@ class _RegisterPageState extends State<RegisterPage> {
               padding: const EdgeInsets.all(16),
               child: Text(
                 "Pilih $label",
-                style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: _kText,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -495,7 +582,9 @@ class _RegisterPageState extends State<RegisterPage> {
           hint: "Minimal 6 karakter",
           controller: _passwordController,
           icon: Icons.lock_outline,
-          isObscure: true,
+          isObscure: _obscurePassword,
+          toggleObscure: () =>
+              setState(() => _obscurePassword = !_obscurePassword),
         ),
         const SizedBox(height: 20),
         _buildTextField(
@@ -503,7 +592,9 @@ class _RegisterPageState extends State<RegisterPage> {
           hint: "Ulangi password",
           controller: _confirmPassController,
           icon: Icons.lock_outline,
-          isObscure: true,
+          isObscure: _obscureConfirm,
+          toggleObscure: () =>
+              setState(() => _obscureConfirm = !_obscureConfirm),
         ),
       ],
     );
@@ -542,11 +633,13 @@ class _RegisterPageState extends State<RegisterPage> {
               builder: (context, child) {
                 return Theme(
                   data: Theme.of(context).copyWith(
-                    colorScheme: const ColorScheme.light(
-                      primary: kPrimaryColor,
+                    colorScheme: const ColorScheme.dark(
+                      primary: _kPrimary,
                       onPrimary: Colors.white,
-                      onSurface: Colors.black,
+                      surface: _kSurface,
+                      onSurface: _kText,
                     ),
+                    dialogBackgroundColor: _kSurface,
                   ),
                   child: child!,
                 );
@@ -565,7 +658,7 @@ class _RegisterPageState extends State<RegisterPage> {
         Text(
           "STATUS PERNIKAHAN",
           style: GoogleFonts.outfit(
-            color: kBorderColor,
+            color: _kTextSecondary,
             fontSize: 12,
             fontWeight: FontWeight.bold,
           ),
@@ -574,18 +667,22 @@ class _RegisterPageState extends State<RegisterPage> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: kInputFillColor,
-            borderRadius: BorderRadius.circular(12),
+            color: _kSurface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: _kPrimary.withOpacity(0.12)),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: _maritalStatus,
-              hint: Text("Pilih Status Pernikahan", style: GoogleFonts.outfit(color: Colors.grey)),
+              hint: Text(
+                "Pilih Status Pernikahan",
+                style: GoogleFonts.outfit(color: _kTextMuted),
+              ),
               isExpanded: true,
               items: _maritalStatusMap.keys.map((String key) {
                 return DropdownMenuItem<String>(
                   value: key, // Store the Label as value to match Map keys, logic handles conversion
-                  child: Text(key, style: GoogleFonts.outfit(color: Colors.black87)),
+                  child: Text(key, style: GoogleFonts.outfit(color: _kText)),
                 );
               }).toList(),
               onChanged: (String? newValue) {
@@ -665,7 +762,7 @@ class _RegisterPageState extends State<RegisterPage> {
         Text(
           "PILIH PERAN",
           style: GoogleFonts.outfit(
-            color: kBorderColor,
+            color: _kTextSecondary,
             fontSize: 12,
             fontWeight: FontWeight.bold,
           ),
@@ -683,16 +780,16 @@ class _RegisterPageState extends State<RegisterPage> {
                   _selectedRole = selected ? role : null;
                 });
               },
-              backgroundColor: kInputFillColor,
-              selectedColor: kPrimaryColor,
+              backgroundColor: _kSurface,
+              selectedColor: _kPrimary,
               labelStyle: GoogleFonts.outfit(
-                color: isSelected ? Colors.white : Colors.black87,
+                color: isSelected ? Colors.white : _kText,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide(
-                  color: isSelected ? kPrimaryColor : Colors.transparent,
+                  color: isSelected ? _kPrimary : Colors.transparent,
                 ),
               ),
             );
@@ -702,18 +799,19 @@ class _RegisterPageState extends State<RegisterPage> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: kInputFillColor,
-            borderRadius: BorderRadius.circular(12),
+            color: _kSurface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: _kPrimary.withOpacity(0.12)),
           ),
           child: CheckboxListTile(
             value: _isCatechumen,
             onChanged: (val) {
               setState(() => _isCatechumen = val ?? false);
             },
-            activeColor: kPrimaryColor,
+            activeColor: _kPrimary,
             title: Text(
               "Saya calon katekumen / sedang belajar agama Katolik",
-              style: GoogleFonts.outfit(fontSize: 14),
+              style: GoogleFonts.outfit(fontSize: 14, color: _kTextSecondary),
             ),
             controlAffinity: ListTileControlAffinity.leading,
             contentPadding: EdgeInsets.zero,
@@ -725,28 +823,28 @@ class _RegisterPageState extends State<RegisterPage> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.blue[50],
-            borderRadius: BorderRadius.circular(12),
-             border: Border.all(color: Colors.blue.withOpacity(0.3)),
+            color: _kPrimary.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: _kPrimary.withOpacity(0.25)),
           ),
           child: Row(
-             children: [
-               Checkbox(
-                 value: _agreedToTerms,
-                 activeColor: kPrimaryColor,
-                 onChanged: (val) {
-                   setState(() {
-                     _agreedToTerms = val ?? false;
-                   });
-                 }
-               ),
-               Expanded(
-                 child: Text(
-                   "Saya menyetujui S&K dan bersedia data iman saya diverifikasi.",
-                   style: GoogleFonts.outfit(fontSize: 12, color: Colors.blue[900]),
-                 ),
-               )
-             ],
+            children: [
+              Checkbox(
+                value: _agreedToTerms,
+                activeColor: _kPrimary,
+                onChanged: (val) {
+                  setState(() {
+                    _agreedToTerms = val ?? false;
+                  });
+                }
+              ),
+              Expanded(
+                child: Text(
+                  "Saya menyetujui S&K dan bersedia data iman saya diverifikasi.",
+                  style: GoogleFonts.outfit(fontSize: 12, color: _kPrimary),
+                ),
+              )
+            ],
           ),
         ),
       ],
@@ -788,135 +886,422 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     return Scaffold(
-      backgroundColor: kBackgroundColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header: Back Button & Step Counter
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  if (_currentStep > 1)
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.black87),
-                    onPressed: () {
-                      setState(() => _currentStep--);
-                    },
-                  )
-                  else
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.black87),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const Spacer(),
-                  Text(
-                    "Langkah $_currentStep dari 4",
-                    style: GoogleFonts.outfit(
-                      color: kBorderColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Progress Bar
-            LinearProgressIndicator(
-              value: _currentStep / 4,
-              backgroundColor: kInputFillColor,
-              color: kSuccessColor,
-              minHeight: 4,
-            ),
-
-            // Main Content Scrollable
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.outfit(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      subtitle,
-                      style: GoogleFonts.outfit(
-                        fontSize: 14,
-                        color: Colors.black54,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    
-                    // Render Steps Here
-                    stepContent,
-                    
-                    const SizedBox(height: 40),
-
-                    // Action Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () async {
-                              if (_currentStep < 4) {
-                                if (_validateCurrentStep()) {
-                                  setState(() => _currentStep++);
-                                }
-                              } else {
-                                await _submitRegistration();
-                              }
-                            },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          padding: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
+      backgroundColor: _kBg,
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: _AuthBackground(
+          child: SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      if (_currentStep > 1)
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back,
+                              color: _kText),
+                          onPressed: () {
+                            setState(() {
+                              _stepForward = false;
+                              _currentStep--;
+                            });
+                          },
+                        )
+                      else
+                        IconButton(
+                          icon: const Icon(Icons.close,
+                              color: _kText),
+                          onPressed: () => Navigator.pop(context),
                         ),
-                        child: Ink(
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [kSecondaryColor, kPrimaryColor],
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
+                      const Spacer(),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(
+                      24,
+                      8,
+                      24,
+                      24 + MediaQuery.of(context).viewInsets.bottom,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _StepHeader(currentStep: _currentStep),
+                        const SizedBox(height: 16),
+                        _AuthCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                title,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.bold,
+                                  color: _kText,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                subtitle,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 13,
+                                  color: _kTextSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 280),
+                            switchInCurve: Curves.easeOutCubic,
+                            switchOutCurve: Curves.easeOutCubic,
+                            transitionBuilder: (child, animation) {
+                              final beginOffset =
+                                  _stepForward ? const Offset(0.12, 0) : const Offset(-0.12, 0);
+                              return FadeTransition(
+                                opacity: animation,
+                                child: SlideTransition(
+                                  position: Tween<Offset>(
+                                    begin: beginOffset,
+                                    end: Offset.zero,
+                                  ).animate(animation),
+                                  child: child,
+                                ),
+                              );
+                            },
+                            child: KeyedSubtree(
+                              key: ValueKey(_currentStep),
+                              child: stepContent,
                             ),
-                            borderRadius: BorderRadius.circular(16),
                           ),
-                          child: Container(
-                            alignment: Alignment.center,
-                            child: _isLoading
-                                ? const CircularProgressIndicator(color: Colors.white)
-                                : Text(
-                                    _currentStep == 4 ? "DAFTAR SEKARANG" : "LANJUT",
-                                    style: GoogleFonts.outfit(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                      letterSpacing: 1.2,
+                          const SizedBox(height: 32),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: SizedBox(
+                                  height: 52,
+                                  child: OutlinedButton(
+                                    onPressed: () {
+                                      if (_currentStep > 1) {
+                                        setState(() {
+                                          _stepForward = false;
+                                          _currentStep--;
+                                        });
+                                      } else {
+                                        Navigator.pop(context);
+                                      }
+                                    },
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(color: _kBorder),
+                                      shape: const StadiumBorder(),
+                                      foregroundColor: _kText,
+                                    ),
+                                    child: Text(
+                                      _currentStep > 1 ? "KEMBALI" : "BATAL",
+                                      style: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.w600,
+                                        color: _kText,
+                                      ),
                                     ),
                                   ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: SizedBox(
+                                  height: 52,
+                                  child: ElevatedButton(
+                                    onPressed: _isLoading
+                                        ? null
+                                        : () async {
+                                            if (_currentStep < 4) {
+                                              if (_validateCurrentStep()) {
+                                                setState(() {
+                                                  _stepForward = true;
+                                                  _currentStep++;
+                                                });
+                                              }
+                                            } else {
+                                              await _submitRegistration();
+                                            }
+                                          },
+                                    style: ButtonStyle(
+                                      backgroundColor:
+                                          MaterialStateProperty.resolveWith(
+                                        (states) => states.contains(
+                                                MaterialState.disabled)
+                                            ? _kPrimary.withOpacity(0.6)
+                                            : _kPrimary,
+                                      ),
+                                      shape: MaterialStateProperty.all(
+                                        const StadiumBorder(),
+                                      ),
+                                      elevation: MaterialStateProperty.all(0),
+                                    ),
+                                    child: AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 200),
+                                      transitionBuilder: (child, animation) {
+                                        return FadeTransition(
+                                          opacity: animation,
+                                          child: ScaleTransition(
+                                            scale: Tween<double>(
+                                              begin: 0.96,
+                                              end: 1.0,
+                                            ).animate(animation),
+                                            child: child,
+                                          ),
+                                        );
+                                      },
+                                      child: _isLoading
+                                          ? Row(
+                                              key: const ValueKey('loading'),
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                const SizedBox(
+                                                  width: 18,
+                                                  height: 18,
+                                                  child: CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    valueColor:
+                                                        AlwaysStoppedAnimation<
+                                                            Color>(Colors.white),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  "Memproses...",
+                                                  style: GoogleFonts.outfit(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ],
+                                            )
+                                          : Text(
+                                              _currentStep == 4
+                                                  ? "DAFTAR"
+                                                  : "LANJUT",
+                                              key: ValueKey(
+                                                  _currentStep == 4
+                                                      ? 'submit'
+                                                      : 'next'),
+                                              style: GoogleFonts.outfit(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 15,
+                                                letterSpacing: 1.0,
+                                              ),
+                                            ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                              const SizedBox(height: 12),
+                            ],
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                    const SizedBox(height: 20),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _AuthBackground extends StatelessWidget {
+  final Widget child;
+
+  const _AuthBackground({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                _kBg,
+                _kSurface,
+                _kBg,
+              ],
+            ),
+          ),
+        ),
+        Positioned(
+          top: -70,
+          right: -30,
+          child: _Blob(
+            size: 180,
+            color: _kPrimary.withOpacity(0.12),
+          ),
+        ),
+        Positioned(
+          bottom: -60,
+          left: -40,
+          child: _Blob(
+            size: 170,
+            color: _kPrimaryDark.withOpacity(0.10),
+          ),
+        ),
+        Positioned(
+          top: 140,
+          left: 20,
+          child: _Blob(
+            size: 90,
+            color: _kPrimary.withOpacity(0.08),
+          ),
+        ),
+        child,
+      ],
+    );
+  }
+}
+
+class _Blob extends StatelessWidget {
+  final double size;
+  final Color color;
+
+  const _Blob({required this.size, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: color,
+            blurRadius: 80,
+            spreadRadius: 10,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AuthCard extends StatelessWidget {
+  final Widget child;
+
+  const _AuthCard({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+      decoration: BoxDecoration(
+        color: _kSurface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: _kBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.35),
+            blurRadius: 28,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _StepHeader extends StatelessWidget {
+  final int currentStep;
+
+  const _StepHeader({required this.currentStep});
+
+  @override
+  Widget build(BuildContext context) {
+    const labels = ["Akun", "Data", "Lokasi", "Peran"];
+    return _StepDots(
+      currentStep: currentStep,
+      labels: labels,
+    );
+  }
+}
+
+class _StepDots extends StatelessWidget {
+  final int currentStep;
+  final List<String> labels;
+
+  const _StepDots({required this.currentStep, required this.labels});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: List.generate(labels.length, (index) {
+            final step = index + 1;
+            final isActive = currentStep == step;
+            final isDone = currentStep > step;
+            final color = isActive || isDone ? _kPrimary : _kBorder;
+            final opacity = isActive ? 1.0 : (isDone ? 0.7 : 0.35);
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
+              width: isActive ? 14 : 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: color.withOpacity(opacity),
+                borderRadius: BorderRadius.circular(999),
+                boxShadow: isActive
+                    ? [
+                        BoxShadow(
+                          color: _kPrimary.withOpacity(0.35),
+                          blurRadius: 10,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : [],
+              ),
+            );
+          }),
+        ),
+        const SizedBox(height: 10),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          transitionBuilder: (child, animation) {
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 0.1),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+            );
+          },
+          child: Text(
+            labels[currentStep - 1],
+            key: ValueKey(currentStep),
+            style: GoogleFonts.outfit(
+              fontSize: 11,
+              color: _kTextSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
