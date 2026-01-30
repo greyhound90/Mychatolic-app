@@ -572,9 +572,9 @@ class _ProfilePageState extends State<ProfilePage>
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: _palette.background,
-        body: Center(child: CircularProgressIndicator()),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -1081,8 +1081,8 @@ class ProfileHeader extends StatelessWidget {
                             ),
                           ),
                           if (profile.isVerified)
-                            const Padding(
-                              padding: EdgeInsets.only(left: 6),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 6),
                               child: Icon(Icons.verified,
                                   color: _palette.primary, size: 20),
                             ),
@@ -1354,9 +1354,9 @@ class ProfileHeader extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildStatItem("${stats['posts'] ?? 0}", "Post"),
-                      _buildStatItem("${stats['followers'] ?? 0}", "Pengikut"),
-                      _buildStatItem("${stats['following'] ?? 0}", "Mengikuti"),
+                      _buildStatItem(context, "${stats['posts'] ?? 0}", "Post"),
+                      _buildStatItem(context, "${stats['followers'] ?? 0}", "Pengikut"),
+                      _buildStatItem(context, "${stats['following'] ?? 0}", "Mengikuti"),
                     ],
                   ),
                 ),
@@ -1403,7 +1403,8 @@ class ProfileHeader extends StatelessWidget {
   );
   }
 
-  Widget _buildStatItem(String count, String label) {
+  Widget _buildStatItem(BuildContext context, String count, String label) {
+    final palette = _ProfilePalette.of(context);
     return Column(
       children: [
         Text(
@@ -1411,14 +1412,14 @@ class ProfileHeader extends StatelessWidget {
           style: GoogleFonts.outfit(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: _palette.text,
+            color: palette.text,
           ),
         ),
         Text(
           label,
           style: GoogleFonts.outfit(
             fontSize: 12,
-            color: _palette.mutedText,
+            color: palette.mutedText,
           ),
         ),
       ],
@@ -1430,6 +1431,7 @@ class ProfileHeader extends StatelessWidget {
     // Logic: verified -> hidden
     if (profile.isVerified) return const SizedBox.shrink();
 
+    final palette = _ProfilePalette.of(context);
     final status = profile.verificationStatus;
     // Map status to UI
     Color bgColor;
@@ -1440,16 +1442,16 @@ class ProfileHeader extends StatelessWidget {
     Widget? actionButton;
 
     if (status == AccountStatus.pending) {
-      bgColor = _palette.primary.withValues(alpha: 0.12);
+      bgColor = palette.primary.withValues(alpha: 0.12);
       borderColor = Colors.transparent; 
-      contentColor = _palette.primaryDark;
+      contentColor = palette.primaryDark;
       icon = Icons.hourglass_top;
       text = "Dokumen Anda sedang ditinjau oleh Admin.";
     } else {
       // unverified, rejected, unknown
-      bgColor = _palette.danger.withValues(alpha: 0.12);
-      borderColor = _palette.danger;
-      contentColor = _palette.danger;
+      bgColor = palette.danger.withValues(alpha: 0.12);
+      borderColor = palette.danger;
+      contentColor = palette.danger;
       icon = Icons.warning_amber_rounded;
       text = "Akun belum terverifikasi. Upload dokumen untuk akses fitur penuh.";
       actionButton = TextButton(
@@ -1506,6 +1508,7 @@ class ProfileHeader extends StatelessWidget {
   }
 
   Widget _buildTrustBadge(BuildContext context) {
+    final palette = _ProfilePalette.of(context);
     String label;
     Color color;
     Color textColor;
@@ -1515,30 +1518,30 @@ class ProfileHeader extends StatelessWidget {
         profile.verificationStatus == AccountStatus.verified_pastoral) {
       if (profile.isClergy) {
         label = "${profile.roleLabel} Terverifikasi";
-        color = _palette.primary.withValues(alpha: 0.12);
-        textColor = _palette.primaryDark;
+        color = palette.primary.withValues(alpha: 0.12);
+        textColor = palette.primaryDark;
         icon = Icons.verified_user;
       } else {
         label = "100% Katolik";
-        color = _palette.success.withValues(alpha: 0.12);
-        textColor = _palette.success;
+        color = palette.success.withValues(alpha: 0.12);
+        textColor = palette.success;
         icon = Icons.star;
       }
     } else if (profile.verificationStatus == AccountStatus.pending) {
       label = "Menunggu Verifikasi";
-      color = _palette.backgroundAlt;
-      textColor = _palette.mutedText;
+      color = palette.backgroundAlt;
+      textColor = palette.mutedText;
       icon = Icons.hourglass_empty;
     } else if (profile.role == UserRole.katekumen) {
       label = "Katekumen";
-      color = _palette.muted.withValues(alpha: 0.12);
-      textColor = _palette.primaryDark;
+      color = palette.muted.withValues(alpha: 0.12);
+      textColor = palette.primaryDark;
       icon = Icons.local_florist;
     } else {
       // Unverified Badge
       label = "Belum Verifikasi";
-      color = _palette.danger.withValues(alpha: 0.12);
-      textColor = _palette.danger;
+      color = palette.danger.withValues(alpha: 0.12);
+      textColor = palette.danger;
       icon = Icons.error_outline;
     }
 

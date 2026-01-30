@@ -221,7 +221,7 @@ class MyCatholicTheme {
           return Colors.transparent;
         }),
       ),
-      tabBarTheme: TabBarTheme(
+      tabBarTheme: TabBarThemeData(
         labelColor: Colors.white,
         unselectedLabelColor: kDarkTextMuted,
         indicatorColor: kDarkPrimary,

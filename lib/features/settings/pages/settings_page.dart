@@ -397,7 +397,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     color: dangerColor.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.logout, color: dangerColor, size: 20),
+                  child: Icon(Icons.logout, color: dangerColor, size: 20),
                 ),
                 title: Text(
                   "Keluar",
