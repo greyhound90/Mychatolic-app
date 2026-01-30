@@ -20,6 +20,8 @@ import 'package:mychatolic_app/pages/story/story_view_page.dart';
 import 'package:mychatolic_app/features/profile/pages/edit_profile_page.dart';
 import 'package:mychatolic_app/features/radar/pages/create_personal_radar_page.dart';
 import 'package:mychatolic_app/features/auth/pages/verification_page.dart';
+import 'package:mychatolic_app/theme/app_colors.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ProfilePage extends StatefulWidget {
   final String? userId; // If null, shows current user's profile
@@ -319,6 +321,70 @@ class _ProfilePageState extends State<ProfilePage>
     }
   }
 
+  void _handleBannerTap() {
+    if (!_isMe) return;
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.visibility),
+            title: const Text("Lihat Banner"),
+            onTap: () {
+              Navigator.pop(ctx);
+              _showBannerPreview();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_camera),
+            title: const Text("Ganti Banner"),
+            onTap: () {
+              Navigator.pop(ctx);
+              _pickAndUploadBanner();
+            },
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  void _showBannerPreview() {
+    final url = _profile?.bannerUrl;
+    if (url == null || url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Banner belum tersedia")),
+      );
+      return;
+    }
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        backgroundColor: AppColors.background,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: SafeNetworkImage(
+            imageUrl: url,
+            fit: BoxFit.cover,
+            fallbackColor: AppColors.backgroundAlt,
+            fallbackIcon: Icons.image,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _shareProfile() async {
+    if (_profile == null) return;
+    final name = _profile!.fullName ?? "User";
+    final userId = _profile!.id;
+    final message =
+        "Cek profil saya di MyChatolic!\nNama: $name\nID: $userId";
+    await Share.share(message);
+  }
+
   Future<void> _handleEditProfile() async {
     final bool? result = await Navigator.push(
       context,
@@ -485,7 +551,7 @@ class _ProfilePageState extends State<ProfilePage>
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.background,
         body: Center(child: CircularProgressIndicator()),
       );
     }
@@ -497,16 +563,16 @@ class _ProfilePageState extends State<ProfilePage>
 
     if (_error != null || _profile == null) {
       return Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.background,
         appBar: AppBar(title: const Text("Profil")),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.grey),
+              const Icon(Icons.error_outline, size: 48, color: AppColors.disabled),
               const SizedBox(height: 16),
               Text(_error ?? "Data profil tidak ditemukan.",
-                  style: GoogleFonts.outfit(color: Colors.black54)),
+                  style: GoogleFonts.outfit(color: AppColors.mutedText)),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _loadProfileData,
@@ -521,7 +587,7 @@ class _ProfilePageState extends State<ProfilePage>
     final displayProfile = _profile!;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       // RefreshIndicator wrapping NestedScrollView
       body: RefreshIndicator(
         onRefresh: _loadProfileData,
@@ -542,6 +608,8 @@ class _ProfilePageState extends State<ProfilePage>
                   onSettingsTap: _openSettings,
                   hasStories: _userStories.isNotEmpty,
                   onAvatarTap: _handleAvatarTap,
+                  onBannerTap: _handleBannerTap,
+                  onShareTap: _shareProfile,
                   isBackEnabled: widget.isBackButtonEnabled,
                 ),
               ),
@@ -549,11 +617,15 @@ class _ProfilePageState extends State<ProfilePage>
                 delegate: _SliverTabBarDelegate(
                   TabBar(
                     controller: _tabController,
-                    indicatorColor: Colors.blue,
+                    indicatorColor: AppColors.primary,
                     indicatorWeight: 3,
-                    labelColor: Colors.blue,
-                    unselectedLabelColor: Colors.grey,
-                    labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
+                    labelColor: AppColors.primary,
+                    unselectedLabelColor: AppColors.mutedText,
+                    labelStyle: GoogleFonts.outfit(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      letterSpacing: 0.4,
+                    ),
                     tabs: [
                       const Tab(text: "GALERI"),
                       const Tab(text: "STATUS"),
@@ -634,7 +706,7 @@ class _ProfilePageState extends State<ProfilePage>
       key: const PageStorageKey<String>('list'),
       padding: EdgeInsets.zero,
       itemCount: posts.length + (_isLoadMoreRunning ? 1 : 0),
-      separatorBuilder: (c, i) => Divider(height: 1, color: Colors.grey[200]),
+      separatorBuilder: (c, i) => Divider(height: 1, color: AppColors.backgroundAlt),
       itemBuilder: (context, index) {
         if (index == posts.length) {
           return const Padding(
@@ -659,10 +731,10 @@ class _ProfilePageState extends State<ProfilePage>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.camera_alt_outlined, size: 64, color: Colors.grey[300]),
+          Icon(Icons.camera_alt_outlined, size: 64, color: AppColors.backgroundAlt),
           const SizedBox(height: 16),
           Text(msg,
-              style: GoogleFonts.outfit(color: Colors.grey, fontSize: 16)),
+              style: GoogleFonts.outfit(color: AppColors.disabled, fontSize: 16)),
         ],
       ),
     );
@@ -685,11 +757,11 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
-      color: Colors.white,
+      color: AppColors.background,
       child: Column(
         children: [
           _tabBar,
-          const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
+          const Divider(height: 1, thickness: 1, color: AppColors.backgroundAlt),
         ],
       ),
     );
@@ -711,6 +783,8 @@ class ProfileHeader extends StatelessWidget {
   final VoidCallback? onSettingsTap;
   final bool hasStories;
   final VoidCallback? onAvatarTap;
+  final VoidCallback? onBannerTap;
+  final VoidCallback? onShareTap;
   final bool isBackEnabled;
 
   const ProfileHeader({
@@ -726,6 +800,8 @@ class ProfileHeader extends StatelessWidget {
     this.onSettingsTap,
     this.hasStories = false,
     this.onAvatarTap,
+    this.onBannerTap,
+    this.onShareTap,
     this.isBackEnabled = false,
   });
 
@@ -733,8 +809,8 @@ class ProfileHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     // LAYOUT CONSTANTS
     const double coverHeight = 180;
-    const double avatarSize = 100;
-    const double cardTopMargin = 150; // Overlaps cover by 30px
+    const double avatarSize = 112;
+    const double cardTopMargin = 160; // Overlaps cover by 20px
 
     String displayName = profile.fullName ?? "User";
     if (profile.baptismName != null && 
@@ -743,22 +819,91 @@ class ProfileHeader extends StatelessWidget {
       displayName = "${profile.baptismName} ${profile.fullName}";
     }
 
+    final followButton = AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      transitionBuilder: (child, animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.95, end: 1.0).animate(animation),
+            child: child,
+          ),
+        );
+      },
+      child: isFollowing
+          ? ElevatedButton.icon(
+              key: const ValueKey('following'),
+              onPressed: onFollowToggle,
+              icon: const Icon(Icons.check, size: 16, color: AppColors.background),
+              label: Text(
+                "Mengikuti",
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.background,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.muted,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                elevation: 0,
+              ),
+            )
+          : ElevatedButton.icon(
+              key: const ValueKey('follow'),
+              onPressed: onFollowToggle,
+              icon: const Icon(Icons.person_add, size: 16, color: AppColors.background),
+              label: Text(
+                "Follow",
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.background,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                elevation: 0,
+              ),
+            ),
+    );
+
     return Stack(
       clipBehavior: Clip.none,
       alignment: Alignment.topCenter,
       children: [
         // 1. BANNER IMAGE
-        Container(
-          height: coverHeight,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: Colors.grey[300],
-            image: profile.bannerUrl != null
-                ? DecorationImage(
-                    image: NetworkImage(profile.bannerUrl!),
-                    fit: BoxFit.cover,
-                  )
-                : null,
+        GestureDetector(
+          onTap: isMe ? onBannerTap : null,
+          child: Container(
+            height: coverHeight,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: AppColors.backgroundAlt,
+              image: profile.bannerUrl != null
+                  ? DecorationImage(
+                      image: NetworkImage(profile.bannerUrl!),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
+            ),
+          ),
+        ),
+        // Gradient overlay for readability
+        Positioned.fill(
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.35),
+                    Colors.black.withValues(alpha: 0.0),
+                    Colors.black.withValues(alpha: 0.15),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
 
@@ -774,7 +919,7 @@ class ProfileHeader extends StatelessWidget {
                 color: Colors.black.withValues(alpha: 0.3),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.settings, color: Colors.white, size: 24),
+              child: const Icon(Icons.settings, color: AppColors.background, size: 24),
             ),
           ),
         ),
@@ -791,7 +936,31 @@ class ProfileHeader extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child:
-                    const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+                    const Icon(Icons.arrow_back, color: AppColors.background, size: 24),
+              ),
+            ),
+          ),
+        if (isMe)
+          Positioned(
+            right: 16,
+            top: coverHeight - 36,
+            child: GestureDetector(
+              onTap: onBannerTap,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.background, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.photo_camera, size: 16, color: AppColors.background),
               ),
             ),
           ),
@@ -799,9 +968,9 @@ class ProfileHeader extends StatelessWidget {
         // 2. WHITE CARD BODY
         Container(
           margin: const EdgeInsets.only(top: cardTopMargin),
-          padding: const EdgeInsets.only(top: 60, bottom: 20), // Top padding for Avatar clearance
+          padding: const EdgeInsets.only(top: 64, bottom: 20), // Top padding for Avatar clearance
           decoration: const BoxDecoration(
-            color: Colors.white,
+            color: AppColors.background,
             borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
           ),
           child: Column(
@@ -825,7 +994,7 @@ class ProfileHeader extends StatelessWidget {
                               style: GoogleFonts.outfit(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.black87,
+                                color: AppColors.text,
                               ),
                             ),
                           ),
@@ -833,7 +1002,7 @@ class ProfileHeader extends StatelessWidget {
                             const Padding(
                               padding: EdgeInsets.only(left: 6),
                               child: Icon(Icons.verified,
-                                  color: Colors.blue, size: 20),
+                                  color: AppColors.primary, size: 20),
                             ),
                         ],
                       ),
@@ -848,13 +1017,13 @@ class ProfileHeader extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(Icons.water_drop,
-                                  size: 14, color: Colors.blue[600]),
+                                  size: 14, color: AppColors.muted),
                               const SizedBox(width: 4),
                               Text(
                                 "Nama Baptis: ${profile.baptismName}",
                                 style: GoogleFonts.outfit(
                                   fontSize: 14,
-                                  color: Colors.blue[600],
+                                  color: AppColors.muted,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -877,13 +1046,13 @@ class ProfileHeader extends StatelessWidget {
                   child: Container(
                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                      decoration: BoxDecoration(
-                       color: Colors.pink[50],
+                       color: AppColors.muted.withValues(alpha: 0.15),
                        borderRadius: BorderRadius.circular(12),
-                       border: Border.all(color: Colors.pink[100]!),
+                       border: Border.all(color: AppColors.muted.withValues(alpha: 0.4)),
                      ),
                      child: Text(
                        "${profile.age} Tahun",
-                       style: GoogleFonts.outfit(fontSize: 12, color: Colors.pink[800], fontWeight: FontWeight.bold),
+                       style: GoogleFonts.outfit(fontSize: 12, color: AppColors.primaryDark, fontWeight: FontWeight.bold),
                      ),
                   ),
                 ),
@@ -900,7 +1069,7 @@ class ProfileHeader extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.outfit(
                       fontSize: 14,
-                      color: Colors.grey[600],
+                      color: AppColors.mutedText,
                     ),
                   ),
                 ),
@@ -911,11 +1080,11 @@ class ProfileHeader extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.location_on_outlined,
-                      size: 16, color: Colors.grey[500]),
+                      size: 16, color: AppColors.mutedText),
                   const SizedBox(width: 4),
                   Text(
                     "${profile.country ?? '-'}, ${profile.diocese ?? '-'}",
-                     style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey[500]),
+                     style: GoogleFonts.outfit(fontSize: 12, color: AppColors.mutedText),
                   ),
                 ],
               ),
@@ -923,11 +1092,11 @@ class ProfileHeader extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.church_outlined,
-                      size: 16, color: Colors.grey[500]),
+                      size: 16, color: AppColors.mutedText),
                   const SizedBox(width: 4),
                   Text(
                     profile.parish ?? "Paroki -",
-                     style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey[500]),
+                     style: GoogleFonts.outfit(fontSize: 12, color: AppColors.mutedText),
                   ),
                 ],
               ),
@@ -943,65 +1112,96 @@ class ProfileHeader extends StatelessWidget {
               // 2D. ACTION BUTTONS
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 40),
-                child: Row(
-                  children: [
-                    if (isMe) ...[
-                      // EDIT PROFILE BUTTON
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: onEditTap,
-                          icon: const Icon(Icons.edit, size: 16, color: Colors.white),
-                          label: Text("Edit Profil", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF0088CC), // Primary Blue
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                            elevation: 0,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      // SHARE BUTTON
-                      OutlinedButton.icon(
-                        onPressed: () {}, // TO DO
-                        icon: const Icon(Icons.share_outlined, size: 16, color: Colors.black87),
-                        label: Text("Share", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.black87)),
-                        style: OutlinedButton.styleFrom(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          side: BorderSide.none, // Or grey border
-                        ),
-                      ),
-                    ] else ...[
-                       // AJAK MISA BUTTON
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: onInviteTap,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF0088CC),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                            elevation: 0,
-                          ),
-                          child: Text(
-                            "Ajak Misa",
-                            style: GoogleFonts.outfit(
-                              fontWeight: FontWeight.bold, 
-                              color: Colors.white
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final bool isNarrow = constraints.maxWidth < 360;
+                    if (isMe) {
+                      return Row(
+                        children: [
+                          // EDIT PROFILE BUTTON
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: onEditTap,
+                              icon: const Icon(Icons.edit, size: 16, color: AppColors.background),
+                              label: Text("Edit Profil", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.background)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                elevation: 0,
+                              ),
                             ),
                           ),
+                          const SizedBox(width: 12),
+                          // SHARE BUTTON
+                          OutlinedButton.icon(
+                            onPressed: onShareTap,
+                            icon: const Icon(Icons.share_outlined, size: 16, color: AppColors.text),
+                            label: Text("Share Profile", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.text)),
+                            style: OutlinedButton.styleFrom(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              side: BorderSide(color: AppColors.border),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+
+                    final Widget chatButton = OutlinedButton.icon(
+                      onPressed: onChatTap,
+                      icon: const Icon(Icons.mark_chat_unread_outlined, size: 16, color: AppColors.text),
+                      label: Text("Chat", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.text)),
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        side: const BorderSide(color: AppColors.border),
+                      ),
+                    );
+
+                    final Widget inviteButton = ElevatedButton(
+                      onPressed: onInviteTap,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.muted,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        "Ajak Misa",
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.background,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      // CHAT BUTTON
-                      OutlinedButton.icon(
-                        onPressed: onChatTap,
-                        icon: const Icon(Icons.mark_chat_unread_outlined, size: 16, color: Colors.black87),
-                        label: Text("Chat", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.black87)),
-                         style: OutlinedButton.styleFrom(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          side: const BorderSide(color: Colors.grey), 
-                        ),
-                      ),
-                    ],
-                  ],
+                    );
+
+                    if (isNarrow) {
+                      return Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(child: followButton),
+                              const SizedBox(width: 12),
+                              Expanded(child: chatButton),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(child: inviteButton),
+                            ],
+                          ),
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        Expanded(child: followButton),
+                        const SizedBox(width: 12),
+                        Expanded(child: chatButton),
+                        const SizedBox(width: 12),
+                        Expanded(child: inviteButton),
+                      ],
+                    );
+                  },
                 ),
               ),
 
@@ -1033,7 +1233,7 @@ class ProfileHeader extends StatelessWidget {
               height: avatarSize,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 4),
+                border: Border.all(color: AppColors.background, width: 4),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.1),
@@ -1049,7 +1249,7 @@ class ProfileHeader extends StatelessWidget {
                   height: avatarSize,
                   fit: BoxFit.cover,
                   fallbackIcon: Icons.person,
-                  fallbackColor: Colors.grey[200],
+                  fallbackColor: AppColors.backgroundAlt,
                 ),
               ),
             ),
@@ -1067,14 +1267,14 @@ class ProfileHeader extends StatelessWidget {
           style: GoogleFonts.outfit(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: AppColors.text,
           ),
         ),
         Text(
           label,
           style: GoogleFonts.outfit(
             fontSize: 12,
-            color: Colors.grey[500],
+            color: AppColors.mutedText,
           ),
         ),
       ],
@@ -1096,16 +1296,16 @@ class ProfileHeader extends StatelessWidget {
     Widget? actionButton;
 
     if (status == AccountStatus.pending) {
-      bgColor = const Color(0xFFE3F2FD); // Light Blue
+      bgColor = AppColors.primary.withValues(alpha: 0.12);
       borderColor = Colors.transparent; 
-      contentColor = const Color(0xFF0D47A1); // Dark Blue
+      contentColor = AppColors.primaryDark;
       icon = Icons.hourglass_top;
       text = "Dokumen Anda sedang ditinjau oleh Admin.";
     } else {
       // unverified, rejected, unknown
-      bgColor = const Color(0xFFFFF3CD); // Light Orange
-      borderColor = Colors.orange;
-      contentColor = const Color(0xFFE65100); // Dark Orange
+      bgColor = AppColors.danger.withValues(alpha: 0.12);
+      borderColor = AppColors.danger;
+      contentColor = AppColors.danger;
       icon = Icons.warning_amber_rounded;
       text = "Akun belum terverifikasi. Upload dokumen untuk akses fitur penuh.";
       actionButton = TextButton(
@@ -1171,30 +1371,30 @@ class ProfileHeader extends StatelessWidget {
         profile.verificationStatus == AccountStatus.verified_pastoral) {
       if (profile.isClergy) {
         label = "${profile.roleLabel} Terverifikasi";
-        color = const Color(0xFFE3F2FD); // Light Blue
-        textColor = const Color(0xFF1565C0);
+        color = AppColors.primary.withValues(alpha: 0.12);
+        textColor = AppColors.primaryDark;
         icon = Icons.verified_user;
       } else {
         label = "100% Katolik";
-        color = const Color(0xFFFFF8E1); // Gold/Yellow
-        textColor = const Color(0xFFF57F17);
+        color = AppColors.success.withValues(alpha: 0.12);
+        textColor = AppColors.success;
         icon = Icons.star;
       }
     } else if (profile.verificationStatus == AccountStatus.pending) {
       label = "Menunggu Verifikasi";
-      color = Colors.grey[100]!;
-      textColor = Colors.grey[700]!;
+      color = AppColors.backgroundAlt;
+      textColor = AppColors.mutedText;
       icon = Icons.hourglass_empty;
     } else if (profile.role == UserRole.katekumen) {
       label = "Katekumen";
-      color = const Color(0xFFE8F5E9); // Light Green
-      textColor = const Color(0xFF2E7D32);
+      color = AppColors.muted.withValues(alpha: 0.12);
+      textColor = AppColors.primaryDark;
       icon = Icons.local_florist;
     } else {
       // Unverified Badge
       label = "Belum Verifikasi";
-      color = const Color(0xFFFFEBEE); // Light Red
-      textColor = const Color(0xFFC62828); // Dark Red
+      color = AppColors.danger.withValues(alpha: 0.12);
+      textColor = AppColors.danger;
       icon = Icons.error_outline;
     }
 
