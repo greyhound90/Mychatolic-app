@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:mychatolic_app/pages/main_page.dart';
 import 'package:mychatolic_app/features/auth/pages/register_page.dart';
+import 'package:mychatolic_app/features/profile/pages/edit_profile_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -85,7 +86,7 @@ class _LoginPageState extends State<LoginPage> {
       // TAHAP B: Profile Check (Anti-Zombie)
       final profile = await Supabase.instance.client
           .from('profiles')
-          .select('id, verification_status, role')
+          .select('id, verification_status, role, profile_filled')
           .eq('id', user.id)
           .maybeSingle();
 
@@ -105,6 +106,18 @@ class _LoginPageState extends State<LoginPage> {
            _showBannedDialog();
          }
          return;
+      }
+
+      // TAHAP D: Profile Completion Check
+      final bool profileFilled = profile['profile_filled'] == true;
+      if (!profileFilled) {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const EditProfilePage()),
+          );
+        }
+        return;
       }
       
       // 4. Success -> Navigation

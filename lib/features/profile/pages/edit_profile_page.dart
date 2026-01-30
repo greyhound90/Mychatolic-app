@@ -8,6 +8,7 @@ import 'package:image_cropper/image_cropper.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mychatolic_app/widgets/safe_network_image.dart';
+import 'package:mychatolic_app/services/profile_service.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -18,6 +19,7 @@ class EditProfilePage extends StatefulWidget {
 
 class _EditProfilePageState extends State<EditProfilePage> {
   final _supabase = Supabase.instance.client;
+  final ProfileService _profileService = ProfileService();
 
   // --- DESIGN SYSTEM CONSTANTS (Light Mode) ---
   static const Color primaryBrand = Color(0xFF0088CC);
@@ -109,7 +111,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           if (data['countries'] != null) {
             _countryController.text = data['countries']['name'] ?? "";
           } else {
-            _countryController.text = data['country'] ?? "";
+            _countryController.text = "";
           }
 
           // Diocese
@@ -117,7 +119,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           if (data['dioceses'] != null) {
             _dioceseController.text = data['dioceses']['name'] ?? "";
           } else {
-            _dioceseController.text = data['diocese'] ?? "";
+            _dioceseController.text = "";
           }
 
           // Parish
@@ -125,7 +127,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           if (data['churches'] != null) {
             _parishController.text = data['churches']['name'] ?? "";
           } else {
-            _parishController.text = data['parish'] ?? "";
+            _parishController.text = "";
           }
         });
       }
@@ -248,24 +250,26 @@ class _EditProfilePageState extends State<EditProfilePage> {
         newAvatarUrl = _supabase.storage.from('avatars').getPublicUrl(path);
       }
 
-      final updates = {
-        'full_name': _nameController.text.trim(),
-        'baptism_name': _baptismNameController.text.trim(), // NEW
-        'bio': _bioController.text.trim(),
-        'gender': _selectedGender,
-        'marital_status': _maritalStatus, // NEW
-        'birth_date': _selectedBirthDate?.toIso8601String(),
-        'ethnicity': _ethnicityController.text.trim(),
-        'country': _countryController.text.trim(),
-        'diocese': _dioceseController.text.trim(),
-        'parish':
-            _selectedParishId ??
-            _parishController.text.trim(),
-        'avatar_url': newAvatarUrl,
-        'updated_at': DateTime.now().toIso8601String(),
-      };
+      final birthDate = _selectedBirthDate != null
+          ? DateFormat('yyyy-MM-dd').format(_selectedBirthDate!)
+          : null;
 
-      await _supabase.from('profiles').update(updates).eq('id', user.id);
+      await _profileService.updateProfile(
+        userId: user.id,
+        updates: {
+          'full_name': _nameController.text.trim(),
+          'baptism_name': _baptismNameController.text.trim(),
+          'bio': _bioController.text.trim(),
+          'gender': _selectedGender,
+          'marital_status': _maritalStatus,
+          'birth_date': birthDate,
+          'ethnicity': _ethnicityController.text.trim(),
+          'country_id': _selectedCountryId,
+          'diocese_id': _selectedDioceseId,
+          'church_id': _selectedParishId,
+          'avatar_url': newAvatarUrl,
+        },
+      );
 
       // Update Auth Metadata for faster access
       await _supabase.auth.updateUser(
@@ -447,6 +451,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           _dioceseController.clear();
                           _selectedDioceseId = null;
                           _parishController.clear();
+                          _selectedParishId = null;
                         });
                       },
                     );
@@ -481,6 +486,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                           // Reset Child
                           _parishController.clear();
+                          _selectedParishId = null;
                         });
                       },
                     );

@@ -44,8 +44,13 @@ class Profile {
   final String? bio;
   final DateTime? birthDate;
   final String? ethnicity;
+  final String? gender;
   final String? baptismName; // NEW Field
   final String? maritalStatus; // NEW Field
+  final bool isCatechumen;
+  final bool profileFilled;
+  final DateTime? termsAcceptedAt;
+  final DateTime? updatedAt;
   
   // Location Text
   final String? country;
@@ -80,8 +85,13 @@ class Profile {
     this.churchId,
     this.birthDate,
     this.ethnicity,
+    this.gender,
     this.baptismName,
     this.maritalStatus,
+    this.isCatechumen = false,
+    this.profileFilled = false,
+    this.termsAcceptedAt,
+    this.updatedAt,
     this.showAge = false,
     this.showEthnicity = false,
   });
@@ -183,6 +193,11 @@ class Profile {
     String? churchId,
     DateTime? birthDate,
     String? ethnicity,
+    String? gender,
+    bool? isCatechumen,
+    bool? profileFilled,
+    DateTime? termsAcceptedAt,
+    DateTime? updatedAt,
     bool? showAge,
     bool? showEthnicity,
   }) {
@@ -207,12 +222,23 @@ class Profile {
       churchId: churchId ?? this.churchId,
       birthDate: birthDate ?? this.birthDate,
       ethnicity: ethnicity ?? this.ethnicity,
+      gender: gender ?? this.gender,
+      isCatechumen: isCatechumen ?? this.isCatechumen,
+      profileFilled: profileFilled ?? this.profileFilled,
+      termsAcceptedAt: termsAcceptedAt ?? this.termsAcceptedAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       showAge: showAge ?? this.showAge,
       showEthnicity: showEthnicity ?? this.showEthnicity,
     );
   }
 
   factory Profile.fromJson(Map<String, dynamic> json) {
+    bool parseBool(dynamic val) {
+      if (val is bool) return val;
+      if (val is num) return val != 0;
+      if (val is String) return val.toLowerCase() == 'true';
+      return false;
+    }
     // Helper to parse Enums
     UserRole parseRole(String? val) {
       if (val == null) return UserRole.umat;
@@ -288,8 +314,17 @@ class Profile {
       dioceseId: json['diocese_id']?.toString(),
       churchId: json['church_id']?.toString(),
       ethnicity: json['ethnicity']?.toString(),
+      gender: json['gender']?.toString(),
       birthDate: json['birth_date'] != null
           ? DateTime.tryParse(json['birth_date'].toString())
+          : null,
+      isCatechumen: parseBool(json['is_catechumen']),
+      profileFilled: parseBool(json['profile_filled']),
+      termsAcceptedAt: json['terms_accepted_at'] != null
+          ? DateTime.tryParse(json['terms_accepted_at'].toString())
+          : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'].toString())
           : null,
       showAge: json['is_age_visible'] == true,
       showEthnicity: json['is_ethnicity_visible'] == true,
@@ -320,6 +355,11 @@ class Profile {
           ? "${birthDate!.year}-${birthDate!.month.toString().padLeft(2, '0')}-${birthDate!.day.toString().padLeft(2, '0')}"
           : null,
       'ethnicity': ethnicity,
+      'gender': gender,
+      'is_catechumen': isCatechumen,
+      'profile_filled': profileFilled,
+      'terms_accepted_at': termsAcceptedAt?.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
       'is_age_visible': showAge,
       'is_ethnicity_visible': showEthnicity,
     };

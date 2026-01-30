@@ -157,44 +157,46 @@ class _RegisterPageState extends State<RegisterPage> {
     final roleUI = _selectedRole ?? 'Umat';
     final roleDB = _roleMap[roleUI] ?? 'umat';
     final maritalDB = _maritalStatusMap[_maritalStatus ?? ''] ?? 'single';
+    final birthDate = _formatDateForDB(_dobController.text);
+    final termsAcceptedAt = DateTime.now().toIso8601String();
+
+    final userMetadata = <String, dynamic>{
+      'full_name': name,
+      'baptism_name': baptismName,
+      'role': roleDB,
+      'is_catechumen': _isCatechumen,
+      'marital_status': maritalDB,
+      'gender': null,
+      'profile_filled': true,
+      'terms_accepted_at': termsAcceptedAt,
+    };
+
+    if (birthDate != null) {
+      userMetadata['birth_date'] = birthDate;
+    }
+    if (_ethnicityController.text.trim().isNotEmpty) {
+      userMetadata['ethnicity'] = _ethnicityController.text.trim();
+    }
+    if (_selectedCountry?['id'] != null) {
+      userMetadata['country_id'] = _selectedCountry!['id'];
+    }
+    if (_selectedDiocese?['id'] != null) {
+      userMetadata['diocese_id'] = _selectedDiocese!['id'];
+    }
+    if (_selectedParish?['id'] != null) {
+      userMetadata['church_id'] = _selectedParish!['id'];
+    }
 
     try {
       // 1. Sign Up
       final AuthResponse res = await _supabase.auth.signUp(
         email: email,
         password: password,
-        data: {
-          'full_name': name,
-          'baptism_name': baptismName, // Added to metadata
-          'role': roleDB,
-          'is_catechumen': _isCatechumen,
-          'marital_status': maritalDB, 
-        },
+        data: userMetadata,
       );
 
-      final user = res.user;
-
-      if (user != null) {
-        // 2. Update Profile
-        final birthDate = _formatDateForDB(_dobController.text);
-        
-        await _supabase.from('profiles').update({
-          'birth_date': birthDate,
-          'ethnicity': _ethnicityController.text.trim(),
-          'country_id': _selectedCountry?['id'],
-          'diocese_id': _selectedDiocese?['id'],
-          'church_id': _selectedParish?['id'],
-          'marital_status': maritalDB, // Ensure stored in profile too
-          'updated_at': DateTime.now().toIso8601String(),
-        }).eq('id', user.id);
-
-        if (mounted) {
-          _showSuccessDialog();
-        }
-      } else {
-        if (mounted) {
-           _showError("Cek email anda untuk verifikasi akun.");
-        }
+      if (mounted) {
+        _showSuccessDialog();
       }
     } on AuthException catch (e) {
       if (mounted) _showError(e.message);
@@ -298,7 +300,7 @@ class _RegisterPageState extends State<RegisterPage> {
             style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.black),
           ),
           content: Text(
-            "Akun anda telah dibuat. Silakan masuk kembali.",
+            "Akun Anda telah dibuat. Silakan verifikasi email terlebih dahulu, lalu login kembali.",
             style: GoogleFonts.outfit(color: Colors.black87),
           ),
           actions: [

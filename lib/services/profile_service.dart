@@ -9,12 +9,15 @@ class ProfileService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
   // 1. Fetch User Profile with Stats
-  Future<Profile> fetchUserProfile(String userId) async {
+  Future<Profile> getProfile(String userId) async {
     try {
       final response = await _supabase
           .from('profiles')
           .select(
-            '*, countries:country_id(name), dioceses:diocese_id(name), churches:church_id(name)',
+            'id, email, full_name, baptism_name, birth_date, gender, ethnicity, marital_status, '
+            'country_id, diocese_id, church_id, avatar_url, bio, banner_url, role, verification_status, '
+            'is_catechumen, profile_filled, updated_at, terms_accepted_at, '
+            'countries:country_id(name), dioceses:diocese_id(name), churches:church_id(name)',
           )
           .eq('id', userId)
           .order('updated_at', ascending: false)
@@ -48,47 +51,91 @@ class ProfileService {
     }
   }
 
+  // Backward compatible alias
+  Future<Profile> fetchUserProfile(String userId) async {
+    return getProfile(userId);
+  }
+
   // 1b. Update Profile
   Future<void> updateProfile({
     required String userId,
+    Map<String, dynamic>? updates,
     String? fullName,
     String? baptismName,
     String? bio,
-    String? country,
-    String? diocese,
-    String? parish,
     String? countryId,
     String? dioceseId,
     String? churchId,
+    String? birthDate,
+    String? gender,
+    String? maritalStatus,
     String? ethnicity,
     bool? showAge,
     bool? showEthnicity,
     String? avatarUrl,
     String? bannerUrl,
-    Map<String, dynamic>? updates,
   }) async {
     try {
-      final updatePayload = <String, dynamic>{
-        'updated_at': DateTime.now().toIso8601String(),
-        if (fullName != null) 'full_name': fullName,
-        if (baptismName != null) 'baptism_name': baptismName,
-        if (bio != null) 'bio': bio,
-        if (country != null) 'country': country,
-        if (diocese != null) 'diocese': diocese,
-        if (parish != null) 'parish': parish,
-        if (countryId != null) 'country_id': countryId,
-        if (dioceseId != null) 'diocese_id': dioceseId,
-        if (churchId != null) 'church_id': churchId,
-        if (ethnicity != null) 'ethnicity': ethnicity,
-        if (showAge != null) 'is_age_visible': showAge,
-        if (showEthnicity != null) 'is_ethnicity_visible': showEthnicity,
-        if (avatarUrl != null) 'avatar_url': avatarUrl,
-        if (bannerUrl != null) 'banner_url': bannerUrl,
+      final payload = <String, dynamic>{};
+      if (updates != null && updates.isNotEmpty) {
+        payload.addAll(updates);
+      }
+
+      if (fullName != null) payload['full_name'] = fullName;
+      if (baptismName != null) payload['baptism_name'] = baptismName;
+      if (bio != null) payload['bio'] = bio;
+      if (countryId != null) payload['country_id'] = countryId;
+      if (dioceseId != null) payload['diocese_id'] = dioceseId;
+      if (churchId != null) payload['church_id'] = churchId;
+      if (birthDate != null) payload['birth_date'] = birthDate;
+      if (gender != null) payload['gender'] = gender;
+      if (maritalStatus != null) payload['marital_status'] = maritalStatus;
+      if (ethnicity != null) payload['ethnicity'] = ethnicity;
+      if (showAge != null) payload['is_age_visible'] = showAge;
+      if (showEthnicity != null) payload['is_ethnicity_visible'] = showEthnicity;
+      if (avatarUrl != null) payload['avatar_url'] = avatarUrl;
+      if (bannerUrl != null) payload['banner_url'] = bannerUrl;
+
+      const allowedKeys = {
+        'full_name',
+        'baptism_name',
+        'bio',
+        'birth_date',
+        'gender',
+        'ethnicity',
+        'marital_status',
+        'country_id',
+        'diocese_id',
+        'church_id',
+        'avatar_url',
+        'banner_url',
+        'role',
+        'verification_status',
+        'is_catechumen',
+        'profile_filled',
+        'terms_accepted_at',
+        'is_age_visible',
+        'is_ethnicity_visible',
       };
 
-      if (updates != null && updates.isNotEmpty) {
-        updatePayload.addAll(updates);
+      final updatePayload = <String, dynamic>{};
+      payload.forEach((key, value) {
+        if (allowedKeys.contains(key)) {
+          updatePayload[key] = value;
+        }
+      });
+
+      if (updatePayload.containsKey('birth_date')) {
+        final value = updatePayload['birth_date'];
+        if (value is DateTime) {
+          updatePayload['birth_date'] =
+              "${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}";
+        }
       }
+
+      if (updatePayload.isEmpty) return;
+
+      updatePayload['updated_at'] = DateTime.now().toIso8601String();
 
       await _supabase.from('profiles').update(updatePayload).eq('id', userId);
     } catch (e) {
