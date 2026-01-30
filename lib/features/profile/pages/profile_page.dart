@@ -14,8 +14,9 @@ import 'package:mychatolic_app/services/post_service.dart';
 import 'package:mychatolic_app/widgets/safe_network_image.dart';
 import 'package:mychatolic_app/widgets/post_card.dart';
 import 'package:mychatolic_app/pages/post_detail_screen.dart';
+import 'package:mychatolic_app/pages/main_page.dart';
 import 'package:mychatolic_app/features/settings/pages/settings_page.dart';
-import 'package:mychatolic_app/features/social/pages/social_chat_detail_page.dart';
+import 'package:mychatolic_app/features/social/pages/chat_page.dart';
 import 'package:mychatolic_app/pages/story/story_view_page.dart';
 import 'package:mychatolic_app/features/profile/pages/edit_profile_page.dart';
 import 'package:mychatolic_app/features/radar/pages/create_personal_radar_page.dart';
@@ -280,34 +281,21 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   Future<void> _navigateToChat() async {
-    if (_profile != null) {
-      try {
-        final chatId = await _chatService.getOrCreatePrivateChat(_profile!.id);
-        if (!mounted) return;
+    if (_profile == null) return;
 
-        final Map<String, dynamic> opponentProfileMap = {
-          'id': _profile!.id,
-          'full_name': _profile!.fullName ?? "User",
-          'avatar_url': _profile!.avatarUrl,
-          'role': _profile!.roleLabel,
-        };
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => SocialChatDetailPage(
-              chatId: chatId,
-              opponentProfile: opponentProfileMap,
-            ),
-          ),
-        );
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text("Error: $e")));
-        }
-      }
+    final homeState = context.findAncestorStateOfType<HomePageState>();
+    if (homeState != null) {
+      homeState.openChatWith(_profile!.id);
+      return;
     }
+
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatPage(partnerId: _profile!.id),
+      ),
+    );
   }
 
   void _handleInviteToMass() {
@@ -809,8 +797,9 @@ class ProfileHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     // LAYOUT CONSTANTS
     const double coverHeight = 180;
-    const double avatarSize = 112;
+    const double avatarSize = 120;
     const double cardTopMargin = 160; // Overlaps cover by 20px
+    final double cardTopPadding = (avatarSize / 2) + 20;
 
     String displayName = profile.fullName ?? "User";
     if (profile.baptismName != null && 
@@ -867,10 +856,12 @@ class ProfileHeader extends StatelessWidget {
             ),
     );
 
-    return Stack(
-      clipBehavior: Clip.none,
-      alignment: Alignment.topCenter,
-      children: [
+    return Container(
+      color: AppColors.backgroundAlt,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.topCenter,
+        children: [
         // 1. BANNER IMAGE
         GestureDetector(
           onTap: isMe ? onBannerTap : null,
@@ -940,185 +931,191 @@ class ProfileHeader extends StatelessWidget {
               ),
             ),
           ),
-        if (isMe)
-          Positioned(
-            right: 16,
-            top: coverHeight - 36,
-            child: GestureDetector(
-              onTap: onBannerTap,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.background, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: const Icon(Icons.photo_camera, size: 16, color: AppColors.background),
-              ),
-            ),
-          ),
-
         // 2. WHITE CARD BODY
         Container(
           margin: const EdgeInsets.only(top: cardTopMargin),
-          padding: const EdgeInsets.only(top: 64, bottom: 20), // Top padding for Avatar clearance
-          decoration: const BoxDecoration(
+          padding: EdgeInsets.only(top: cardTopPadding, bottom: 20),
+          decoration: BoxDecoration(
             color: AppColors.background,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 18,
+                offset: const Offset(0, -6),
+              ),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 2A. NAME & VERIFIED
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+              // Section 1: Identity + badges
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: AppColors.backgroundAlt,
+                  borderRadius: BorderRadius.circular(18),
+                ),
                 child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // 1. FULL NAME & VERIFIED
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              profile.fullName ?? "User",
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.outfit(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.text,
-                              ),
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            profile.fullName ?? "User",
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.outfit(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.text,
                             ),
-                          ),
-                          if (profile.isVerified)
-                            const Padding(
-                              padding: EdgeInsets.only(left: 6),
-                              child: Icon(Icons.verified,
-                                  color: AppColors.primary, size: 20),
-                            ),
-                        ],
-                      ),
-                      // 2. BAPTISM NAME (SUB-TEXT)
-                      if (profile.baptismName != null &&
-                          profile.baptismName!.trim().isNotEmpty &&
-                          profile.baptismName != "null")
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.water_drop,
-                                  size: 14, color: AppColors.muted),
-                              const SizedBox(width: 4),
-                              Text(
-                                "Nama Baptis: ${profile.baptismName}",
-                                style: GoogleFonts.outfit(
-                                  fontSize: 14,
-                                  color: AppColors.muted,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
                           ),
                         ),
-                    ],
-                  ),
-              ),
-              const SizedBox(height: 8),
-
-              // 2B. TRUST BADGE
-              _buildTrustBadge(context),
-              const SizedBox(height: 12),
-              
-              // 2C. AGE (Only if < 18)
-              if (profile.shouldShowAge && profile.age != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Container(
-                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                     decoration: BoxDecoration(
-                       color: AppColors.muted.withValues(alpha: 0.15),
-                       borderRadius: BorderRadius.circular(12),
-                       border: Border.all(color: AppColors.muted.withValues(alpha: 0.4)),
-                     ),
-                     child: Text(
-                       "${profile.age} Tahun",
-                       style: GoogleFonts.outfit(fontSize: 12, color: AppColors.primaryDark, fontWeight: FontWeight.bold),
-                     ),
-                  ),
-                ),
-
-              // 2D. BIO
-              if (profile.bio != null && profile.bio!.isNotEmpty)
-              if (profile.bio != null && profile.bio!.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
-                  child: Text(
-                    profile.bio!,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.outfit(
-                      fontSize: 14,
-                      color: AppColors.mutedText,
+                        if (profile.isVerified)
+                          const Padding(
+                            padding: EdgeInsets.only(left: 6),
+                            child: Icon(Icons.verified,
+                                color: AppColors.primary, size: 20),
+                          ),
+                      ],
                     ),
-                  ),
+                    if (profile.baptismName != null &&
+                        profile.baptismName!.trim().isNotEmpty &&
+                        profile.baptismName != "null")
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.water_drop,
+                                size: 14, color: AppColors.muted),
+                            const SizedBox(width: 4),
+                            Text(
+                              "Nama Baptis: ${profile.baptismName}",
+                              style: GoogleFonts.outfit(
+                                fontSize: 14,
+                                color: AppColors.muted,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: 10),
+                    _buildTrustBadge(context),
+                    if (profile.shouldShowAge && profile.age != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.muted.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.muted.withValues(alpha: 0.4)),
+                          ),
+                          child: Text(
+                            "${profile.age} Tahun",
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              color: AppColors.primaryDark,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-              const SizedBox(height: 12),
-
-              // 2C. LOCATION / DETAILS
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.location_on_outlined,
-                      size: 16, color: AppColors.mutedText),
-                  const SizedBox(width: 4),
-                  Text(
-                    "${profile.country ?? '-'}, ${profile.diocese ?? '-'}",
-                     style: GoogleFonts.outfit(fontSize: 12, color: AppColors.mutedText),
-                  ),
-                ],
-              ),
-               Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.church_outlined,
-                      size: 16, color: AppColors.mutedText),
-                  const SizedBox(width: 4),
-                  Text(
-                    profile.parish ?? "Paroki -",
-                     style: GoogleFonts.outfit(fontSize: 12, color: AppColors.mutedText),
-                  ),
-                ],
               ),
 
-              const SizedBox(height: 24),
-
               const SizedBox(height: 12),
+
+              // Section 2: Bio + location
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: AppColors.backgroundAlt),
+                ),
+                child: Column(
+                  children: [
+                    if (profile.bio != null && profile.bio!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Text(
+                          profile.bio!,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            color: AppColors.mutedText,
+                          ),
+                        ),
+                      ),
+                    if (profile.bio != null && profile.bio!.isNotEmpty)
+                      const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.location_on_outlined,
+                            size: 16, color: AppColors.mutedText),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            "${profile.country ?? '-'}, ${profile.diocese ?? '-'}",
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.outfit(fontSize: 12, color: AppColors.mutedText),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.church_outlined,
+                            size: 16, color: AppColors.mutedText),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            profile.parish ?? "Paroki -",
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.outfit(fontSize: 12, color: AppColors.mutedText),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 14),
 
               // VERIFICATION BANNER
               _buildVerificationBanner(context),
               const SizedBox(height: 12),
 
-              // 2D. ACTION BUTTONS
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40),
+              // Section 3: Action buttons
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: AppColors.backgroundAlt,
+                  borderRadius: BorderRadius.circular(18),
+                ),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final bool isNarrow = constraints.maxWidth < 360;
                     if (isMe) {
                       return Row(
                         children: [
-                          // EDIT PROFILE BUTTON
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: onEditTap,
@@ -1132,7 +1129,6 @@ class ProfileHeader extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          // SHARE BUTTON
                           OutlinedButton.icon(
                             onPressed: onShareTap,
                             icon: const Icon(Icons.share_outlined, size: 16, color: AppColors.text),
@@ -1205,23 +1201,56 @@ class ProfileHeader extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 24),
-              const Divider(height: 1, indent: 20, endIndent: 20),
               const SizedBox(height: 16),
+              const Divider(height: 1, indent: 20, endIndent: 20),
+              const SizedBox(height: 12),
 
-              // 2E. STATS ROW
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildStatItem("${stats['posts'] ?? 0}", "Post"),
-                  _buildStatItem("${stats['followers'] ?? 0}", "Pengikut"),
-                  _buildStatItem("${stats['following'] ?? 0}", "Mengikuti"),
-                ],
+              // Section 4: Stats
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.backgroundAlt,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildStatItem("${stats['posts'] ?? 0}", "Post"),
+                    _buildStatItem("${stats['followers'] ?? 0}", "Pengikut"),
+                    _buildStatItem("${stats['following'] ?? 0}", "Mengikuti"),
+                  ],
+                ),
               ),
               const SizedBox(height: 8),
             ],
           ),
         ),
+
+        if (isMe)
+          Positioned(
+            right: 16,
+            top: cardTopMargin - 52,
+            child: GestureDetector(
+              onTap: onBannerTap,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.background, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.photo_camera, size: 16, color: AppColors.background),
+              ),
+            ),
+          ),
 
         // 3. AVATAR (Positioned to overlap)
         Positioned(
@@ -1256,7 +1285,8 @@ class ProfileHeader extends StatelessWidget {
           ),
         ),
       ],
-    );
+    ),
+  );
   }
 
   Widget _buildStatItem(String count, String label) {

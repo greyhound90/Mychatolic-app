@@ -17,12 +17,13 @@ class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<HomePage> createState() => HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class HomePageState extends State<HomePage> {
   final _supabase = Supabase.instance.client;
   int _currentIndex = 0;
+  String? _chatPartnerId;
 
   final GlobalKey<HomeScreenState> _homeScreenKey =
       GlobalKey<HomeScreenState>();
@@ -69,6 +70,18 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  void openChatWith(String partnerId) {
+    setState(() {
+      _chatPartnerId = partnerId;
+      _currentIndex = 4;
+    });
+
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      setState(() => _chatPartnerId = null);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     // List of pages for the bottom navigation
@@ -78,7 +91,7 @@ class _HomePageState extends State<HomePage> {
       const BibleLibraryScreen(),
       const RadarPage(),
       // Unified Chat Page (Replaces SocialInboxPage)
-      const ChatPage(), 
+      ChatPage(key: ValueKey(_chatPartnerId ?? 'chat'), partnerId: _chatPartnerId),
       ProfilePage(key: _profilePageKey),
     ];
 
