@@ -516,8 +516,11 @@ class _RegisterPageState extends State<RegisterPage> {
           // 5. Config Popup
           popupProps: PopupProps.modalBottomSheet(
             showSearchBox: true,
-            itemBuilder: (context, item, isSelected) {
+            itemBuilder: (context, item, isSelected, isHighlighted) {
               return ListTile(
+                tileColor: isHighlighted
+                    ? _kPrimary.withOpacity(0.12)
+                    : Colors.transparent,
                 title: Text(
                   item['name']?.toString() ?? '',
                   style: GoogleFonts.outfit(
