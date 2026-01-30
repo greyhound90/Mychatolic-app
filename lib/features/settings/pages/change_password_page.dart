@@ -73,20 +73,26 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final textPrimary = colors.onSurface;
+    final textSecondary = colors.onSurface.withOpacity(0.7);
+    final surface = colors.surface;
+    final border = theme.dividerColor;
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           "Ubah Kata Sandi",
           style: GoogleFonts.outfit(
-            color: Colors.black,
+            color: textPrimary,
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Icon(Icons.arrow_back, color: textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -97,16 +103,31 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
             _buildInput(
               label: "Password Saat Ini",
               controller: _currentController,
+              textPrimary: textPrimary,
+              textSecondary: textSecondary,
+              surface: surface,
+              border: border,
+              primary: colors.primary,
             ),
             const SizedBox(height: 12),
             _buildInput(
               label: "Password Baru",
               controller: _newController,
+              textPrimary: textPrimary,
+              textSecondary: textSecondary,
+              surface: surface,
+              border: border,
+              primary: colors.primary,
             ),
             const SizedBox(height: 12),
             _buildInput(
               label: "Konfirmasi Password Baru",
               controller: _confirmController,
+              textPrimary: textPrimary,
+              textSecondary: textSecondary,
+              surface: surface,
+              border: border,
+              primary: colors.primary,
             ),
             const SizedBox(height: 20),
             SizedBox(
@@ -114,25 +135,27 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _handleChangePassword,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0088CC),
+                  backgroundColor: colors.primary,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 child: _isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            colors.onPrimary,
+                          ),
                         ),
                       )
                     : Text(
                         "Simpan",
                         style: GoogleFonts.outfit(
-                          color: Colors.white,
+                          color: colors.onPrimary,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -148,6 +171,11 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   Widget _buildInput({
     required String label,
     required TextEditingController controller,
+    required Color textPrimary,
+    required Color textSecondary,
+    required Color surface,
+    required Color border,
+    required Color primary,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -157,7 +185,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
           style: GoogleFonts.outfit(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            color: textSecondary,
           ),
         ),
         const SizedBox(height: 6),
@@ -166,20 +194,21 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
           obscureText: true,
           decoration: InputDecoration(
             filled: true,
-            fillColor: Colors.white,
+            fillColor: surface,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: border.withOpacity(0.6)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: border.withOpacity(0.6)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF0088CC)),
+              borderSide: BorderSide(color: primary),
             ),
           ),
+          style: GoogleFonts.outfit(color: textPrimary),
         ),
       ],
     );

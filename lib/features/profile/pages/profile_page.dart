@@ -24,7 +24,6 @@ import 'package:mychatolic_app/pages/story/story_view_page.dart';
 import 'package:mychatolic_app/features/profile/pages/edit_profile_page.dart';
 import 'package:mychatolic_app/features/radar/pages/create_personal_radar_page.dart';
 import 'package:mychatolic_app/features/auth/pages/verification_page.dart';
-import 'package:mychatolic_app/theme/app_colors.dart';
 import 'package:share_plus/share_plus.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -57,6 +56,8 @@ class _ProfilePageState extends State<ProfilePage>
   Map<String, int> _stats = {'followers': 0, 'following': 0, 'posts': 0};
   bool _isFollowing = false;
   bool _isMe = false;
+  
+  _ProfilePalette get _palette => _ProfilePalette.of(context);
 
   // Post Lists (Pagination State)
   List<UserPost> _photoPosts = [];
@@ -359,13 +360,13 @@ class _ProfilePageState extends State<ProfilePage>
       context: context,
       builder: (_) => Dialog(
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-        backgroundColor: AppColors.background,
+        backgroundColor: _palette.background,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: SafeNetworkImage(
             imageUrl: url,
             fit: BoxFit.cover,
-            fallbackColor: AppColors.backgroundAlt,
+            fallbackColor: _palette.backgroundAlt,
             fallbackIcon: Icons.image,
           ),
         ),
@@ -512,8 +513,8 @@ class _ProfilePageState extends State<ProfilePage>
       uiSettings: [
         AndroidUiSettings(
           toolbarTitle: 'Atur Banner',
-          toolbarColor: AppColors.primary,
-          toolbarWidgetColor: Colors.white,
+          toolbarColor: _palette.primary,
+          toolbarWidgetColor: Theme.of(context).colorScheme.onPrimary,
           initAspectRatio: CropAspectRatioPreset.ratio16x9,
           lockAspectRatio: true,
         ),
@@ -572,7 +573,7 @@ class _ProfilePageState extends State<ProfilePage>
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: _palette.background,
         body: Center(child: CircularProgressIndicator()),
       );
     }
@@ -586,16 +587,16 @@ class _ProfilePageState extends State<ProfilePage>
 
     if (_error != null || _profile == null) {
       return Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: _palette.background,
         appBar: AppBar(title: const Text("Profil")),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: AppColors.disabled),
+              Icon(Icons.error_outline, size: 48, color: _palette.disabled),
               const SizedBox(height: 16),
               Text(_error ?? "Data profil tidak ditemukan.",
-                  style: GoogleFonts.outfit(color: AppColors.mutedText)),
+                  style: GoogleFonts.outfit(color: _palette.mutedText)),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _loadProfileData,
@@ -610,7 +611,7 @@ class _ProfilePageState extends State<ProfilePage>
     final displayProfile = _profile!;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: _palette.background,
       // RefreshIndicator wrapping NestedScrollView
       body: RefreshIndicator(
         onRefresh: _loadProfileData,
@@ -640,10 +641,7 @@ class _ProfilePageState extends State<ProfilePage>
                 delegate: _SliverTabBarDelegate(
                   TabBar(
                     controller: _tabController,
-                    indicatorColor: AppColors.primary,
                     indicatorWeight: 3,
-                    labelColor: AppColors.primary,
-                    unselectedLabelColor: AppColors.mutedText,
                     labelStyle: GoogleFonts.outfit(
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
@@ -738,7 +736,7 @@ class _ProfilePageState extends State<ProfilePage>
       key: const PageStorageKey<String>('list'),
       padding: EdgeInsets.zero,
       itemCount: posts.length + (_isLoadMoreRunning ? 1 : 0),
-      separatorBuilder: (c, i) => Divider(height: 1, color: AppColors.backgroundAlt),
+      separatorBuilder: (c, i) => Divider(height: 1, color: _palette.border),
       itemBuilder: (context, index) {
         if (index == posts.length) {
           return const Padding(
@@ -767,11 +765,11 @@ class _ProfilePageState extends State<ProfilePage>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.camera_alt_outlined, size: 64, color: AppColors.backgroundAlt),
+                Icon(Icons.camera_alt_outlined, size: 64, color: _palette.mutedText),
                 const SizedBox(height: 16),
                 Text(
                   msg,
-                  style: GoogleFonts.outfit(color: AppColors.disabled, fontSize: 16),
+                  style: GoogleFonts.outfit(color: _palette.disabled, fontSize: 16),
                 ),
               ],
             ),
@@ -797,12 +795,13 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final _palette = _ProfilePalette.of(context);
     return Container(
-      color: AppColors.background,
+      color: _palette.background,
       child: Column(
         children: [
           _tabBar,
-          const Divider(height: 1, thickness: 1, color: AppColors.backgroundAlt),
+          Divider(height: 1, thickness: 1, color: _palette.border),
         ],
       ),
     );
@@ -848,6 +847,7 @@ class ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final _palette = _ProfilePalette.of(context);
     // LAYOUT CONSTANTS
     const double coverHeight = 180;
     const double avatarSize = 120;
@@ -876,16 +876,16 @@ class ProfileHeader extends StatelessWidget {
           ? ElevatedButton.icon(
               key: const ValueKey('following'),
               onPressed: onFollowToggle,
-              icon: const Icon(Icons.check, size: 16, color: AppColors.background),
+              icon: Icon(Icons.check, size: 16, color: _palette.onPrimary),
               label: Text(
                 "Mengikuti",
                 style: GoogleFonts.outfit(
                   fontWeight: FontWeight.bold,
-                  color: AppColors.background,
+                  color: _palette.onPrimary,
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.muted,
+                backgroundColor: _palette.muted,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 elevation: 0,
               ),
@@ -893,16 +893,16 @@ class ProfileHeader extends StatelessWidget {
           : ElevatedButton.icon(
               key: const ValueKey('follow'),
               onPressed: onFollowToggle,
-              icon: const Icon(Icons.person_add, size: 16, color: AppColors.background),
+              icon: Icon(Icons.person_add, size: 16, color: _palette.onPrimary),
               label: Text(
                 "Follow",
                 style: GoogleFonts.outfit(
                   fontWeight: FontWeight.bold,
-                  color: AppColors.background,
+                  color: _palette.onPrimary,
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: _palette.primary,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 elevation: 0,
               ),
@@ -944,10 +944,10 @@ class ProfileHeader extends StatelessWidget {
                 padding: padding,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.14),
+                  color: _palette.background.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(
-                    color: AppColors.background.withValues(alpha: 0.35),
+                    color: _palette.border.withValues(alpha: 0.5),
                   ),
                 ),
                 child: icon,
@@ -959,7 +959,7 @@ class ProfileHeader extends StatelessWidget {
     }
 
     return Container(
-      color: AppColors.backgroundAlt,
+      color: _palette.backgroundAlt,
       child: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.topCenter,
@@ -971,7 +971,7 @@ class ProfileHeader extends StatelessWidget {
             height: coverHeight,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: AppColors.backgroundAlt,
+              color: _palette.backgroundAlt,
               image: profile.bannerUrl != null
                   ? DecorationImage(
                       image: NetworkImage(profile.bannerUrl!),
@@ -990,8 +990,8 @@ class ProfileHeader extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withValues(alpha: 0.0),
-                    Colors.black.withValues(alpha: 0.12),
+                    _palette.shadow.withValues(alpha: 0.0),
+                    _palette.shadow.withValues(alpha: 0.22),
                   ],
                 ),
               ),
@@ -1009,13 +1009,13 @@ class ProfileHeader extends StatelessWidget {
               children: [
                 glassIconButton(
                   onTap: onSettingsTap,
-                  icon: const Icon(Icons.settings, color: AppColors.background, size: 22),
+                  icon: Icon(Icons.settings, color: _palette.text, size: 22),
                 ),
                 if (isMe) ...[
                   const SizedBox(height: 10),
                   glassIconButton(
                     onTap: onBannerTap,
-                    icon: const Icon(Icons.photo_camera, size: 22, color: AppColors.background),
+                    icon: Icon(Icons.photo_camera, size: 22, color: _palette.text),
                   ),
                 ],
               ],
@@ -1028,7 +1028,7 @@ class ProfileHeader extends StatelessWidget {
             left: 16,
             child: glassIconButton(
               onTap: () => Navigator.pop(context),
-              icon: const Icon(Icons.arrow_back, color: AppColors.background, size: 24),
+              icon: Icon(Icons.arrow_back, color: _palette.text, size: 24),
             ),
           ),
         // 2. WHITE CARD BODY
@@ -1036,11 +1036,12 @@ class ProfileHeader extends StatelessWidget {
           margin: const EdgeInsets.only(top: cardTopMargin),
           padding: EdgeInsets.only(top: cardTopPadding, bottom: 20),
           decoration: BoxDecoration(
-            color: AppColors.background,
+            color: _palette.backgroundAlt,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            border: Border.all(color: _palette.text.withValues(alpha: 0.06)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
+                color: _palette.shadow.withValues(alpha: 0.12),
                 blurRadius: 18,
                 offset: const Offset(0, -6),
               ),
@@ -1055,10 +1056,10 @@ class ProfileHeader extends StatelessWidget {
                   margin: const EdgeInsets.symmetric(horizontal: 20),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.03),
+                    color: _palette.primary.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.15),
+                      color: _palette.text.withValues(alpha: 0.08),
                     ),
                   ),
                   child: Column(
@@ -1075,7 +1076,7 @@ class ProfileHeader extends StatelessWidget {
                               style: GoogleFonts.outfit(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.text,
+                                color: _palette.text,
                               ),
                             ),
                           ),
@@ -1083,7 +1084,7 @@ class ProfileHeader extends StatelessWidget {
                             const Padding(
                               padding: EdgeInsets.only(left: 6),
                               child: Icon(Icons.verified,
-                                  color: AppColors.primary, size: 20),
+                                  color: _palette.primary, size: 20),
                             ),
                         ],
                       ),
@@ -1097,13 +1098,13 @@ class ProfileHeader extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(Icons.water_drop,
-                                  size: 14, color: AppColors.muted),
+                                  size: 14, color: _palette.muted),
                               const SizedBox(width: 4),
                               Text(
                                 "Nama Baptis: ${profile.baptismName}",
                                 style: GoogleFonts.outfit(
                                   fontSize: 14,
-                                  color: AppColors.muted,
+                                  color: _palette.muted,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -1119,16 +1120,16 @@ class ProfileHeader extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: AppColors.muted.withValues(alpha: 0.15),
+                              color: _palette.muted.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                  color: AppColors.muted.withValues(alpha: 0.4)),
+                                  color: _palette.muted.withValues(alpha: 0.4)),
                             ),
                             child: Text(
                               "${profile.age} Tahun",
                               style: GoogleFonts.outfit(
                                 fontSize: 12,
-                                color: AppColors.primaryDark,
+                                color: _palette.primaryDark,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -1142,66 +1143,75 @@ class ProfileHeader extends StatelessWidget {
               const SizedBox(height: 12),
 
               // Section 2: Bio + location
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: AppColors.backgroundAlt),
-                ),
-                child: Column(
-                  children: [
-                    if (profile.bio != null && profile.bio!.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Text(
-                          profile.bio!,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.outfit(
-                            fontSize: 14,
-                            color: AppColors.mutedText,
-                          ),
-                        ),
+              animateSection(
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: _palette.backgroundAlt,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: _palette.text.withValues(alpha: 0.06)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _palette.shadow.withValues(alpha: 0.08),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
                       ),
-                    if (profile.bio != null && profile.bio!.isNotEmpty)
-                      const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.location_on_outlined,
-                            size: 16, color: AppColors.mutedText),
-                        const SizedBox(width: 4),
-                        Flexible(
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      if (profile.bio != null && profile.bio!.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
                           child: Text(
-                            "${profile.country ?? '-'}, ${profile.diocese ?? '-'}",
+                            profile.bio!,
                             textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.outfit(
-                                fontSize: 12, color: AppColors.mutedText),
+                              fontSize: 14,
+                              color: _palette.mutedText,
+                            ),
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.church_outlined,
-                            size: 16, color: AppColors.mutedText),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            profile.parish ?? "Paroki -",
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.outfit(
-                                fontSize: 12, color: AppColors.mutedText),
+                      if (profile.bio != null && profile.bio!.isNotEmpty)
+                        const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.location_on_outlined,
+                              size: 16, color: _palette.mutedText),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              "${profile.country ?? '-'}, ${profile.diocese ?? '-'}",
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.outfit(
+                                  fontSize: 12, color: _palette.mutedText),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.church_outlined,
+                              size: 16, color: _palette.mutedText),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              profile.parish ?? "Paroki -",
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.outfit(
+                                  fontSize: 12, color: _palette.mutedText),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
@@ -1217,8 +1227,16 @@ class ProfileHeader extends StatelessWidget {
                   margin: const EdgeInsets.symmetric(horizontal: 20),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
-                    color: AppColors.backgroundAlt,
+                    color: _palette.backgroundAlt,
                     borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: _palette.text.withValues(alpha: 0.06)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _palette.shadow.withValues(alpha: 0.08),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
                   child: LayoutBuilder(
                     builder: (context, constraints) {
@@ -1229,10 +1247,10 @@ class ProfileHeader extends StatelessWidget {
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: onEditTap,
-                              icon: const Icon(Icons.edit, size: 16, color: AppColors.background),
-                              label: Text("Edit Profil", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.background)),
+                              icon: Icon(Icons.edit, size: 16, color: _palette.onPrimary),
+                              label: Text("Edit Profil", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: _palette.onPrimary)),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
+                                backgroundColor: _palette.primary,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                                 elevation: 0,
                               ),
@@ -1241,11 +1259,11 @@ class ProfileHeader extends StatelessWidget {
                           const SizedBox(width: 12),
                           OutlinedButton.icon(
                             onPressed: onShareTap,
-                            icon: const Icon(Icons.share_outlined, size: 16, color: AppColors.text),
-                            label: Text("Share Profile", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.text)),
+                            icon: Icon(Icons.share_outlined, size: 16, color: _palette.text),
+                            label: Text("Share Profile", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: _palette.text)),
                             style: OutlinedButton.styleFrom(
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                              side: BorderSide(color: AppColors.border),
+                              side: BorderSide(color: _palette.text.withValues(alpha: 0.2)),
                             ),
                           ),
                         ],
@@ -1254,18 +1272,18 @@ class ProfileHeader extends StatelessWidget {
 
                     final Widget chatButton = OutlinedButton.icon(
                       onPressed: onChatTap,
-                      icon: const Icon(Icons.mark_chat_unread_outlined, size: 16, color: AppColors.text),
-                      label: Text("Chat", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.text)),
+                      icon: Icon(Icons.mark_chat_unread_outlined, size: 16, color: _palette.text),
+                      label: Text("Chat", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: _palette.text)),
                       style: OutlinedButton.styleFrom(
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                        side: const BorderSide(color: AppColors.border),
+                        side: BorderSide(color: _palette.text.withValues(alpha: 0.2)),
                       ),
                     );
 
                     final Widget inviteButton = ElevatedButton(
                       onPressed: onInviteTap,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.muted,
+                        backgroundColor: _palette.muted,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         elevation: 0,
                       ),
@@ -1273,7 +1291,7 @@ class ProfileHeader extends StatelessWidget {
                         "Ajak Misa",
                         style: GoogleFonts.outfit(
                           fontWeight: FontWeight.bold,
-                          color: AppColors.background,
+                          color: _palette.onPrimary,
                         ),
                       ),
                     );
@@ -1313,7 +1331,7 @@ class ProfileHeader extends StatelessWidget {
               ),
 
               const SizedBox(height: 16),
-              const Divider(height: 1, indent: 20, endIndent: 20),
+              Divider(height: 1, indent: 20, endIndent: 20, color: _palette.border),
               const SizedBox(height: 12),
 
               // Section 4: Stats
@@ -1322,8 +1340,16 @@ class ProfileHeader extends StatelessWidget {
                   margin: const EdgeInsets.symmetric(horizontal: 20),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: AppColors.backgroundAlt,
+                    color: _palette.backgroundAlt,
                     borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: _palette.text.withValues(alpha: 0.06)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _palette.shadow.withValues(alpha: 0.08),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -1350,10 +1376,10 @@ class ProfileHeader extends StatelessWidget {
               height: avatarSize,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.background, width: 4),
+                border: Border.all(color: _palette.backgroundAlt, width: 4),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
+                    color: _palette.shadow.withValues(alpha: 0.2),
                     blurRadius: 10,
                     offset: const Offset(0, 5),
                   ),
@@ -1366,7 +1392,7 @@ class ProfileHeader extends StatelessWidget {
                   height: avatarSize,
                   fit: BoxFit.cover,
                   fallbackIcon: Icons.person,
-                  fallbackColor: AppColors.backgroundAlt,
+                  fallbackColor: _palette.backgroundAlt,
                 ),
               ),
             ),
@@ -1385,14 +1411,14 @@ class ProfileHeader extends StatelessWidget {
           style: GoogleFonts.outfit(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: AppColors.text,
+            color: _palette.text,
           ),
         ),
         Text(
           label,
           style: GoogleFonts.outfit(
             fontSize: 12,
-            color: AppColors.mutedText,
+            color: _palette.mutedText,
           ),
         ),
       ],
@@ -1414,16 +1440,16 @@ class ProfileHeader extends StatelessWidget {
     Widget? actionButton;
 
     if (status == AccountStatus.pending) {
-      bgColor = AppColors.primary.withValues(alpha: 0.12);
+      bgColor = _palette.primary.withValues(alpha: 0.12);
       borderColor = Colors.transparent; 
-      contentColor = AppColors.primaryDark;
+      contentColor = _palette.primaryDark;
       icon = Icons.hourglass_top;
       text = "Dokumen Anda sedang ditinjau oleh Admin.";
     } else {
       // unverified, rejected, unknown
-      bgColor = AppColors.danger.withValues(alpha: 0.12);
-      borderColor = AppColors.danger;
-      contentColor = AppColors.danger;
+      bgColor = _palette.danger.withValues(alpha: 0.12);
+      borderColor = _palette.danger;
+      contentColor = _palette.danger;
       icon = Icons.warning_amber_rounded;
       text = "Akun belum terverifikasi. Upload dokumen untuk akses fitur penuh.";
       actionButton = TextButton(
@@ -1489,30 +1515,30 @@ class ProfileHeader extends StatelessWidget {
         profile.verificationStatus == AccountStatus.verified_pastoral) {
       if (profile.isClergy) {
         label = "${profile.roleLabel} Terverifikasi";
-        color = AppColors.primary.withValues(alpha: 0.12);
-        textColor = AppColors.primaryDark;
+        color = _palette.primary.withValues(alpha: 0.12);
+        textColor = _palette.primaryDark;
         icon = Icons.verified_user;
       } else {
         label = "100% Katolik";
-        color = AppColors.success.withValues(alpha: 0.12);
-        textColor = AppColors.success;
+        color = _palette.success.withValues(alpha: 0.12);
+        textColor = _palette.success;
         icon = Icons.star;
       }
     } else if (profile.verificationStatus == AccountStatus.pending) {
       label = "Menunggu Verifikasi";
-      color = AppColors.backgroundAlt;
-      textColor = AppColors.mutedText;
+      color = _palette.backgroundAlt;
+      textColor = _palette.mutedText;
       icon = Icons.hourglass_empty;
     } else if (profile.role == UserRole.katekumen) {
       label = "Katekumen";
-      color = AppColors.muted.withValues(alpha: 0.12);
-      textColor = AppColors.primaryDark;
+      color = _palette.muted.withValues(alpha: 0.12);
+      textColor = _palette.primaryDark;
       icon = Icons.local_florist;
     } else {
       // Unverified Badge
       label = "Belum Verifikasi";
-      color = AppColors.danger.withValues(alpha: 0.12);
-      textColor = AppColors.danger;
+      color = _palette.danger.withValues(alpha: 0.12);
+      textColor = _palette.danger;
       icon = Icons.error_outline;
     }
 
@@ -1538,6 +1564,59 @@ class ProfileHeader extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ProfilePalette {
+  final Color primary;
+  final Color onPrimary;
+  final Color primaryDark;
+  final Color muted;
+  final Color background;
+  final Color backgroundAlt;
+  final Color text;
+  final Color mutedText;
+  final Color border;
+  final Color disabled;
+  final Color success;
+  final Color danger;
+  final Color shadow;
+
+  const _ProfilePalette._({
+    required this.primary,
+    required this.onPrimary,
+    required this.primaryDark,
+    required this.muted,
+    required this.background,
+    required this.backgroundAlt,
+    required this.text,
+    required this.mutedText,
+    required this.border,
+    required this.disabled,
+    required this.success,
+    required this.danger,
+    required this.shadow,
+  });
+
+  factory _ProfilePalette.of(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final onSurface = colors.onSurface;
+    return _ProfilePalette._(
+      primary: colors.primary,
+      onPrimary: colors.onPrimary,
+      primaryDark: colors.primary,
+      muted: colors.secondary,
+      background: theme.scaffoldBackgroundColor,
+      backgroundAlt: colors.surface,
+      text: onSurface,
+      mutedText: onSurface.withOpacity(0.7),
+      border: theme.dividerColor,
+      disabled: onSurface.withOpacity(0.4),
+      success: colors.secondary,
+      danger: colors.error,
+      shadow: theme.shadowColor,
     );
   }
 }

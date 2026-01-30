@@ -60,8 +60,9 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildStatusChip({required bool verified}) {
-    final color = verified ? Colors.green : Colors.orange;
-    final label = verified ? "Verified" : "Unverified";
+    final colors = Theme.of(context).colorScheme;
+    final color = verified ? colors.secondary : colors.error;
+    final label = verified ? "Terverifikasi" : "Belum terverifikasi";
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -86,6 +87,10 @@ class _SettingsPageState extends State<SettingsPage> {
   }) async {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) {
         return SafeArea(
           child: Column(
@@ -159,9 +164,9 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
+            child: Text(
               "Keluar",
-              style: TextStyle(color: Colors.red),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
         ],
@@ -191,8 +196,16 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    const bgColor = Color(0xFFF5F5F5);
-    const dangerColor = Color(0xFFE74C3C);
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final bgColor = theme.scaffoldBackgroundColor;
+    final surface = colors.surface;
+    final border = theme.dividerColor;
+    final textPrimary = colors.onSurface;
+    final textSecondary = colors.onSurface.withOpacity(0.7);
+    final textMuted = colors.onSurface.withOpacity(0.5);
+    final primary = colors.primary;
+    final dangerColor = colors.error;
     final user = _supabase.auth.currentUser;
     final email = user?.email ?? "-";
     final isEmailVerified = user?.emailConfirmedAt != null;
@@ -207,7 +220,7 @@ class _SettingsPageState extends State<SettingsPage> {
       case AccountStatus.verified_pastoral:
         statusLabel = "Terverifikasi";
         subtitleText = "Status: Terverifikasi";
-        trailingWidget = const Icon(Icons.verified, color: Colors.blue);
+        trailingWidget = Icon(Icons.verified, color: primary);
         break;
       case AccountStatus.pending:
         statusLabel = "Menunggu";
@@ -215,7 +228,7 @@ class _SettingsPageState extends State<SettingsPage> {
         trailingWidget = Text(
           "Menunggu",
           style: GoogleFonts.outfit(
-            color: Colors.orange,
+            color: colors.secondary,
             fontWeight: FontWeight.bold,
             fontSize: 13,
           ),
@@ -224,12 +237,12 @@ class _SettingsPageState extends State<SettingsPage> {
       case AccountStatus.rejected:
         statusLabel = "Ditolak";
         subtitleText = "Status: Verifikasi Ditolak";
-        trailingWidget = const Icon(Icons.chevron_right, color: Colors.grey);
+        trailingWidget = Icon(Icons.chevron_right, color: textMuted);
         break;
       default:
         statusLabel = "Belum";
         subtitleText = "Status: Belum Terverifikasi";
-        trailingWidget = const Icon(Icons.chevron_right, color: Colors.grey);
+        trailingWidget = Icon(Icons.chevron_right, color: textMuted);
     }
 
     return Scaffold(
@@ -238,14 +251,14 @@ class _SettingsPageState extends State<SettingsPage> {
         title: Text(
           "Pengaturan",
           style: GoogleFonts.outfit(
-            color: Colors.black,
+            color: textPrimary,
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: bgColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Icon(Icons.arrow_back, color: textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -291,8 +304,8 @@ class _SettingsPageState extends State<SettingsPage> {
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: Colors.grey.shade200),
+                borderRadius: BorderRadius.circular(18),
+                side: BorderSide(color: border.withOpacity(0.8)),
               ),
               child: ListTile(
                 contentPadding:
@@ -300,25 +313,25 @@ class _SettingsPageState extends State<SettingsPage> {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
+                    color: textSecondary.withOpacity(0.12),
                     shape: BoxShape.circle,
                   ),
                   child:
-                      const Icon(Icons.email_outlined, color: Color(0xFF0088CC), size: 20),
+                      Icon(Icons.email_outlined, color: textSecondary, size: 20),
                 ),
                 title: Text(
                   "Email",
                   style: GoogleFonts.outfit(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
-                    color: Colors.black87,
+                    color: textPrimary,
                   ),
                 ),
                 subtitle: Text(
                   "$email • ${isEmailVerified ? "Terverifikasi" : "Belum terverifikasi"}",
                   style: GoogleFonts.outfit(
                     fontSize: 12,
-                    color: Colors.grey.shade600,
+                    color: textSecondary,
                   ),
                 ),
                 trailing: _buildStatusChip(verified: isEmailVerified),
@@ -376,7 +389,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
             // SECTION: LOGOUT
             Container(
-              color: Colors.white,
+              color: surface,
               child: ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
@@ -402,7 +415,7 @@ class _SettingsPageState extends State<SettingsPage> {
             Center(
               child: Text(
                 "Versi 1.0.0",
-                style: GoogleFonts.outfit(color: Colors.grey, fontSize: 12),
+                style: GoogleFonts.outfit(color: textMuted, fontSize: 12),
               ),
             ),
           ],
@@ -412,6 +425,8 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildSectionHeader(String title) {
+    final colors = Theme.of(context).colorScheme;
+    final textMuted = colors.onSurface.withOpacity(0.5);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
       child: Align(
@@ -421,7 +436,7 @@ class _SettingsPageState extends State<SettingsPage> {
           style: GoogleFonts.outfit(
             fontSize: 12,
             fontWeight: FontWeight.bold,
-            color: Colors.grey.shade600,
+            color: textMuted,
             letterSpacing: 1.2,
           ),
         ),
@@ -436,25 +451,36 @@ class _SettingsPageState extends State<SettingsPage> {
     required VoidCallback onTap,
     Widget? trailing,
   }) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final surface = colors.surface;
+    final textPrimary = colors.onSurface;
+    final textSecondary = colors.onSurface.withOpacity(0.7);
+    final textMuted = colors.onSurface.withOpacity(0.5);
+    final border = theme.dividerColor;
     return Container(
-      color: Colors.white,
-      margin: const EdgeInsets.only(bottom: 1), // Divider effect
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: border.withOpacity(0.8)),
+      ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.blue.shade50,
+            color: textSecondary.withOpacity(0.12),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: const Color(0xFF0088CC), size: 20),
+          child: Icon(icon, color: textSecondary, size: 20),
         ),
         title: Text(
           title,
           style: GoogleFonts.outfit(
             fontSize: 16,
             fontWeight: FontWeight.w500,
-            color: Colors.black87,
+            color: textPrimary,
           ),
         ),
         subtitle: subtitle != null
@@ -462,12 +488,11 @@ class _SettingsPageState extends State<SettingsPage> {
                 subtitle,
                 style: GoogleFonts.outfit(
                   fontSize: 12,
-                  color: Colors.grey.shade600,
+                  color: textSecondary,
                 ),
               )
             : null,
-        trailing:
-            trailing ?? const Icon(Icons.chevron_right, color: Colors.grey),
+        trailing: trailing ?? Icon(Icons.chevron_right, color: textMuted),
         onTap: onTap,
       ),
     );

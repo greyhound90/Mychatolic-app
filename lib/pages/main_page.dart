@@ -118,7 +118,7 @@ class HomePageState extends State<HomePage> {
                   });
                 }
               },
-              backgroundColor: const Color(0xFF0088CC),
+              backgroundColor: Theme.of(context).colorScheme.primary,
               child: const Icon(Icons.add, color: Colors.white),
             )
           : null,
@@ -127,9 +127,7 @@ class HomePageState extends State<HomePage> {
           color: Theme.of(context).cardColor,
           boxShadow: [
             BoxShadow(
-              color: const Color(
-                0xff570088,
-              ).withValues(alpha: 0.05), // Light purple shadow
+              color: Colors.black.withOpacity(0.15),
               blurRadius: 10,
               offset: const Offset(0, -2),
             ),
@@ -139,8 +137,6 @@ class HomePageState extends State<HomePage> {
           currentIndex: _currentIndex,
           onTap: _onTabTapped,
           backgroundColor: Theme.of(context).cardColor,
-          selectedItemColor: const Color(0xFF0088CC), // Blue active color
-          unselectedItemColor: Colors.grey, // Grey inactive color
           showUnselectedLabels: true,
           type: BottomNavigationBarType.fixed,
           selectedFontSize: 11,

@@ -21,13 +21,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final _supabase = Supabase.instance.client;
   final ProfileService _profileService = ProfileService();
 
-  // --- DESIGN SYSTEM CONSTANTS (Light Mode) ---
-  static const Color primaryBrand = Color(0xFF0088CC);
-  static const Color bgMain = Color(0xFFFFFFFF);
-  static const Color bgSurface = Color(0xFFF5F5F5);
-  static const Color textPrimary = Color(0xFF000000);
-  static const Color textSecondary = Color(0xFF555555);
-  static const Color borderLight = Color(0xFFE0E0E0);
+  ColorScheme get _colors => Theme.of(context).colorScheme;
+  Color get _primary => _colors.primary;
+  Color get _onPrimary => _colors.onPrimary;
+  Color get _background => Theme.of(context).scaffoldBackgroundColor;
+  Color get _surface => _colors.surface;
+  Color get _border => Theme.of(context).dividerColor;
+  Color get _textPrimary => _colors.onSurface;
+  Color get _textSecondary => _colors.onSurface.withOpacity(0.7);
+  Color get _textMuted => _colors.onSurface.withOpacity(0.5);
 
   // Controllers - Personal
   final TextEditingController _nameController = TextEditingController();
@@ -149,8 +151,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
         uiSettings: [
           AndroidUiSettings(
             toolbarTitle: 'Atur Foto Profil',
-            toolbarColor: primaryBrand,
-            toolbarWidgetColor: Colors.white,
+            toolbarColor: _primary,
+            toolbarWidgetColor: _onPrimary,
             initAspectRatio: CropAspectRatioPreset.square,
             lockAspectRatio: true,
           ),
@@ -172,15 +174,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       lastDate: DateTime.now(),
       builder: (context, child) {
         return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: primaryBrand,
-              onPrimary: Colors.white,
-              surface: bgMain,
-              onSurface: textPrimary,
-            ),
-            dialogTheme: const DialogThemeData(backgroundColor: bgMain),
-          ),
+          data: Theme.of(context),
           child: child!,
         );
       },
@@ -201,7 +195,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: bgMain,
+      backgroundColor: _surface,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -278,9 +272,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Profil Berhasil Diupdate!"),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: const Text("Profil Berhasil Diupdate!"),
+            backgroundColor: _colors.secondary,
           ),
         );
         Navigator.pop(context, true);
@@ -299,20 +293,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgMain,
+      backgroundColor: _background,
       appBar: AppBar(
         title: Text(
           "Edit Profil",
           style: GoogleFonts.outfit(
-            color: textPrimary,
+            color: _textPrimary,
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: bgMain,
+        backgroundColor: _background,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: textPrimary),
+          icon: Icon(Icons.close, color: _textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
@@ -323,14 +317,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(
-                      color: primaryBrand,
+                      color: _primary,
                       strokeWidth: 2,
                     ),
                   )
                 : Text(
                     "SIMPAN",
                     style: GoogleFonts.outfit(
-                      color: primaryBrand,
+                      color: _primary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -338,7 +332,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(color: borderLight, height: 1),
+          child: Container(color: _border, height: 1),
         ),
       ),
       body: SingleChildScrollView(
@@ -356,7 +350,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   Text(
                     "Data Pribadi",
                     style: GoogleFonts.outfit(
-                      color: primaryBrand,
+                      color: _primary,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -404,14 +398,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
 
                   const SizedBox(height: 32),
-                  const Divider(color: borderLight, thickness: 1),
+                  Divider(color: _border, thickness: 1),
                   const SizedBox(height: 24),
 
                   // DOMISILI GEREJAWI
                   Text(
                     "Domisili Gerejawi",
                     style: GoogleFonts.outfit(
-                      color: primaryBrand,
+                      color: _primary,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -421,7 +415,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     child: Text(
                       "Data Gereja dapat diubah jika Anda pindah domisili.",
                       style: GoogleFonts.outfit(
-                        color: textSecondary,
+                        color: _textSecondary,
                         fontSize: 13,
                       ),
                     ),
@@ -526,7 +520,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _saveProfile,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryBrand,
+                        backgroundColor: _primary,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -537,7 +531,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               width: 24,
                               height: 24,
                               child: CircularProgressIndicator(
-                                color: Colors.white,
+                                color: _onPrimary,
                                 strokeWidth: 3,
                               ),
                             )
@@ -547,7 +541,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                                 letterSpacing: 1,
-                                color: Colors.white,
+                                color: _onPrimary,
                               ),
                             ),
                     ),
@@ -574,8 +568,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
             height: 120,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: bgSurface,
-              border: Border.all(color: borderLight, width: 2),
+              color: _surface,
+              border: Border.all(color: _border, width: 2),
             ),
             child: ClipOval(
               child: _avatarFile != null
@@ -585,7 +579,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           ? _avatarUrl
                           : "https://i.pravatar.cc/300",
                       fit: BoxFit.cover,
-                      fallbackColor: bgSurface,
+                      fallbackColor: _surface,
                       fallbackIcon: Icons.person,
                     ),
             ),
@@ -595,14 +589,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
             child: Container(
               margin: const EdgeInsets.only(right: 4, bottom: 4),
               padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: primaryBrand,
+              decoration: BoxDecoration(
+                color: _primary,
                 shape: BoxShape.circle,
-                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                boxShadow: [
+                  BoxShadow(
+                    color: Theme.of(context).shadowColor.withOpacity(0.35),
+                    blurRadius: 4,
+                  ),
+                ],
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.camera_alt,
-                color: Colors.white,
+                color: _onPrimary,
                 size: 20,
               ),
             ),
@@ -628,21 +627,21 @@ class _EditProfilePageState extends State<EditProfilePage> {
           textCapitalization: capitalize
               ? TextCapitalization.words
               : TextCapitalization.none,
-          style: GoogleFonts.outfit(color: textPrimary),
+          style: GoogleFonts.outfit(color: _textPrimary),
           decoration: InputDecoration(
             filled: true,
-            fillColor: bgSurface,
+            fillColor: _surface,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.transparent),
+              borderSide: BorderSide(color: _border.withOpacity(0.6)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.transparent),
+              borderSide: BorderSide(color: _border.withOpacity(0.6)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: primaryBrand, width: 1.5),
+              borderSide: BorderSide(color: _primary, width: 1.5),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
@@ -669,29 +668,29 @@ class _EditProfilePageState extends State<EditProfilePage> {
             child: TextField(
               controller: controller,
               readOnly: true,
-              style: GoogleFonts.outfit(color: textPrimary),
+              style: GoogleFonts.outfit(color: _textPrimary),
               decoration: InputDecoration(
                 filled: true,
-                fillColor: bgSurface,
+                fillColor: _surface,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.transparent),
+                  borderSide: BorderSide(color: _border.withOpacity(0.6)),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.transparent),
+                  borderSide: BorderSide(color: _border.withOpacity(0.6)),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: primaryBrand, width: 1.5),
+                  borderSide: BorderSide(color: _primary, width: 1.5),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 14,
                 ),
-                suffixIcon: const Icon(
+                suffixIcon: Icon(
                   Icons.arrow_drop_down,
-                  color: textSecondary,
+                  color: _textSecondary,
                 ),
               ),
             ),
@@ -708,7 +707,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
-          color: bgSurface,
+          color: _surface,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -718,9 +717,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
               _selectedBirthDate == null
                   ? "Pilih Tanggal"
                   : DateFormat("dd MMM yyyy").format(_selectedBirthDate!),
-              style: GoogleFonts.outfit(color: textPrimary, fontSize: 16),
+              style: GoogleFonts.outfit(color: _textPrimary, fontSize: 16),
             ),
-            const Icon(Icons.calendar_today, color: textSecondary, size: 20),
+            Icon(Icons.calendar_today, color: _textSecondary, size: 20),
           ],
         ),
       ),
@@ -733,7 +732,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       child: Text(
         text,
         style: GoogleFonts.outfit(
-          color: textSecondary,
+          color: _textSecondary,
           fontSize: 13,
           fontWeight: FontWeight.w600,
         ),
@@ -749,16 +748,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: bgSurface,
+        color: _surface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: items.contains(value) ? value : items.first,
           isExpanded: true,
-          dropdownColor: bgMain,
-          icon: const Icon(Icons.keyboard_arrow_down, color: textSecondary),
-          style: GoogleFonts.outfit(color: textPrimary, fontSize: 16),
+          dropdownColor: _surface,
+          icon: Icon(Icons.keyboard_arrow_down, color: _textSecondary),
+          style: GoogleFonts.outfit(color: _textPrimary, fontSize: 16),
           items: items
               .map((e) => DropdownMenuItem(value: e, child: Text(e)))
               .toList(),
@@ -776,16 +775,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: bgSurface,
+        color: _surface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: items.containsKey(value) ? value : items.keys.first,
           isExpanded: true,
-          dropdownColor: bgMain,
-          icon: const Icon(Icons.keyboard_arrow_down, color: textSecondary),
-          style: GoogleFonts.outfit(color: textPrimary, fontSize: 16),
+          dropdownColor: _surface,
+          icon: Icon(Icons.keyboard_arrow_down, color: _textSecondary),
+          style: GoogleFonts.outfit(color: _textPrimary, fontSize: 16),
           items: items.entries
               .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
               .toList(),
@@ -825,9 +824,6 @@ class _SearchableListModalState extends State<_SearchableListModal> {
   List<Map<String, dynamic>> _results = [];
   bool _loading = false;
   Timer? _debounce;
-
-  static const Color primaryBrand = Color(0xFF0088CC);
-  static const Color bgSurface = Color(0xFFF5F5F5);
 
   @override
   void initState() {
@@ -890,12 +886,18 @@ class _SearchableListModalState extends State<_SearchableListModal> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final surface = colors.surface;
+    final onSurface = colors.onSurface;
+    final border = theme.dividerColor;
+    final muted = colors.onSurface.withOpacity(0.6);
     return Container(
       height: MediaQuery.of(context).size.height * 0.7,
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         children: [
@@ -903,13 +905,13 @@ class _SearchableListModalState extends State<_SearchableListModal> {
             children: [
               IconButton(
                 onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close, color: Colors.black),
+                icon: Icon(Icons.close, color: onSurface),
               ),
               Expanded(
                 child: Text(
                   widget.title,
                   style: GoogleFonts.outfit(
-                    color: Colors.black,
+                    color: onSurface,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -923,50 +925,50 @@ class _SearchableListModalState extends State<_SearchableListModal> {
           TextField(
             controller: _searchController,
             onChanged: _performSearch,
-            style: GoogleFonts.outfit(color: Colors.black),
+            style: GoogleFonts.outfit(color: onSurface),
             decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.search, color: Colors.grey),
+              prefixIcon: Icon(Icons.search, color: muted),
               hintText: "Cari...",
-              hintStyle: GoogleFonts.outfit(color: Colors.grey),
+              hintStyle: GoogleFonts.outfit(color: muted),
               filled: true,
-              fillColor: bgSurface,
+              fillColor: surface,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.transparent),
+                borderSide: BorderSide(color: border.withOpacity(0.6)),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.transparent),
+                borderSide: BorderSide(color: border.withOpacity(0.6)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: primaryBrand),
+                borderSide: BorderSide(color: colors.primary),
               ),
             ),
           ),
           const SizedBox(height: 16),
           Expanded(
             child: _loading
-                ? const Center(
-                    child: CircularProgressIndicator(color: primaryBrand),
+                ? Center(
+                    child: CircularProgressIndicator(color: colors.primary),
                   )
                 : _results.isEmpty
                 ? Center(
                     child: Text(
                       "Data tidak ditemukan",
-                      style: GoogleFonts.outfit(color: Colors.grey),
+                      style: GoogleFonts.outfit(color: muted),
                     ),
                   )
                 : ListView.separated(
                     itemCount: _results.length,
                     separatorBuilder: (_, _) =>
-                        const Divider(color: Colors.grey),
+                        Divider(color: border),
                     itemBuilder: (context, index) {
                       final item = _results[index];
                       return ListTile(
                         title: Text(
                           item['name'],
-                          style: GoogleFonts.outfit(color: Colors.black),
+                          style: GoogleFonts.outfit(color: onSurface),
                         ),
                         onTap: () {
                           widget.onSelect(item);
