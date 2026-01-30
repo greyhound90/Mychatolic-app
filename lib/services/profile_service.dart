@@ -9,62 +9,43 @@ class ProfileService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
   // 1. Fetch User Profile with Stats
-  Future<Map<String, dynamic>> fetchUserProfile(String userId) async {
+  Future<Profile> fetchUserProfile(String userId) async {
     try {
-      // Fetch Explicit Columns (No Join, Flat Data)
       final response = await _supabase
           .from('profiles')
-          .select('''
-            id, 
-            full_name, 
-            bio, 
-            role, 
-            user_role,
-            account_status,
-            account_status,
-            avatar_url, 
-            banner_url,
-            country, 
-            diocese, 
-            parish,
-            country_id,
-            diocese_id,
-            church_id, 
-            ethnicity, 
-            birth_date, 
-            is_age_visible, 
-            is_ethnicity_visible, 
-            verification_status, 
-            followers_count, 
-            following_count
-          ''')
+          .select(
+            '*, countries:country_id(name), dioceses:diocese_id(name), churches:church_id(name)',
+          )
           .eq('id', userId)
+          .order('updated_at', ascending: false)
           .single();
 
-      // Safe Extract Profile
-      final profile = Profile.fromJson(response);
+      final data = Map<String, dynamic>.from(response);
 
-      // Safe Extract Stats (Nullable Integers)
-      int followers = (response['followers_count'] as num?)?.toInt() ?? 0;
-      int following = (response['following_count'] as num?)?.toInt() ?? 0;
+      // Manual Flattening / Safety Check for Nested JSON
+      // This ensures we prioritize the Relation Data if available, matching user request.
+      if (data['countries'] != null && data['countries'] is Map) {
+         data['country'] = data['countries']['name'] ?? data['country'];
+      }
+      if (data['dioceses'] != null && data['dioceses'] is Map) {
+         data['diocese'] = data['dioceses']['name'] ?? data['diocese'];
+      }
+      if (data['churches'] != null && data['churches'] is Map) {
+         data['parish'] = data['churches']['name'] ?? data['parish'];
+      }
 
-      // Posts count is handled locally by counting fetched posts in ProfilePage
-      // or we return 0 here.
-      Map<String, int> stats = {
-        'followers': followers,
-        'following': following,
-        'posts': 0,
-      };
-
-      return {'profile': profile, 'stats': stats};
+      return Profile.fromJson(data);
     } catch (e) {
+      debugPrint("Fetch User Profile Error: $e");
       throw Exception('Gagal mengambil data profil: ${e.toString()}');
     }
   }
 
   // 1b. Update Profile
   Future<void> updateProfile({
-    required String fullName,
+    required String userId,
+    String? fullName,
+    String? baptismName,
     String? bio,
     String? country,
     String? diocese,
@@ -73,38 +54,36 @@ class ProfileService {
     String? dioceseId,
     String? churchId,
     String? ethnicity,
-    bool showAge = false,
-    bool showEthnicity = false,
+    bool? showAge,
+    bool? showEthnicity,
     String? avatarUrl,
     String? bannerUrl,
+    Map<String, dynamic>? updates,
   }) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) throw Exception("User belum login");
-
     try {
-      final updates = {
-        'full_name': fullName,
-        'bio': bio,
-        'country': country, // Keep updating strings for now
-        'diocese': diocese,
-        'parish': parish,
-        'country_id': countryId,
-        'diocese_id': dioceseId,
-        'church_id': churchId,
-        'ethnicity': ethnicity,
-        'is_age_visible': showAge,
-        'is_ethnicity_visible': showEthnicity,
+      final updatePayload = <String, dynamic>{
         'updated_at': DateTime.now().toIso8601String(),
+        if (fullName != null) 'full_name': fullName,
+        if (baptismName != null) 'baptism_name': baptismName,
+        if (bio != null) 'bio': bio,
+        if (country != null) 'country': country,
+        if (diocese != null) 'diocese': diocese,
+        if (parish != null) 'parish': parish,
+        if (countryId != null) 'country_id': countryId,
+        if (dioceseId != null) 'diocese_id': dioceseId,
+        if (churchId != null) 'church_id': churchId,
+        if (ethnicity != null) 'ethnicity': ethnicity,
+        if (showAge != null) 'is_age_visible': showAge,
+        if (showEthnicity != null) 'is_ethnicity_visible': showEthnicity,
+        if (avatarUrl != null) 'avatar_url': avatarUrl,
+        if (bannerUrl != null) 'banner_url': bannerUrl,
       };
-      
-      if (avatarUrl != null) {
-        updates['avatar_url'] = avatarUrl;
-      }
-      if (bannerUrl != null) {
-        updates['banner_url'] = bannerUrl;
+
+      if (updates != null && updates.isNotEmpty) {
+        updatePayload.addAll(updates);
       }
 
-      await _supabase.from('profiles').update(updates).eq('id', user.id);
+      await _supabase.from('profiles').update(updatePayload).eq('id', userId);
     } catch (e) {
       throw Exception("Gagal update profile: $e");
     }

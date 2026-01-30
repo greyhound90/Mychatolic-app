@@ -150,7 +150,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       final dummyProfile = Profile(
         id: json['user_id'].toString(),
         fullName: "User Baru",
-        userRole: UserRole.umat,
+        role: UserRole.umat,
       );
       final newItem = Comment(
         id: json['id'].toString(),

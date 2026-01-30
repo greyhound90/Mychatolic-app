@@ -1,15 +1,24 @@
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mychatolic_app/features/profile/pages/edit_profile_page.dart';
-import 'package:mychatolic_app/features/verification/pages/verification_page.dart';
+import 'package:mychatolic_app/features/auth/pages/verification_page.dart';
 import 'package:mychatolic_app/features/auth/pages/login_page.dart';
+import 'package:mychatolic_app/models/profile.dart';
 
-class SettingsPage extends StatelessWidget {
-  const SettingsPage({super.key});
+class SettingsPage extends StatefulWidget {
+  final Profile profile;
 
-  Future<void> _handleLogout(BuildContext context) async {
+  const SettingsPage({super.key, required this.profile});
+
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  final SupabaseClient _supabase = Supabase.instance.client;
+
+  Future<void> _handleLogout() async {
     // Show Confirmation Dialog
     final confirm = await showDialog<bool>(
       context: context,
@@ -33,32 +42,65 @@ class SettingsPage extends StatelessWidget {
     );
 
     if (confirm == true) {
-       // Perform Sign Out
-       try {
-         await Supabase.instance.client.auth.signOut();
-         if (context.mounted) {
-            // Remove all routes and go to Login
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (_) => const LoginPage()),
-              (route) => false,
-            );
-         }
-       } catch (e) {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("Gagal keluar: $e")),
-            );
-          }
-       }
+      try {
+        await _supabase.auth.signOut();
+        if (mounted) {
+          // Remove all routes and go to Login
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginPage()),
+            (route) => false,
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Gagal keluar: $e")),
+          );
+        }
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     const bgColor = Color(0xFFF5F5F5);
-    const primaryColor = Color(0xFF0088CC);
     const dangerColor = Color(0xFFE74C3C);
+
+    // Determine Logic for Verification Tile
+    String statusLabel;
+    Widget trailingWidget;
+    String subtitleText;
+
+    switch (widget.profile.verificationStatus) {
+      case AccountStatus.verified_catholic:
+      case AccountStatus.verified_pastoral:
+        statusLabel = "Terverifikasi";
+        subtitleText = "Status: Terverifikasi";
+        trailingWidget = const Icon(Icons.verified, color: Colors.blue);
+        break;
+      case AccountStatus.pending:
+        statusLabel = "Menunggu";
+        subtitleText = "Status: Menunggu Verifikasi";
+        trailingWidget = Text(
+          "Menunggu",
+          style: GoogleFonts.outfit(
+            color: Colors.orange,
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
+        );
+        break;
+      case AccountStatus.rejected:
+        statusLabel = "Ditolak";
+        subtitleText = "Status: Verifikasi Ditolak";
+        trailingWidget = const Icon(Icons.chevron_right, color: Colors.grey);
+        break;
+      default:
+        statusLabel = "Belum";
+        subtitleText = "Status: Belum Terverifikasi";
+        trailingWidget = const Icon(Icons.chevron_right, color: Colors.grey);
+    }
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -86,35 +128,31 @@ class SettingsPage extends StatelessWidget {
             _buildListTile(
               icon: Icons.edit_outlined,
               title: "Edit Profil",
-              onTap: () {
-                Navigator.push(
+              onTap: () async {
+               final result = await Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const EditProfilePage()),
                 );
+                // If edit page returns true (updated), we might want to pop or standardly reload?
+                // But SettingsPage receives 'profile' from parent. 
+                // Ideally parent should refresh, or we just rely on parent's state. 
+                // For now just navigate.
+                if (result == true && mounted) {
+                  Navigator.pop(context, true); // Pass specific signal if needed
+                }
               },
             ),
             _buildListTile(
               icon: Icons.verified_user_outlined,
-              title: "Status Verifikasi",
-              trailing: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  "Unverified",
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+              title: "Verifikasi Akun",
+              subtitle: subtitleText,
+              trailing: trailingWidget,
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const VerificationPage()),
+                  MaterialPageRoute(
+                    builder: (_) => VerificationPage(profile: widget.profile),
+                  ),
                 );
               },
             ),
@@ -128,7 +166,8 @@ class SettingsPage extends StatelessWidget {
               title: "Ubah Kata Sandi",
               onTap: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Fitur Ubah Kata Sandi (Coming Soon)")),
+                  const SnackBar(
+                      content: Text("Fitur Ubah Kata Sandi (Coming Soon)")),
                 );
               },
             ),
@@ -164,7 +203,7 @@ class SettingsPage extends StatelessWidget {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: dangerColor.withValues(alpha: 0.1),
+                    color: dangerColor.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.logout, color: dangerColor, size: 20),
@@ -177,10 +216,10 @@ class SettingsPage extends StatelessWidget {
                     color: dangerColor,
                   ),
                 ),
-                onTap: () => _handleLogout(context),
+                onTap: _handleLogout,
               ),
             ),
-            
+
             const SizedBox(height: 20),
             Center(
               child: Text(
@@ -215,6 +254,7 @@ class SettingsPage extends StatelessWidget {
   Widget _buildListTile({
     required IconData icon,
     required String title,
+    String? subtitle,
     required VoidCallback onTap,
     Widget? trailing,
   }) {
@@ -239,7 +279,17 @@ class SettingsPage extends StatelessWidget {
             color: Colors.black87,
           ),
         ),
-        trailing: trailing ?? const Icon(Icons.chevron_right, color: Colors.grey),
+        subtitle: subtitle != null
+            ? Text(
+                subtitle,
+                style: GoogleFonts.outfit(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                ),
+              )
+            : null,
+        trailing:
+            trailing ?? const Icon(Icons.chevron_right, color: Colors.grey),
         onTap: onTap,
       ),
     );

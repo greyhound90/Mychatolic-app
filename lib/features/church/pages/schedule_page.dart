@@ -8,6 +8,7 @@ import 'package:mychatolic_app/models/mass_schedule.dart';
 import 'package:mychatolic_app/models/country.dart';
 import 'package:mychatolic_app/models/diocese.dart';
 import 'package:mychatolic_app/models/church.dart';
+import 'package:mychatolic_app/models/profile.dart';
 import 'package:mychatolic_app/services/schedule_service.dart';
 import 'package:mychatolic_app/services/liturgy_service.dart';
 import 'package:mychatolic_app/services/master_data_service.dart';
@@ -891,16 +892,14 @@ class _SchedulePageState extends State<SchedulePage> {
     final user = _supabase.auth.currentUser;
     if (user == null) return const SizedBox.shrink();
 
-    return StreamBuilder<Map<String, dynamic>>(
+    return StreamBuilder<Profile>(
       // Using a Future wrapped in stream for simplicity, or could rely on real-time profile logic.
       // Re-fetching on build to ensure updates are caught if user edits profile.
       stream: Stream.fromFuture(_profileService.fetchUserProfile(user.id)),
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const SizedBox.shrink();
 
-        final profile =
-            snapshot.data!['profile']
-                as dynamic; // Using dynamic to access properties safely or cast to Profile
+        final profile = snapshot.data!;
         // Assuming Profile model has parishId or we check 'parish' string.
         // Based on Profile model provided: 'parish' is a String (Name).
         // We need 'church_id' to query schedules.

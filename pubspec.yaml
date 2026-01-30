@@ -63,6 +63,7 @@ dependencies:
   flutter_staggered_animations: ^1.1.1
   record: ^6.1.2
   video_player: ^2.10.1
+  dropdown_search: ^6.0.2
 
 dev_dependencies:
   flutter_test:

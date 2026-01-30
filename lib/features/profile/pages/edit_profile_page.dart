@@ -29,6 +29,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   // Controllers - Personal
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _baptismNameController = TextEditingController(); // NEW
   final TextEditingController _bioController = TextEditingController();
   final TextEditingController _ethnicityController = TextEditingController();
 
@@ -41,6 +42,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   // State Variables
   String _selectedGender = "Laki-laki";
+  String _maritalStatus = "single"; // NEW
   DateTime? _selectedBirthDate;
 
   String? _avatarUrl;
@@ -52,6 +54,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
   String? _selectedParishId;
 
   bool _isLoading = false;
+
+  final Map<String, String> _maritalStatusOptions = {
+    'single': 'Belum Pernah Menikah',
+    'widowed': 'Cerai Mati',
+  };
 
   @override
   void initState() {
@@ -66,102 +73,68 @@ class _EditProfilePageState extends State<EditProfilePage> {
     try {
       final data = await _supabase
           .from('profiles')
-          .select()
+          .select(
+            '*, countries:country_id(name, id), dioceses:diocese_id(name, id), churches:church_id(name, id)',
+          )
           .eq('id', user.id)
           .maybeSingle();
 
       if (data != null && mounted) {
         setState(() {
           _nameController.text = data['full_name'] ?? "";
+          _baptismNameController.text = data['baptism_name'] ?? ""; // NEW
           _bioController.text = data['bio'] ?? "";
           _ethnicityController.text = data['ethnicity'] ?? "";
-
-          if (data['country'] != null &&
-              data['country'].toString().isNotEmpty) {
-            _countryController.text = data['country'];
-          }
-          _dioceseController.text = data['diocese'] ?? "";
-          _parishController.text = data['parish'] ?? "";
-
           _avatarUrl = data['avatar_url'];
 
+          // Gender
           if (data['gender'] != null) _selectedGender = data['gender'];
+
+          // Marital Status
+          final ms = data['marital_status'];
+          if (ms != null && _maritalStatusOptions.containsKey(ms)) {
+            _maritalStatus = ms;
+          } else {
+            _maritalStatus = 'single';
+          }
+
+          // Birth Date
           if (data['birth_date'] != null) {
             _selectedBirthDate = DateTime.tryParse(data['birth_date']);
           }
-        });
 
-        // REVERSE LOOKUP IDs (Populate UUIDs based on text names)
-        _performReverseLookup();
+          // --- LOCATION LOGIC (AUTO-FILL ID & NAME) ---
+          // Country
+          _selectedCountryId = data['country_id']?.toString();
+          if (data['countries'] != null) {
+            _countryController.text = data['countries']['name'] ?? "";
+          } else {
+            _countryController.text = data['country'] ?? "";
+          }
+
+          // Diocese
+          _selectedDioceseId = data['diocese_id']?.toString();
+          if (data['dioceses'] != null) {
+            _dioceseController.text = data['dioceses']['name'] ?? "";
+          } else {
+            _dioceseController.text = data['diocese'] ?? "";
+          }
+
+          // Parish
+          _selectedParishId = data['church_id']?.toString();
+          if (data['churches'] != null) {
+            _parishController.text = data['churches']['name'] ?? "";
+          } else {
+            _parishController.text = data['parish'] ?? "";
+          }
+        });
       }
     } catch (e) {
       debugPrint("Error fetching profile: $e");
     }
   }
 
-  Future<void> _performReverseLookup() async {
-    try {
-      // Lookup Country ID
-      if (_countryController.text.isNotEmpty) {
-        final cData = await _supabase
-            .from('countries')
-            .select('id')
-            .eq('name', _countryController.text)
-            .maybeSingle();
-        if (cData != null && mounted) {
-          setState(() => _selectedCountryId = cData['id'].toString());
-        }
-      }
 
-      // Lookup Diocese ID
-      if (_dioceseController.text.isNotEmpty) {
-        final dData = await _supabase
-            .from('dioceses')
-            .select('id')
-            .eq('name', _dioceseController.text)
-            .maybeSingle();
-        if (dData != null && mounted) {
-          setState(() => _selectedDioceseId = dData['id'].toString());
-        }
-      }
-
-      // Lookup Parish ID/Name Resolution
-      // The profile might store ID (new format) or Name (old format).
-      // We try to resolve it to ensure UI shows Name, but we have ID for saving.
-      final rawParish = _parishController.text;
-      if (rawParish.isNotEmpty) {
-        // 1. Try treating it as an ID first
-        final byId = await _supabase
-            .from('churches')
-            .select('id, name')
-            .eq('id', rawParish)
-            .maybeSingle();
-
-        if (byId != null) {
-          // It was an ID! Update UI to show Name
-          if (mounted) {
-            setState(() {
-              _selectedParishId = byId['id'].toString();
-              _parishController.text = byId['name'];
-            });
-          }
-        } else {
-          // 2. Try treating it as a Name
-          final byName = await _supabase
-              .from('churches')
-              .select('id, name')
-              .eq('name', rawParish)
-              .maybeSingle();
-          if (byName != null && mounted) {
-            // matched by Name, store the ID
-            setState(() => _selectedParishId = byName['id'].toString());
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint("Reverse lookup failed: $e");
-    }
-  }
 
   // --- IMAGE PICKER ---
   Future<void> _pickImage() async {
@@ -275,19 +248,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
         newAvatarUrl = _supabase.storage.from('avatars').getPublicUrl(path);
       }
 
-      // ONLY UPDATE DATA THAT IS COMPATIBLE (Text Columns Only)
-      // DO NOT update country_id, diocese_id, parish_id because of Type Mismatch (BigInt vs UUID)
       final updates = {
         'full_name': _nameController.text.trim(),
+        'baptism_name': _baptismNameController.text.trim(), // NEW
         'bio': _bioController.text.trim(),
         'gender': _selectedGender,
+        'marital_status': _maritalStatus, // NEW
         'birth_date': _selectedBirthDate?.toIso8601String(),
         'ethnicity': _ethnicityController.text.trim(),
         'country': _countryController.text.trim(),
         'diocese': _dioceseController.text.trim(),
         'parish':
             _selectedParishId ??
-            _parishController.text.trim(), // Prefer ID update, fallback to text
+            _parishController.text.trim(),
         'avatar_url': newAvatarUrl,
         'updated_at': DateTime.now().toIso8601String(),
       };
@@ -392,6 +365,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                   const SizedBox(height: 16),
                   _buildTextField(
+                    "Nama Baptis (Opsional)",
+                    _baptismNameController,
+                    capitalize: true,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
                     "Bio / Deskripsi",
                     _bioController,
                     maxLines: 3,
@@ -402,6 +381,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     ["Laki-laki", "Perempuan"],
                     _selectedGender,
                     (val) => setState(() => _selectedGender = val!),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildLabel("Status Pernikahan"),
+                  _buildMapDropdown(
+                    _maritalStatusOptions,
+                    _maritalStatus,
+                    (val) => setState(() => _maritalStatus = val!),
                   ),
                   const SizedBox(height: 16),
                   _buildLabel("Tanggal Lahir"),
@@ -769,6 +755,33 @@ class _EditProfilePageState extends State<EditProfilePage> {
           style: GoogleFonts.outfit(color: textPrimary, fontSize: 16),
           items: items
               .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+              .toList(),
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMapDropdown(
+    Map<String, String> items,
+    String value,
+    Function(String?) onChanged,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: bgSurface,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: items.containsKey(value) ? value : items.keys.first,
+          isExpanded: true,
+          dropdownColor: bgMain,
+          icon: const Icon(Icons.keyboard_arrow_down, color: textSecondary),
+          style: GoogleFonts.outfit(color: textPrimary, fontSize: 16),
+          items: items.entries
+              .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
               .toList(),
           onChanged: onChanged,
         ),

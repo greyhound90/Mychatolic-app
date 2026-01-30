@@ -57,12 +57,12 @@ class _VerificationPageState extends State<VerificationPage> {
       //    We use a direct query to get raw data for simplicity and precision here
       final profileData = await _supabase
           .from('profiles')
-          .select('user_role, account_status, country_id, diocese_id, church_id')
+          .select('role, verification_status, country_id, diocese_id, church_id')
           .eq('id', userId)
           .single();
       
       // Parse Role
-      final roleStr = profileData['user_role']?.toString() ?? 'umat';
+      final roleStr = profileData['role']?.toString() ?? 'umat';
       try {
         _userRole = UserRole.values.firstWhere(
             (e) => e.name.toLowerCase() == roleStr.toLowerCase(),
@@ -72,7 +72,7 @@ class _VerificationPageState extends State<VerificationPage> {
       }
 
       // Parse Status
-      _status = profileData['account_status']?.toString() ?? 'unverified';
+      _status = profileData['verification_status']?.toString() ?? 'unverified';
 
       // 2. Fetch Countries List (Always available)
       final countriesRes = await _supabase
@@ -247,7 +247,7 @@ class _VerificationPageState extends State<VerificationPage> {
         'country': countryName,
         'diocese': dioceseName,
         'parish': churchName,
-        'account_status': 'pending', // Enum: AccountStatus.pending
+        'verification_status': 'pending', // Enum: AccountStatus.pending
         'verification_submitted_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
       }).eq('id', userId);

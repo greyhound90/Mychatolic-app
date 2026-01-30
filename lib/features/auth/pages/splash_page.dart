@@ -84,7 +84,7 @@ class _SplashPageState extends State<SplashPage>
       }
 
       // CONDITION 2: ACCOUNT STATUS CHECK (Banned/Rejected)
-      final statusRaw = profileData['account_status']?.toString().toLowerCase();
+      final statusRaw = profileData['verification_status']?.toString().toLowerCase();
       final isBanned = statusRaw == 'banned' || statusRaw == 'rejected';
 
       if (isBanned) {

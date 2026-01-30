@@ -1,7 +1,15 @@
-
 // ignore_for_file: constant_identifier_names
 
-enum UserRole { umat, katekumen, pastor, bruder, suster, katekis, unknown }
+enum UserRole {
+  umat,
+  pastor,
+  suster,
+  bruder,
+  frater,
+  katekis,
+  katekumen,
+  unknown
+}
 
 enum AccountStatus {
   unverified,
@@ -9,6 +17,7 @@ enum AccountStatus {
   verified_catholic,
   verified_pastoral,
   rejected,
+  banned,
   unknown,
 }
 
@@ -16,46 +25,50 @@ enum CounselorStatus { online, busy, offline, unknown }
 
 class Profile {
   final String id;
+  
+  // Basic Info
   final String? fullName;
+  final String? email;
   final String? avatarUrl;
   final String? bannerUrl;
-
-
-  // Enums for strict typing
-  final UserRole userRole;
-  final AccountStatus accountStatus;
-
-  // Counselor Specific
+  
+  // Status Enums
+  final UserRole role;
+  final AccountStatus verificationStatus;
   final CounselorStatus counselorStatus;
+  
+  // Counselor Metrics
   final int ministryCount;
-
+  
+  // Personal Info
   final String? bio;
-
-  // Location (Text)
+  final DateTime? birthDate;
+  final String? ethnicity;
+  final String? baptismName; // NEW Field
+  final String? maritalStatus; // NEW Field
+  
+  // Location Text
   final String? country;
   final String? diocese;
   final String? parish;
-
+  
   // Location IDs
   final String? countryId;
   final String? dioceseId;
   final String? churchId;
-
-  // Demographics
-  final DateTime? birthDate;
-  final String? ethnicity;
-
-  // Privacy
+  
+  // Privacy Settings
   final bool showAge;
   final bool showEthnicity;
 
   Profile({
     required this.id,
     this.fullName,
+    this.email,
     this.avatarUrl,
     this.bannerUrl,
-    this.userRole = UserRole.umat,
-    this.accountStatus = AccountStatus.unverified,
+    this.role = UserRole.umat,
+    this.verificationStatus = AccountStatus.unverified,
     this.counselorStatus = CounselorStatus.offline,
     this.ministryCount = 0,
     this.bio,
@@ -67,49 +80,76 @@ class Profile {
     this.churchId,
     this.birthDate,
     this.ethnicity,
+    this.baptismName,
+    this.maritalStatus,
     this.showAge = false,
     this.showEthnicity = false,
   });
 
   // --- LOGIC GETTERS ---
 
-  // Backward Compatibility for 'role' String usage
-  // Returns string representation suitable for display or logic
-  String? get role => userRole != UserRole.unknown ? userRole.name : 'umat';
+  int? get age {
+    if (birthDate == null) return null;
+    final today = DateTime.now();
+    int a = today.year - birthDate!.year;
+    if (today.month < birthDate!.month ||
+        (today.month == birthDate!.month && today.day < birthDate!.day)) {
+      a--;
+    }
+    return a;
+  }
 
-  // Backward Compatibility for 'verificationStatus'
-  String? get verificationStatus => accountStatus.name;
+  // Combine fullName + BaptismName for display
+  String get fullNameWithBaptism {
+    if (baptismName != null && baptismName!.isNotEmpty) {
+      return "$fullName ($baptismName)";
+    }
+    return fullName ?? "User";
+  }
+
+  // ALIAS for consistent display name
+  String get displayName => fullNameWithBaptism;
+
+  // Phase 3 Rule: Show age ONLY if under 18.
+  bool get shouldShowAge {
+    final a = age;
+    if (a == null) return false;
+    return a < 18;
+  }
 
   bool get isClergy {
     return [
       UserRole.pastor,
       UserRole.bruder,
       UserRole.suster,
+      UserRole.frater,
       UserRole.katekis,
-    ].contains(userRole);
+    ].contains(role);
   }
 
   bool get canReceiveMassInvite {
-    return [UserRole.umat, UserRole.katekumen].contains(userRole);
+    return [UserRole.umat, UserRole.katekumen].contains(role);
   }
 
   bool get isVerified {
     return [
       AccountStatus.verified_catholic,
       AccountStatus.verified_pastoral,
-    ].contains(accountStatus);
+    ].contains(verificationStatus);
   }
 
   bool get isOnline => counselorStatus == CounselorStatus.online;
 
   String get roleLabel {
-    switch (userRole) {
+    switch (role) {
       case UserRole.pastor:
         return "Pastor";
       case UserRole.bruder:
         return "Bruder";
       case UserRole.suster:
         return "Suster";
+      case UserRole.frater:
+        return "Frater";
       case UserRole.katekis:
         return "Katekis";
       case UserRole.katekumen:
@@ -125,10 +165,13 @@ class Profile {
   Profile copyWith({
     String? id,
     String? fullName,
+    String? email,
+    String? baptismName,
+    String? maritalStatus,
     String? avatarUrl,
     String? bannerUrl,
-    UserRole? userRole,
-    AccountStatus? accountStatus,
+    UserRole? role,
+    AccountStatus? verificationStatus,
     CounselorStatus? counselorStatus,
     int? ministryCount,
     String? bio,
@@ -146,10 +189,13 @@ class Profile {
     return Profile(
       id: id ?? this.id,
       fullName: fullName ?? this.fullName,
+      email: email ?? this.email,
+      baptismName: baptismName ?? this.baptismName,
+      maritalStatus: maritalStatus ?? this.maritalStatus,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       bannerUrl: bannerUrl ?? this.bannerUrl,
-      userRole: userRole ?? this.userRole,
-      accountStatus: accountStatus ?? this.accountStatus,
+      role: role ?? this.role,
+      verificationStatus: verificationStatus ?? this.verificationStatus,
       counselorStatus: counselorStatus ?? this.counselorStatus,
       ministryCount: ministryCount ?? this.ministryCount,
       bio: bio ?? this.bio,
@@ -182,18 +228,23 @@ class Profile {
 
     AccountStatus parseStatus(String? val) {
       if (val == null) return AccountStatus.unverified;
-      // Handle mapping old 'approved' to new 'verified_catholic' if needed
-      if (val.toLowerCase() == 'approved') {
-        return AccountStatus.verified_catholic;
-      }
-
-      try {
-        return AccountStatus.values.firstWhere(
-          (e) => e.name.toLowerCase() == val.toLowerCase(),
-          orElse: () => AccountStatus.unverified,
-        );
-      } catch (_) {
-        return AccountStatus.unverified;
+      final v = val.toLowerCase();
+      
+      switch (v) {
+        case 'verified':
+        case 'verified_catholic':
+        case 'approved': // legacy support
+          return AccountStatus.verified_catholic;
+        case 'verified_pastoral':
+          return AccountStatus.verified_pastoral;
+        case 'pending':
+          return AccountStatus.pending;
+        case 'rejected':
+          return AccountStatus.rejected;
+        case 'banned':
+          return AccountStatus.banned;
+        default:
+          return AccountStatus.unverified;
       }
     }
 
@@ -212,30 +263,30 @@ class Profile {
     return Profile(
       id: json['id']?.toString() ?? '',
       fullName: json['full_name']?.toString(),
+      email: json['email']?.toString(),
+      baptismName: json['baptism_name']?.toString(),
+      maritalStatus: json['marital_status']?.toString(),
       avatarUrl: json['avatar_url']?.toString(),
       bannerUrl: json['banner_url']?.toString(),
-
-      // Parse Enums (Check new column names first, fall back to old)
-      userRole: parseRole(
-        json['user_role']?.toString() ?? json['role']?.toString(),
-      ),
-      accountStatus: parseStatus(
-        json['account_status']?.toString() ??
-            json['verification_status']?.toString(),
-      ),
+      role: parseRole(json['role']?.toString()),
+      verificationStatus: parseStatus(json['verification_status']?.toString()),
       counselorStatus: parseCounselorStatus(
         json['counselor_status']?.toString(),
       ),
       ministryCount: (json['ministry_count'] as num?)?.toInt() ?? 0,
-
       bio: json['bio']?.toString(),
-      country: json['country']?.toString(),
-      diocese: json['diocese']?.toString(),
-      parish: json['parish']?.toString(),
+      country: (json['countries'] != null && json['countries'] is Map && json['countries']['name'] != null)
+          ? json['countries']['name']
+          : json['country']?.toString(),
+      diocese: (json['dioceses'] != null && json['dioceses'] is Map && json['dioceses']['name'] != null)
+          ? json['dioceses']['name']
+          : json['diocese']?.toString(),
+      parish: (json['churches'] != null && json['churches'] is Map && json['churches']['name'] != null)
+          ? json['churches']['name']
+          : json['parish']?.toString(),
       countryId: json['country_id']?.toString(),
       dioceseId: json['diocese_id']?.toString(),
       churchId: json['church_id']?.toString(),
-      
       ethnicity: json['ethnicity']?.toString(),
       birthDate: json['birth_date'] != null
           ? DateTime.tryParse(json['birth_date'].toString())
@@ -249,12 +300,13 @@ class Profile {
     return {
       'id': id,
       'full_name': fullName,
+      'email': email,
+      'baptism_name': baptismName,
+      'marital_status': maritalStatus,
       'avatar_url': avatarUrl,
       'banner_url': bannerUrl,
-      'user_role': userRole.name,
-      'role': userRole.name, // Keep for legacy
-      'account_status': accountStatus.name,
-      'verification_status': accountStatus.name, // Keep for legacy
+      'role': role.name,
+      'verification_status': verificationStatus.name,
       'counselor_status': counselorStatus.name,
       'ministry_count': ministryCount,
       'bio': bio,
