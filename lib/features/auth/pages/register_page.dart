@@ -445,6 +445,43 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
+  void _openMaritalStatusSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: _kSurface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          top: false,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: _maritalStatusMap.keys.length,
+            separatorBuilder: (_, __) => Divider(color: _kBorder, height: 1),
+            itemBuilder: (context, index) {
+              final key = _maritalStatusMap.keys.elementAt(index);
+              final selected = key == _maritalStatus;
+              return ListTile(
+                title: Text(
+                  key,
+                  style: GoogleFonts.outfit(color: _kText),
+                ),
+                trailing: selected
+                    ? Icon(Icons.check_circle, color: _kSuccess)
+                    : null,
+                onTap: () {
+                  setState(() => _maritalStatus = key);
+                  Navigator.pop(context);
+                },
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildLocationDropdown({
     required String label,
     required String hint,
@@ -636,6 +673,7 @@ class _RegisterPageState extends State<RegisterPage> {
               builder: (context, child) {
                 return Theme(
                   data: Theme.of(context).copyWith(
+                    useMaterial3: true,
                     colorScheme: const ColorScheme.dark(
                       primary: _kPrimary,
                       onPrimary: Colors.white,
@@ -643,6 +681,60 @@ class _RegisterPageState extends State<RegisterPage> {
                       onSurface: _kText,
                     ),
                     dialogBackgroundColor: _kSurface,
+                    dialogTheme: DialogThemeData(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                    ),
+                    textButtonTheme: TextButtonThemeData(
+                      style: TextButton.styleFrom(
+                        foregroundColor: _kPrimary,
+                      ),
+                    ),
+                    datePickerTheme: DatePickerThemeData(
+                      backgroundColor: _kSurface,
+                      surfaceTintColor: Colors.transparent,
+                      headerBackgroundColor: _kSurface,
+                      headerForegroundColor: _kText,
+                      dividerColor: _kBorder,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      dayForegroundColor:
+                          MaterialStateProperty.resolveWith((states) {
+                        if (states.contains(MaterialState.selected)) {
+                          return _kBg;
+                        }
+                        if (states.contains(MaterialState.disabled)) {
+                          return _kTextMuted;
+                        }
+                        return _kText;
+                      }),
+                      dayBackgroundColor:
+                          MaterialStateProperty.resolveWith((states) {
+                        if (states.contains(MaterialState.selected)) {
+                          return _kPrimary;
+                        }
+                        return Colors.transparent;
+                      }),
+                      yearForegroundColor:
+                          MaterialStateProperty.resolveWith((states) {
+                        if (states.contains(MaterialState.selected)) {
+                          return _kText;
+                        }
+                        return _kTextSecondary;
+                      }),
+                      yearBackgroundColor:
+                          MaterialStateProperty.resolveWith((states) {
+                        if (states.contains(MaterialState.selected)) {
+                          return _kPrimary.withOpacity(0.20);
+                        }
+                        return Colors.transparent;
+                      }),
+                      todayForegroundColor:
+                          const MaterialStatePropertyAll(_kPrimary),
+                      todayBorder: const BorderSide(color: _kPrimary, width: 1.2),
+                    ),
                   ),
                   child: child!,
                 );
@@ -657,7 +749,7 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
         const SizedBox(height: 20),
         
-        // STATUS PERNIKAHAN DROPDOWN (Manual Implementation for simple choice)
+        // STATUS PERNIKAHAN PICKER (Dark premium bottom sheet)
         Text(
           "STATUS PERNIKAHAN",
           style: GoogleFonts.outfit(
@@ -668,31 +760,30 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
         const SizedBox(height: 8),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
             color: _kSurface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: _kPrimary.withOpacity(0.12)),
           ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _maritalStatus,
-              hint: Text(
-                "Pilih Status Pernikahan",
-                style: GoogleFonts.outfit(color: _kTextMuted),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: _openMaritalStatusSheet,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _maritalStatus ?? "Pilih Status Pernikahan",
+                      style: GoogleFonts.outfit(
+                        color: _maritalStatus == null ? _kTextMuted : _kText,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  Icon(Icons.expand_more, color: _kTextSecondary),
+                ],
               ),
-              isExpanded: true,
-              items: _maritalStatusMap.keys.map((String key) {
-                return DropdownMenuItem<String>(
-                  value: key, // Store the Label as value to match Map keys, logic handles conversion
-                  child: Text(key, style: GoogleFonts.outfit(color: _kText)),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  _maritalStatus = newValue;
-                });
-              },
             ),
           ),
         ),
@@ -818,6 +909,7 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
             controlAffinity: ListTileControlAffinity.leading,
             contentPadding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
           ),
         ),
         const SizedBox(height: 20),
@@ -834,6 +926,11 @@ class _RegisterPageState extends State<RegisterPage> {
             children: [
               Checkbox(
                 value: _agreedToTerms,
+                checkColor: _kBg,
+                side: BorderSide(
+                  color: _kTextSecondary.withOpacity(0.9),
+                  width: 1.4,
+                ),
                 activeColor: _kPrimary,
                 onChanged: (val) {
                   setState(() {
@@ -884,7 +981,27 @@ class _RegisterPageState extends State<RegisterPage> {
       case 4:
         title = "Peran & Status";
         subtitle = "Bagaimana anda melayani gereja?";
-        stepContent = _buildStep4();
+        stepContent = Theme(
+          data: Theme.of(context).copyWith(
+            checkboxTheme: CheckboxThemeData(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
+              ),
+              side: BorderSide(
+                color: _kTextSecondary.withOpacity(0.9),
+                width: 1.4,
+              ),
+              checkColor: const MaterialStatePropertyAll(_kBg),
+              fillColor: MaterialStateProperty.resolveWith((states) {
+                if (states.contains(MaterialState.selected)) {
+                  return _kPrimary;
+                }
+                return Colors.transparent;
+              }),
+            ),
+          ),
+          child: _buildStep4(),
+        );
         break;
     }
 
