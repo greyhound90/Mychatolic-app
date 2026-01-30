@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -337,19 +339,131 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   void _handleAvatarTap() {
-    if (_userStories.isNotEmpty) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => StoryViewPage(
-            stories: _userStories,
-            userProfile: {
-              'full_name': _profile?.fullName,
-              'avatar_url': _profile?.avatarUrl,
+    if (!_isMe) {
+      if (_userStories.isNotEmpty) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => StoryViewPage(
+              stories: _userStories,
+              userProfile: {
+                'full_name': _profile?.fullName,
+                'avatar_url': _profile?.avatarUrl,
+              },
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.visibility),
+            title: const Text("Lihat Foto"),
+            onTap: () {
+              Navigator.pop(ctx);
+              if (_userStories.isNotEmpty) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => StoryViewPage(
+                      stories: _userStories,
+                      userProfile: {
+                        'full_name': _profile?.fullName,
+                        'avatar_url': _profile?.avatarUrl,
+                      },
+                    ),
+                  ),
+                );
+              }
             },
           ),
-        ),
-      );
+          ListTile(
+            leading: const Icon(Icons.photo_camera),
+            title: const Text("Ganti Foto Profil"),
+            onTap: () {
+              Navigator.pop(ctx);
+              _pickAndUploadAvatar();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.image),
+            title: const Text("Ganti Sampul (Banner)"),
+            onTap: () {
+              Navigator.pop(ctx);
+              _pickAndUploadBanner();
+            },
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickAndUploadAvatar() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
+
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+
+    try {
+      final File imageFile = File(picked.path);
+      final String publicUrl = await _profileService.uploadAvatar(imageFile);
+      
+      if (_profile != null) {
+        await _profileService.updateProfile(
+          userId: _profile!.id,
+          avatarUrl: publicUrl,
+        );
+        await _loadProfileData(); // Refresh UI
+      }
+    } catch (e) {
+      debugPrint("Upload Avatar Failed: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Gagal upload foto: $e")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _pickAndUploadBanner() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
+
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+
+    try {
+      final File imageFile = File(picked.path);
+      final String publicUrl = await _profileService.uploadBanner(imageFile);
+      
+      if (_profile != null) {
+        await _profileService.updateProfile(
+          userId: _profile!.id,
+          bannerUrl: publicUrl,
+        );
+        await _loadProfileData(); // Refresh UI
+      }
+    } catch (e) {
+      debugPrint("Upload Banner Failed: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Gagal upload banner: $e")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -623,8 +737,9 @@ class ProfileHeader extends StatelessWidget {
     const double cardTopMargin = 150; // Overlaps cover by 30px
 
     String displayName = profile.fullName ?? "User";
-    if (profile.baptismName != null && profile.baptismName!.trim().isNotEmpty) {
-      // Format: "NamaBaptis NamaLengkap"
+    if (profile.baptismName != null && 
+        profile.baptismName!.trim().isNotEmpty && 
+        profile.baptismName != "null") {
       displayName = "${profile.baptismName} ${profile.fullName}";
     }
 
@@ -695,28 +810,59 @@ class ProfileHeader extends StatelessWidget {
               // 2A. NAME & VERIFIED
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        displayName,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 1. FULL NAME & VERIFIED
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              profile.fullName ?? "User",
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.outfit(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                          if (profile.isVerified)
+                            const Padding(
+                              padding: EdgeInsets.only(left: 6),
+                              child: Icon(Icons.verified,
+                                  color: Colors.blue, size: 20),
+                            ),
+                        ],
+                      ),
+                      // 2. BAPTISM NAME (SUB-TEXT)
+                      if (profile.baptismName != null &&
+                          profile.baptismName!.trim().isNotEmpty &&
+                          profile.baptismName != "null")
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.water_drop,
+                                  size: 14, color: Colors.blue[600]),
+                              const SizedBox(width: 4),
+                              Text(
+                                "Nama Baptis: ${profile.baptismName}",
+                                style: GoogleFonts.outfit(
+                                  fontSize: 14,
+                                  color: Colors.blue[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ),
-                    if (profile.isVerified)
-                      const Padding(
-                        padding: EdgeInsets.only(left: 6),
-                        child: Icon(Icons.verified, color: Colors.blue, size: 20),
-                      ),
-                  ],
-                ),
+                    ],
+                  ),
               ),
               const SizedBox(height: 8),
 

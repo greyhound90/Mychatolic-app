@@ -22,6 +22,13 @@ class ProfileService {
 
       final data = Map<String, dynamic>.from(response);
 
+      debugPrint("=== AUDIT PROFIL ===");
+      debugPrint("NAMA BAPTIS DB: ${data['baptism_name']}");
+      debugPrint("ID NEGARA: ${data['country_id']}");
+      debugPrint("DATA JOIN NEGARA: ${data['countries']}");
+      debugPrint("DATA JOIN GEREJA: ${data['churches']}");
+      debugPrint("====================");
+
       // Manual Flattening / Safety Check for Nested JSON
       // This ensures we prioritize the Relation Data if available, matching user request.
       if (data['countries'] != null && data['countries'] is Map) {
@@ -89,42 +96,69 @@ class ProfileService {
     }
   }
 
-  // 1c. Upload Avatar (returns public URL)
+  // 1c. Upload Avatar (returns public URL and updates DB)
   Future<String> uploadAvatar(File imageFile) async {
-    return _uploadImage(imageFile, 'avatars');
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception("User belum login");
+
+    final publicUrl = await _uploadImage(imageFile, 'avatars');
+    
+    // Update DB
+    await _supabase.from('profiles').update({
+      'avatar_url': publicUrl,
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('id', user.id);
+
+    return publicUrl;
   }
 
-  // 1d. Upload Banner
+  // 1d. Upload Banner (returns public URL and updates DB)
   Future<String> uploadBanner(File imageFile) async {
-    return _uploadImage(imageFile, 'banners');
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception("User belum login");
+
+    // Use 'banners' bucket if available, else fallback logic could be added.
+    // Assuming 'banners' bucket exists or we use 'avatars' bucket with banner prefix.
+    // For safety with existing setup, I'll use 'avatars' bucket but with a 'banners/' folder prefix in the path?
+    // Supabase storage paths are just strings. 
+    // Let's try to use 'property' or 'banners' bucket. 
+    // If we want to be safe and use ONE bucket 'avatars':
+    final publicUrl = await _uploadImage(imageFile, 'avatars', folderPrefix: 'banners');
+
+    // Update DB
+    await _supabase.from('profiles').update({
+      'banner_url': publicUrl,
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('id', user.id);
+
+    return publicUrl;
   }
 
-  Future<String> _uploadImage(File imageFile, String folder) async {
+  Future<String> _uploadImage(File imageFile, String bucketName, {String folderPrefix = ''}) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception("User belum login");
 
     try {
       final fileExt = imageFile.path.split('.').last;
-      final fileName = '${user.id}_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
-      final path = fileName; // Typically storage structure puts it in folder defined by bucket
+      final timeStamp = DateTime.now().millisecondsSinceEpoch;
+      // Path: userID/prefix_timestamp.ext
+      final fileName = '${folderPrefix.isNotEmpty ? "${folderPrefix}_" : ""}$timeStamp.$fileExt';
+      final path = '${user.id}/$fileName';
 
-      // Assuming separate buckets 'avatars' and 'banners' exist
-      // OR assuming one bucket 'public-images' with folders?
-      // Spec said: bucket 'avatars' or create folder 'banners'.
-      // Let's assume bucket name is consistent. If we need a 'banners' bucket, 
-      // we might fail if not created. Let's try to use 'verification-docs' pattern or 'avatars'.
-      // Safest: Use 'avatars' bucket for banners too if possible or 'common'.
-      // Given instructions: "Upload file banner ke Supabase Storage (bucket `avatars` atau buat folder `banners`)."
-      // I will use 'avatars' bucket but prefixed/foldered if I could, but 'avatars' bucket usually flat.
-      // I'll stick to 'avatars' bucket for simplicity as instructed.
+      await _supabase.storage.from(bucketName).upload(
+            path,
+            imageFile,
+            fileOptions: const FileOptions(
+              cacheControl: '3600',
+              upsert: true,
+            ),
+          );
 
-      await _supabase.storage.from('avatars').upload(path, imageFile,
-          fileOptions: const FileOptions(cacheControl: '3600', upsert: false));
-
-      final imageUrl = _supabase.storage.from('avatars').getPublicUrl(path);
+      final imageUrl = _supabase.storage.from(bucketName).getPublicUrl(path);
       return imageUrl;
     } catch (e) {
-      throw Exception("Gagal upload image: $e");
+      debugPrint("Upload Storage Error: $e");
+      throw Exception("Gagal upload image ke storage: $e");
     }
   }
 
