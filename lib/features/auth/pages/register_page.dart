@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:dropdown_search/dropdown_search.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:mychatolic_app/core/widgets/app_text_field.dart';
 import 'package:mychatolic_app/core/widgets/app_button.dart';
 import 'package:mychatolic_app/core/design_tokens.dart';
 import 'package:mychatolic_app/core/widgets/app_card.dart';
 import 'package:mychatolic_app/core/ui/app_snackbar.dart';
 import 'package:mychatolic_app/core/log/app_logger.dart';
+import 'package:mychatolic_app/core/analytics/analytics_service.dart';
+import 'package:mychatolic_app/core/analytics/analytics_events.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -45,26 +48,16 @@ class _RegisterPageState extends State<RegisterPage> {
   final _supabase = Supabase.instance.client;
 
   // Marital Status (NEW: Strict 2 options)
-  String? _maritalStatus; 
-  final Map<String, String> _maritalStatusMap = {
-    'Belum Pernah Menikah': 'single', // Updated label
-    'Cerai Mati': 'widowed',
-  };
+  String? _maritalStatusValue;
 
   // Role Selection
-  String? _selectedRole;
+  String? _selectedRoleValue;
   bool _isCatechumen = false;
   
   // Agreement (NEW)
   bool _agreedToTerms = false;
   
   // Mapping Label UI -> Value Database
-  final Map<String, String> _roleMap = {
-    'Umat': 'umat',
-    'Imam': 'pastor',
-    'Biarawan/wati': 'bruder',
-    'Katekis': 'katekis',
-  };
 
   // Location Objects (for DropdownSearch)
   Map<String, dynamic>? _selectedCountry;
@@ -92,6 +85,7 @@ class _RegisterPageState extends State<RegisterPage> {
   // ---------------------------------------------------------------------------
 
   bool _validateCurrentStep() {
+    final t = AppLocalizations.of(context)!;
     if (_errorMessage != null) {
       setState(() => _errorMessage = null);
     }
@@ -99,46 +93,46 @@ class _RegisterPageState extends State<RegisterPage> {
       case 1:
         if (_emailController.text.trim().isEmpty || 
             _passwordController.text.trim().isEmpty) {
-          _showError("Email dan Password wajib diisi");
+          _showError(t.registerEmailPasswordRequired);
           return false;
         }
         if (_passwordController.text != _confirmPassController.text) {
-          _showError("Password tidak sama");
+          _showError(t.registerPasswordsNotMatch);
           return false;
         }
         if (_passwordController.text.length < 6) {
-           _showError("Password minimal 6 karakter");
+           _showError(t.registerPasswordMin);
            return false;
         }
         return true;
       case 2:
         if (_nameController.text.trim().isEmpty) {
-          _showError("Nama Lengkap wajib diisi");
+          _showError(t.registerNameRequired);
           return false;
         }
         // Baptism name is optional
         if (_dobController.text.trim().isEmpty) {
-          _showError("Tanggal Lahir wajib diisi");
+          _showError(t.registerDobRequired);
           return false;
         }
-        if (_maritalStatus == null) {
-          _showError("Status Pernikahan wajib dipilih");
+        if (_maritalStatusValue == null) {
+          _showError(t.registerMaritalRequired);
           return false;
         }
         return true;
       case 3:
         if (_selectedCountry == null) {
-          _showError("Negara wajib dipilih");
+          _showError(t.registerCountryRequired);
           return false;
         }
         return true;
       case 4:
-        if (_selectedRole == null) {
-          _showError("Pilih peran pelayanan anda");
+        if (_selectedRoleValue == null) {
+          _showError(t.registerRoleRequired);
           return false;
         }
         if (!_agreedToTerms) {
-          _showError("Anda harus menyetujui Syarat & Ketentuan");
+          _showError(t.registerAgreeTermsRequired);
           return false;
         }
         return true;
@@ -156,9 +150,8 @@ class _RegisterPageState extends State<RegisterPage> {
     final password = _passwordController.text.trim();
     final name = _nameController.text.trim();
     final baptismName = _baptismNameController.text.trim();
-    final roleUI = _selectedRole ?? 'Umat';
-    final roleDB = _roleMap[roleUI] ?? 'umat';
-    final maritalDB = _maritalStatusMap[_maritalStatus ?? ''] ?? 'single';
+    final roleDB = _selectedRoleValue ?? 'umat';
+    final maritalDB = _maritalStatusValue ?? 'single';
     final birthDate = _formatDateForDB(_dobController.text);
     final termsAcceptedAt = DateTime.now().toIso8601String();
 
@@ -198,12 +191,21 @@ class _RegisterPageState extends State<RegisterPage> {
       );
 
       if (mounted) {
+        AnalyticsService.instance.track(AnalyticsEvents.authRegisterSuccess);
         _showSuccessDialog();
       }
     } on AuthException catch (e) {
+      AnalyticsService.instance.track(
+        AnalyticsEvents.authRegisterFailed,
+        props: {'reason': _mapAuthError(e.message)},
+      );
       if (mounted) _showError(e.message);
     } catch (e) {
       AppLogger.logError("Register Error", error: e);
+      AnalyticsService.instance.track(
+        AnalyticsEvents.authRegisterFailed,
+        props: {'reason': 'unknown'},
+      );
       if (mounted) _showError("Terjadi kesalahan: $e");
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -283,7 +285,17 @@ class _RegisterPageState extends State<RegisterPage> {
     AppSnackBar.showError(context, message);
   }
 
+  String _mapAuthError(String message) {
+    final msg = message.toLowerCase();
+    if (msg.contains('email')) return 'invalid_email';
+    if (msg.contains('password')) return 'weak_password';
+    if (msg.contains('already') || msg.contains('exists')) return 'already_exists';
+    if (msg.contains('rate')) return 'rate_limited';
+    return 'auth_error';
+  }
+
   void _showSuccessDialog() {
+    final t = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -292,14 +304,14 @@ class _RegisterPageState extends State<RegisterPage> {
           backgroundColor: AppColors.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
-            "Registrasi Berhasil",
+            t.registerSuccessTitle,
             style: GoogleFonts.outfit(
               fontWeight: FontWeight.bold,
               color: AppColors.text,
             ),
           ),
           content: Text(
-            "Akun Anda telah dibuat. Silakan verifikasi email terlebih dahulu, lalu login kembali.",
+            t.registerSuccessMessage,
             style: GoogleFonts.outfit(color: AppColors.textBody),
           ),
           actions: [
@@ -309,7 +321,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 Navigator.pop(context); // Back to Login Page
               },
               child: Text(
-                "Masuk Aplikasi",
+                t.registerSuccessAction,
                 style: GoogleFonts.outfit(
                   color: AppColors.primary, 
                   fontWeight: FontWeight.bold
@@ -368,7 +380,34 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
+  List<_Option> _maritalOptions(AppLocalizations t) {
+    return [
+      _Option(value: 'single', label: t.registerMaritalSingle),
+      _Option(value: 'widowed', label: t.registerMaritalWidowed),
+    ];
+  }
+
+  String _maritalStatusLabel(AppLocalizations t) {
+    final value = _maritalStatusValue;
+    if (value == null) return t.registerSelectMaritalStatus;
+    for (final option in _maritalOptions(t)) {
+      if (option.value == value) return option.label;
+    }
+    return t.registerSelectMaritalStatus;
+  }
+
+  Map<String, String> _roleLabels(AppLocalizations t) {
+    return {
+      'umat': t.registerRoleUmat,
+      'pastor': t.registerRolePriest,
+      'bruder': t.registerRoleReligious,
+      'katekis': t.registerRoleCatechist,
+    };
+  }
+
   void _openMaritalStatusSheet() {
+    final t = AppLocalizations.of(context)!;
+    final options = _maritalOptions(t);
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surface,
@@ -380,21 +419,21 @@ class _RegisterPageState extends State<RegisterPage> {
           top: false,
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: _maritalStatusMap.keys.length,
+            itemCount: options.length,
             separatorBuilder: (_, __) => Divider(color: AppColors.border, height: 1),
             itemBuilder: (context, index) {
-              final key = _maritalStatusMap.keys.elementAt(index);
-              final selected = key == _maritalStatus;
+              final option = options[index];
+              final selected = option.value == _maritalStatusValue;
               return ListTile(
                 title: Text(
-                  key,
+                  option.label,
                   style: GoogleFonts.outfit(color: AppColors.text),
                 ),
                 trailing: selected
                     ? Icon(Icons.check_circle, color: AppColors.success)
                     : null,
                 onTap: () {
-                  setState(() => _maritalStatus = key);
+                  setState(() => _maritalStatusValue = option.value);
                   Navigator.pop(context);
                 },
               );
@@ -492,7 +531,8 @@ class _RegisterPageState extends State<RegisterPage> {
             },
             searchFieldProps: TextFieldProps(
               decoration: InputDecoration(
-                hintText: "Cari $label...",
+                hintText:
+                    AppLocalizations.of(context)!.registerSearchHint(label),
                 prefixIcon:
                     const Icon(Icons.search, color: AppColors.textMuted),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -506,16 +546,16 @@ class _RegisterPageState extends State<RegisterPage> {
               backgroundColor: AppColors.surface,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-            ),
-            title: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                "Pilih $label",
-                style: GoogleFonts.outfit(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.text,
+          ),
+        ),
+        title: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            AppLocalizations.of(context)!.registerPickLabel(label),
+            style: GoogleFonts.outfit(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.text,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -530,20 +570,20 @@ class _RegisterPageState extends State<RegisterPage> {
   // 8. STEP BUILDERS
   // ---------------------------------------------------------------------------
 
-  Widget _buildStep1() {
+  Widget _buildStep1(AppLocalizations t) {
     return Column(
       children: [
         _buildTextField(
-          label: "Email",
-          hint: "Masukkan email anda",
+          label: t.emailLabel,
+          hint: t.emailHint,
           controller: _emailController,
           icon: Icons.email_outlined,
           keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: 20),
         _buildTextField(
-          label: "Password",
-          hint: "Minimal 6 karakter",
+          label: t.passwordLabel,
+          hint: t.registerPasswordMin,
           controller: _passwordController,
           icon: Icons.lock_outline,
           isObscure: _obscurePassword,
@@ -552,8 +592,8 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
         const SizedBox(height: 20),
         _buildTextField(
-          label: "Konfirmasi Password",
-          hint: "Ulangi password",
+          label: t.confirmPasswordLabel,
+          hint: t.confirmPasswordHint,
           controller: _confirmPassController,
           icon: Icons.lock_outline,
           isObscure: _obscureConfirm,
@@ -564,27 +604,27 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  Widget _buildStep2() {
+  Widget _buildStep2(AppLocalizations t) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildTextField(
-          label: "Nama Lengkap",
-          hint: "Sesuai dengan KTP",
+          label: t.registerFullNameLabel,
+          hint: t.registerFullNameHint,
           controller: _nameController,
           icon: Icons.person_outline,
         ),
         const SizedBox(height: 20),
         _buildTextField(
-          label: "Nama Baptis (Opsional)",
-          hint: "Masukkan nama baptis jika ada",
+          label: t.registerBaptismNameLabel,
+          hint: t.registerBaptismNameHint,
           controller: _baptismNameController,
           icon: Icons.water_drop_outlined,
         ),
         const SizedBox(height: 20),
         _buildTextField(
-          label: "Tanggal Lahir",
-          hint: "DD/MM/YYYY",
+          label: t.registerDobLabel,
+          hint: t.registerDobHint,
           controller: _dobController,
           icon: Icons.calendar_today,
           isReadOnly: true,
@@ -677,7 +717,7 @@ class _RegisterPageState extends State<RegisterPage> {
         
         // STATUS PERNIKAHAN PICKER (Dark premium bottom sheet)
         Text(
-          "STATUS PERNIKAHAN",
+          t.registerMaritalStatusLabel,
           style: GoogleFonts.outfit(
             color: AppColors.textMuted,
             fontSize: 12,
@@ -700,9 +740,9 @@ class _RegisterPageState extends State<RegisterPage> {
                 children: [
                   Expanded(
                     child: Text(
-                      _maritalStatus ?? "Pilih Status Pernikahan",
+                      _maritalStatusLabel(t),
                       style: GoogleFonts.outfit(
-                        color: _maritalStatus == null
+                        color: _maritalStatusValue == null
                             ? AppColors.textMuted
                             : AppColors.text,
                         fontSize: 14,
@@ -718,8 +758,8 @@ class _RegisterPageState extends State<RegisterPage> {
 
         const SizedBox(height: 20),
         _buildTextField(
-          label: "Suku / Etnis",
-          hint: "Contoh: Batak, Jawa, Chinese",
+          label: t.registerEthnicityLabel,
+          hint: t.registerEthnicityHint,
           controller: _ethnicityController,
           icon: Icons.people_outline,
         ),
@@ -727,12 +767,12 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  Widget _buildStep3() {
+  Widget _buildStep3(AppLocalizations t) {
     return Column(
       children: [
         _buildLocationDropdown(
-          label: "Negara",
-          hint: "Pilih Negara",
+          label: t.registerCountryLabel,
+          hint: t.registerCountryHint,
           selectedItem: _selectedCountry,
           enabled: true,
           onFind: _fetchCountries,
@@ -747,8 +787,8 @@ class _RegisterPageState extends State<RegisterPage> {
         const SizedBox(height: 20),
         _buildLocationDropdown(
           key: ValueKey('diocese_${_selectedCountry?['id']}'),
-          label: "Keuskupan",
-          hint: "Pilih Keuskupan",
+          label: t.registerDioceseLabel,
+          hint: t.registerDioceseHint,
           selectedItem: _selectedDiocese,
           enabled: _selectedCountry != null,
           onFind: _fetchDioceses,
@@ -762,8 +802,8 @@ class _RegisterPageState extends State<RegisterPage> {
         const SizedBox(height: 20),
         _buildLocationDropdown(
           key: ValueKey('parish_${_selectedDiocese?['id']}'),
-          label: "Gereja Paroki",
-          hint: "Pilih Gereja Paroki",
+          label: t.registerParishLabel,
+          hint: t.registerParishHint,
           selectedItem: _selectedParish,
           enabled: _selectedDiocese != null,
           onFind: _fetchParishes,
@@ -777,12 +817,13 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  Widget _buildStep4() {
+  Widget _buildStep4(AppLocalizations t) {
+    final roleLabels = _roleLabels(t);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "PILIH PERAN",
+          t.registerRoleLabel,
           style: GoogleFonts.outfit(
             color: AppColors.textMuted,
             fontSize: 12,
@@ -792,14 +833,14 @@ class _RegisterPageState extends State<RegisterPage> {
         const SizedBox(height: 12),
         Wrap(
           spacing: 10,
-          children: _roleMap.keys.map((role) {
-            final isSelected = _selectedRole == role;
+          children: roleLabels.keys.map((role) {
+            final isSelected = _selectedRoleValue == role;
             return ChoiceChip(
-              label: Text(role),
+              label: Text(roleLabels[role] ?? role),
               selected: isSelected,
               onSelected: (selected) {
                 setState(() {
-                  _selectedRole = selected ? role : null;
+                  _selectedRoleValue = selected ? role : null;
                 });
               },
               backgroundColor: AppColors.surface,
@@ -832,7 +873,7 @@ class _RegisterPageState extends State<RegisterPage> {
             },
             activeColor: AppColors.primary,
             title: Text(
-              "Saya calon katekumen / sedang belajar agama Katolik",
+              t.registerCatechumenLabel,
               style: GoogleFonts.outfit(fontSize: 14, color: AppColors.textBody),
             ),
             controlAffinity: ListTileControlAffinity.leading,
@@ -868,7 +909,7 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
               Expanded(
                 child: Text(
-                  "Saya menyetujui S&K dan bersedia data iman saya diverifikasi.",
+                  t.registerTermsText,
                   style:
                       GoogleFonts.outfit(fontSize: 12, color: AppColors.primary),
                 ),
@@ -886,6 +927,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     // Determine title & subtitle based on step
     String title = "";
     String subtitle = "";
@@ -893,23 +935,23 @@ class _RegisterPageState extends State<RegisterPage> {
 
     switch (_currentStep) {
       case 1:
-        title = "Buat Akun";
-        subtitle = "Mulai perjalanan iman anda sekarang.";
-        stepContent = _buildStep1();
+        title = t.registerTitleStep1;
+        subtitle = t.registerSubtitleStep1;
+        stepContent = _buildStep1(t);
         break;
       case 2:
-        title = "Data Diri";
-        subtitle = "Beritahu kami sedikit tentang anda.";
-        stepContent = _buildStep2();
+        title = t.registerTitleStep2;
+        subtitle = t.registerSubtitleStep2;
+        stepContent = _buildStep2(t);
         break;
       case 3:
-        title = "Lokasi";
-        subtitle = "Dimana anda bergereja saat ini?";
-        stepContent = _buildStep3();
+        title = t.registerTitleStep3;
+        subtitle = t.registerSubtitleStep3;
+        stepContent = _buildStep3(t);
         break;
       case 4:
-        title = "Peran & Status";
-        subtitle = "Bagaimana anda melayani gereja?";
+        title = t.registerTitleStep4;
+        subtitle = t.registerSubtitleStep4;
         stepContent = Theme(
           data: Theme.of(context).copyWith(
             checkboxTheme: CheckboxThemeData(
@@ -929,7 +971,7 @@ class _RegisterPageState extends State<RegisterPage> {
               }),
             ),
           ),
-          child: _buildStep4(),
+          child: _buildStep4(t),
         );
         break;
     }
@@ -948,21 +990,37 @@ class _RegisterPageState extends State<RegisterPage> {
                   child: Row(
                     children: [
                       if (_currentStep > 1)
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back,
-                              color: AppColors.text),
-                          onPressed: () {
-                            setState(() {
-                              _stepForward = false;
-                              _currentStep--;
-                            });
-                          },
+                        Semantics(
+                          button: true,
+                          label: t.commonBack,
+                          child: IconButton(
+                            constraints: const BoxConstraints(
+                              minWidth: 48,
+                              minHeight: 48,
+                            ),
+                            icon: const Icon(Icons.arrow_back,
+                                color: AppColors.text),
+                            onPressed: () {
+                              setState(() {
+                                _stepForward = false;
+                                _currentStep--;
+                              });
+                            },
+                          ),
                         )
                       else
-                        IconButton(
-                          icon: const Icon(Icons.close,
-                              color: AppColors.text),
-                          onPressed: () => Navigator.pop(context),
+                        Semantics(
+                          button: true,
+                          label: t.commonClose,
+                          child: IconButton(
+                            constraints: const BoxConstraints(
+                              minWidth: 48,
+                              minHeight: 48,
+                            ),
+                            icon: const Icon(Icons.close,
+                                color: AppColors.text),
+                            onPressed: () => Navigator.pop(context),
+                          ),
                         ),
                       const Spacer(),
                     ],
@@ -979,7 +1037,15 @@ class _RegisterPageState extends State<RegisterPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _StepHeader(currentStep: _currentStep),
+                        _StepHeader(
+                          currentStep: _currentStep,
+                          labels: [
+                            t.registerStepLabelAccount,
+                            t.registerStepLabelData,
+                            t.registerStepLabelLocation,
+                            t.registerStepLabelRole,
+                          ],
+                        ),
                         const SizedBox(height: 16),
                         _AuthCard(
                           child: Column(
@@ -1076,7 +1142,9 @@ class _RegisterPageState extends State<RegisterPage> {
                                 child: SizedBox(
                                   height: 52,
                                   child: AppSecondaryButton(
-                                    label: _currentStep > 1 ? "KEMBALI" : "BATAL",
+                                    label: _currentStep > 1
+                                        ? t.registerBack
+                                        : t.registerCancel,
                                     onPressed: () {
                                       if (_currentStep > 1) {
                                         setState(() {
@@ -1103,10 +1171,10 @@ class _RegisterPageState extends State<RegisterPage> {
                                     child: AppPrimaryButton(
                                       key: ValueKey(_isLoading),
                                       label: _isLoading
-                                          ? "Memproses..."
+                                          ? t.registerProcessing
                                           : _currentStep == 4
-                                              ? "DAFTAR"
-                                              : "LANJUT",
+                                              ? t.registerSubmit
+                                              : t.registerNext,
                                       isLoading: _isLoading,
                                       onPressed: _isLoading
                                           ? null
@@ -1243,12 +1311,15 @@ class _AuthCard extends StatelessWidget {
 
 class _StepHeader extends StatelessWidget {
   final int currentStep;
+  final List<String> labels;
 
-  const _StepHeader({required this.currentStep});
+  const _StepHeader({
+    required this.currentStep,
+    required this.labels,
+  });
 
   @override
   Widget build(BuildContext context) {
-    const labels = ["Akun", "Data", "Lokasi", "Peran"];
     return _StepDots(
       currentStep: currentStep,
       labels: labels,

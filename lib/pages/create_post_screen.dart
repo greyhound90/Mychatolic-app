@@ -8,6 +8,9 @@ import 'package:path_provider/path_provider.dart' as path_provider;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mychatolic_app/core/theme.dart';
 import 'package:mychatolic_app/services/social_service.dart';
+import 'package:mychatolic_app/core/ui/permission_prompt.dart';
+import 'package:mychatolic_app/core/analytics/analytics_service.dart';
+import 'package:mychatolic_app/core/analytics/analytics_events.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});
@@ -69,6 +72,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   Future<void> _pickImage() async {
     try {
+      final allowed = await PermissionPrompt.requestGallery(context);
+      if (!allowed) return;
       final picked = await _picker.pickImage(source: ImageSource.gallery);
       if (picked != null) {
         setState(() {
@@ -166,6 +171,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       );
 
       if (mounted) {
+        AnalyticsService.instance.track(
+          AnalyticsEvents.postCreate,
+          props: {'type': _imageFile != null ? 'photo' : 'text'},
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Postingan berhasil dibuat!")),
         );

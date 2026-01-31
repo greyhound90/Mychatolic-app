@@ -11,6 +11,9 @@ import 'package:mychatolic_app/widgets/safe_network_image.dart';
 import 'package:mychatolic_app/services/profile_service.dart';
 import 'package:mychatolic_app/core/widgets/app_text_field.dart';
 import 'package:mychatolic_app/core/widgets/app_button.dart';
+import 'package:mychatolic_app/core/ui/permission_prompt.dart';
+import 'package:mychatolic_app/core/analytics/analytics_service.dart';
+import 'package:mychatolic_app/core/analytics/analytics_events.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -144,6 +147,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   // --- IMAGE PICKER ---
   Future<void> _pickImage() async {
+    final allowed = await PermissionPrompt.requestGallery(context);
+    if (!allowed) return;
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery);
 
@@ -273,6 +278,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       );
 
       if (mounted) {
+        AnalyticsService.instance.track(AnalyticsEvents.profileEditSaved);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text("Profil Berhasil Diupdate!"),
@@ -339,7 +345,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            24 + MediaQuery.of(context).viewInsets.bottom,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [

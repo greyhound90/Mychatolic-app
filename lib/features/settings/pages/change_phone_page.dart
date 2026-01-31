@@ -5,6 +5,8 @@ import 'package:mychatolic_app/core/design_tokens.dart';
 import 'package:mychatolic_app/core/widgets/app_button.dart';
 import 'package:mychatolic_app/core/widgets/app_card.dart';
 import 'package:mychatolic_app/core/widgets/app_text_field.dart';
+import 'package:mychatolic_app/core/analytics/analytics_service.dart';
+import 'package:mychatolic_app/core/analytics/analytics_events.dart';
 
 class ChangePhonePage extends StatefulWidget {
   final String? currentPhone;
@@ -73,6 +75,7 @@ class _ChangePhonePageState extends State<ChangePhonePage> {
       return;
     }
     setState(() => _isSending = true);
+    AnalyticsService.instance.track(AnalyticsEvents.settingsChangePhoneAttempt);
     try {
       await _supabase.auth.updateUser(UserAttributes(phone: phone));
       if (!mounted) return;
@@ -80,6 +83,7 @@ class _ChangePhonePageState extends State<ChangePhonePage> {
         _otpSent = true;
         _infoMessage = "OTP dikirim ke $phone";
       });
+      AnalyticsService.instance.track(AnalyticsEvents.settingsChangePhoneSuccess);
     } catch (e) {
       final message = e.toString();
       if (_isSmsProviderIssue(message)) {
@@ -87,7 +91,15 @@ class _ChangePhonePageState extends State<ChangePhonePage> {
           _infoMessage =
               "Verifikasi SMS belum diaktifkan di server. Silakan konfigurasi provider SMS di Supabase Auth.";
         });
+        AnalyticsService.instance.track(
+          AnalyticsEvents.settingsChangePhoneFail,
+          props: {'error_code': 'sms_provider'},
+        );
       } else {
+        AnalyticsService.instance.track(
+          AnalyticsEvents.settingsChangePhoneFail,
+          props: {'error_code': AnalyticsService.errorCode(e)},
+        );
         setState(() => _errorMessage = "Gagal mengirim OTP: $e");
       }
     } finally {
@@ -114,8 +126,13 @@ class _ChangePhonePageState extends State<ChangePhonePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Nomor HP terverifikasi.")),
       );
+      AnalyticsService.instance.track(AnalyticsEvents.settingsChangePhoneSuccess);
       Navigator.pop(context);
     } catch (e) {
+      AnalyticsService.instance.track(
+        AnalyticsEvents.settingsChangePhoneFail,
+        props: {'error_code': AnalyticsService.errorCode(e)},
+      );
       setState(() => _errorMessage = "Gagal verifikasi OTP: $e");
     } finally {
       if (mounted) setState(() => _isVerifying = false);
@@ -149,7 +166,12 @@ class _ChangePhonePageState extends State<ChangePhonePage> {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          20 + MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: Column(
           children: [
             AppCard(

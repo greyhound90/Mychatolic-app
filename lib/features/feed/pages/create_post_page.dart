@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mychatolic_app/services/post_service.dart';
+import 'package:mychatolic_app/core/ui/permission_prompt.dart';
+import 'package:mychatolic_app/core/analytics/analytics_service.dart';
+import 'package:mychatolic_app/core/analytics/analytics_events.dart';
 
 class CreatePostPage extends StatefulWidget {
   const CreatePostPage({Key? key}) : super(key: key);
@@ -28,6 +31,11 @@ class _CreatePostPageState extends State<CreatePostPage> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
+    final allowed = source == ImageSource.camera
+        ? await PermissionPrompt.requestCamera(context)
+        : await PermissionPrompt.requestGallery(context);
+    if (!allowed) return;
+
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: source);
     if (picked != null) {
@@ -65,6 +73,10 @@ class _CreatePostPageState extends State<CreatePostPage> {
       );
 
       if (mounted) {
+        AnalyticsService.instance.track(
+          AnalyticsEvents.postCreate,
+          props: {'type': _selectedMode == 0 ? 'photo' : 'text'},
+        );
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Berhasil diposting!")));
         Navigator.pop(context, true); // Return true to trigger refresh
       }

@@ -12,6 +12,8 @@ import 'package:mychatolic_app/features/settings/pages/change_email_page.dart';
 import 'package:mychatolic_app/features/settings/pages/change_phone_page.dart';
 import 'package:mychatolic_app/features/settings/pages/change_password_page.dart';
 import 'package:mychatolic_app/features/settings/widgets/security_tile.dart';
+import 'package:mychatolic_app/core/analytics/analytics_service.dart';
+import 'package:mychatolic_app/core/analytics/analytics_events.dart';
 
 class AccountSecurityPage extends StatefulWidget {
   const AccountSecurityPage({super.key});
@@ -33,6 +35,7 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
   void initState() {
     super.initState();
     _loadUser();
+    AnalyticsService.instance.track(AnalyticsEvents.settingsSecurityOpen);
   }
 
   Future<void> _loadUser() async {

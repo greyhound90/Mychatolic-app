@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MyCatholic</string>
+    <string name="perm_camera">Kami membutuhkan akses kamera untuk mengambil foto.</string>
+    <string name="perm_gallery">Kami membutuhkan akses galeri untuk memilih foto.</string>
+    <string name="perm_microphone">Kami membutuhkan akses mikrofon untuk mengirim pesan suara.</string>
+    <string name="perm_location">Kami membutuhkan akses lokasi untuk membagikan lokasi saat ini.</string>
+</resources>

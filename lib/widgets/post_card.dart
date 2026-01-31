@@ -5,6 +5,8 @@ import 'package:mychatolic_app/models/user_post.dart';
 import 'package:mychatolic_app/services/post_service.dart';
 import 'package:mychatolic_app/widgets/safe_network_image.dart';
 import 'package:mychatolic_app/core/ui/image_prefetch.dart';
+import 'package:mychatolic_app/core/analytics/analytics_service.dart';
+import 'package:mychatolic_app/core/analytics/analytics_events.dart';
 import 'package:mychatolic_app/features/profile/pages/profile_page.dart';
 import 'package:mychatolic_app/features/feed/pages/comments_page.dart';
 import 'package:mychatolic_app/features/feed/pages/full_screen_image_page.dart';
@@ -71,6 +73,11 @@ class _PostCardState extends State<PostCard> {
       _isLiked = !_isLiked;
       _likesCount += _isLiked ? 1 : -1;
     });
+
+    AnalyticsService.instance.track(
+      AnalyticsEvents.postLikeToggle,
+      props: {'action': _isLiked ? 'like' : 'unlike'},
+    );
 
     try {
       await _postService.toggleLike(widget.post.id);

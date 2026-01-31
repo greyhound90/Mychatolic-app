@@ -9,7 +9,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import 'package:record/record.dart';
@@ -20,6 +19,9 @@ import 'package:mychatolic_app/core/ui/app_state_view.dart';
 import 'package:mychatolic_app/core/ui/app_snackbar.dart';
 import 'package:mychatolic_app/core/log/app_logger.dart';
 import 'package:mychatolic_app/widgets/safe_network_image.dart';
+import 'package:mychatolic_app/core/ui/permission_prompt.dart';
+import 'package:mychatolic_app/core/analytics/analytics_service.dart';
+import 'package:mychatolic_app/core/analytics/analytics_events.dart';
 import 'package:mychatolic_app/services/chat_service.dart';
 import 'package:mychatolic_app/features/profile/pages/profile_page.dart';
 import 'package:mychatolic_app/features/social/group_info_page.dart';
@@ -29,6 +31,7 @@ class SocialChatDetailPage extends StatefulWidget {
   final Map<String, dynamic> opponentProfile;
   final String? otherUserId;
   final bool isGroup;
+  final String source;
 
   const SocialChatDetailPage({
     super.key,
@@ -36,6 +39,7 @@ class SocialChatDetailPage extends StatefulWidget {
     required this.opponentProfile,
     this.otherUserId,
     this.isGroup = false,
+    this.source = 'chat_list',
   });
 
   @override
@@ -93,6 +97,10 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.track(
+      AnalyticsEvents.chatOpen,
+      props: {'source': widget.source},
+    );
     _scrollController.addListener(_handleScroll);
     _loadInitialMessages();
     _subscribeToMessages();
@@ -440,14 +448,28 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
   }
 
   Widget _buildMenuIcon(IconData icon, String label, Color color, VoidCallback onTap) {
-    return GestureDetector(onTap: onTap, child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(shape: BoxShape.circle, color: color.withOpacity(0.1)), child: Icon(icon, color: color, size: 28)),
-          const SizedBox(height: 8), Text(label, style: GoogleFonts.outfit(color: Colors.black)),
-    ]));
+    return Semantics(
+        button: true,
+        label: label,
+        child: GestureDetector(
+            onTap: onTap,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                      shape: BoxShape.circle, color: color.withOpacity(0.1)),
+                  child: Icon(icon, color: color, size: 28)),
+              const SizedBox(height: 8),
+              Text(label, style: GoogleFonts.outfit(color: Colors.black)),
+            ])));
   }
 
   Future<void> _handleAttachment(ImageSource source) async {
     try {
+      final allowed = source == ImageSource.camera
+          ? await PermissionPrompt.requestCamera(context)
+          : await PermissionPrompt.requestGallery(context);
+      if (!allowed) return;
       final picked = await ImagePicker().pickImage(source: source);
       if (picked == null) return;
       final file = File(picked.path);
@@ -463,7 +485,8 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
 
   Future<void> _handleLocation() async {
     try {
-      if (await Permission.location.request().isGranted) {
+      final allowed = await PermissionPrompt.requestLocation(context);
+      if (allowed) {
         final pos = await Geolocator.getCurrentPosition();
         final url = 'http://googleusercontent.com/maps.google.com/maps?q=${pos.latitude},${pos.longitude}';
         _sendMessage(type: 'location', content: url);
@@ -475,6 +498,8 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
 
   Future<void> _startRecording() async {
     try {
+      final allowed = await PermissionPrompt.requestMicrophone(context);
+      if (!allowed) return;
       if (await _audioRecorder.hasPermission()) {
         HapticFeedback.mediumImpact();
         
@@ -648,6 +673,16 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
         'is_edited': false,
       });
 
+      final length = type == 'text' ? text.length : 0;
+      final hasMedia = type != 'text' && type != 'beeb';
+      AnalyticsService.instance.track(
+        AnalyticsEvents.chatMessageSent,
+        props: {
+          'has_media': hasMedia,
+          'length_bucket': _lengthBucket(length),
+        },
+      );
+
       if (_replyMessage != null) _cancelReply();
 
       String summaryMsg = text;
@@ -689,6 +724,12 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
 
   void _showDialogImage(String imageUrl) {
     showDialog(context: context, builder: (_) => Dialog(backgroundColor: Colors.transparent, child: SafeNetworkImage(imageUrl: imageUrl, fit: BoxFit.contain)));
+  }
+
+  String _lengthBucket(int length) {
+    if (length <= 20) return '0-20';
+    if (length <= 80) return '21-80';
+    return '80+';
   }
 
   @override
@@ -1087,7 +1128,14 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
                        Text("Membalas ${_getSenderName(_replyMessage!['sender_id'])}", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 12, color: kPrimaryBlue)),
                        Text(_replyMessage!['content'] ?? '...', maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.outfit(fontSize: 12))
                    ])),
-                   IconButton(icon: const Icon(Icons.close, size: 20), onPressed: _cancelReply)
+                   Semantics(
+                     button: true,
+                     label: "Batal balasan",
+                     child: IconButton(
+                       icon: const Icon(Icons.close, size: 20),
+                       onPressed: _cancelReply,
+                     ),
+                   )
                ]),
              ),
           
@@ -1096,7 +1144,14 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
           else
             Row(
               children: [
-                 IconButton(icon: const Icon(Icons.add, color: kPrimaryBlue), onPressed: _showAttachmentSheet),
+                 Semantics(
+                   button: true,
+                   label: "Tambah lampiran",
+                   child: IconButton(
+                     icon: const Icon(Icons.add, color: kPrimaryBlue),
+                     onPressed: _showAttachmentSheet,
+                   ),
+                 ),
                  Expanded(
                    child: Container(
                      padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1112,17 +1167,25 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
                  ),
                  const SizedBox(width: 8),
                  if (_textController.text.trim().isNotEmpty) // Send text
-                    GestureDetector(
-                      onTap: () => _sendMessage(type: 'text'),
-                      child: CircleAvatar(backgroundColor: kPrimaryBlue, child: const Icon(Icons.send, color: Colors.white, size: 20)),
+                    Semantics(
+                      button: true,
+                      label: "Kirim pesan",
+                      child: GestureDetector(
+                        onTap: () => _sendMessage(type: 'text'),
+                        child: CircleAvatar(backgroundColor: kPrimaryBlue, child: const Icon(Icons.send, color: Colors.white, size: 20)),
+                      ),
                     )
                  else // Mic or Beeb
-                    GestureDetector(
-                      onTap: _sendBeeb,
-                      onLongPress: _startRecording,
-                      onLongPressMoveUpdate: _handleDragUpdate,
-                      onLongPressEnd: (details) => _stopRecordingAndSend(),
-                      child: CircleAvatar(backgroundColor: Colors.orange, child: Image.asset('assets/beep.png', width: 24)),
+                    Semantics(
+                      button: true,
+                      label: "Kirim BEEB, tekan dan tahan untuk rekam suara",
+                      child: GestureDetector(
+                        onTap: _sendBeeb,
+                        onLongPress: _startRecording,
+                        onLongPressMoveUpdate: _handleDragUpdate,
+                        onLongPressEnd: (details) => _stopRecordingAndSend(),
+                        child: CircleAvatar(backgroundColor: Colors.orange, child: Image.asset('assets/beep.png', width: 24)),
+                      ),
                     )
               ],
             ),

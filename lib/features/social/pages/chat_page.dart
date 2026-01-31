@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'package:mychatolic_app/features/social/pages/social_chat_detail_page.dart';
 import 'package:mychatolic_app/widgets/safe_network_image.dart';
@@ -28,6 +29,11 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final SupabaseClient _supabase = Supabase.instance.client;
   bool _isRedirecting = false;
+
+  List<String> _myChatIds = [];
+  bool _loadingChatIds = true;
+  Object? _chatIdsError;
+  Stream<List<Map<String, dynamic>>>? _chatStream;
   
   // Cache untuk menyimpan profil user yang sudah di-fetch
   // Key: User ID, Value: Map Profile Data
@@ -51,6 +57,7 @@ class _ChatPageState extends State<ChatPage> {
     if (widget.partnerId != null) {
       _handleAutoRedirect(widget.partnerId!);
     }
+    _loadMyChatIds();
   }
 
   Future<void> _handleAutoRedirect(String partnerId) async {
@@ -82,7 +89,7 @@ class _ChatPageState extends State<ChatPage> {
 
       if (mounted) {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => SocialChatDetailPage(
-          chatId: chatId, opponentProfile: profile, isGroup: false
+          chatId: chatId, opponentProfile: profile, isGroup: false, source: 'profile'
         )));
       }
     } catch (e, st) {
@@ -121,8 +128,62 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  Future<void> _loadMyChatIds() async {
+    final myId = _supabase.auth.currentUser?.id;
+    if (myId == null) {
+      safeSetState(() {
+        _loadingChatIds = false;
+        _chatIdsError = Exception("User belum login");
+        _myChatIds = [];
+        _chatStream = null;
+      });
+      return;
+    }
+
+    safeSetState(() {
+      _loadingChatIds = true;
+      _chatIdsError = null;
+    });
+
+    try {
+      final res = await _supabase
+          .from('social_chats')
+          .select('id, participants')
+          .contains('participants', [myId])
+          .order('updated_at', ascending: false);
+
+      final ids = (res as List)
+          .map((e) => e['id']?.toString())
+          .whereType<String>()
+          .toList();
+
+      safeSetState(() {
+        _myChatIds = ids;
+        if (_myChatIds.isNotEmpty) {
+          _chatStream = _supabase
+              .from('social_chats')
+              .stream(primaryKey: ['id'])
+              .inFilter('id', _myChatIds)
+              .order('updated_at', ascending: false);
+        } else {
+          _chatStream = null;
+        }
+        _loadingChatIds = false;
+      });
+    } catch (e, st) {
+      AppLogger.logError("Error loading chat ids", error: e, stackTrace: st);
+      safeSetState(() {
+        _chatIdsError = e;
+        _myChatIds = [];
+        _chatStream = null;
+        _loadingChatIds = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     if (_isRedirecting) {
       return const Scaffold(
         body: AppStateView(state: AppViewState.loading),
@@ -130,12 +191,12 @@ class _ChatPageState extends State<ChatPage> {
     }
     final myId = _supabase.auth.currentUser?.id;
     if (myId == null) {
-      return const Scaffold(
+      return Scaffold(
         body: AppStateView(
           state: AppViewState.error,
           error: AppError(
-            title: "Sesi berakhir",
-            message: "Silakan login ulang.",
+            title: t.chatSessionExpiredTitle,
+            message: t.chatSessionExpiredMessage,
           ),
         ),
       );
@@ -144,7 +205,7 @@ class _ChatPageState extends State<ChatPage> {
     return Scaffold(
       backgroundColor: AppColors.background, 
       appBar: AppBar(
-        title: Text("Pesan", style: GoogleFonts.outfit(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 22)),
+        title: Text(t.chatTitle, style: GoogleFonts.outfit(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 22)),
         centerTitle: false,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
@@ -158,9 +219,16 @@ class _ChatPageState extends State<ChatPage> {
         elevation: 0, 
         automaticallyImplyLeading: false,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchUserPage())),
+          Semantics(
+            button: true,
+            label: t.a11yChatSearch,
+            child: IconButton(
+              icon: const Icon(Icons.search, color: Colors.white),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SearchUserPage()),
+              ).then((_) => _loadMyChatIds()),
+            ),
           ),
           const SizedBox(width: 8),
         ],
@@ -171,12 +239,19 @@ class _ChatPageState extends State<ChatPage> {
            gradient: LinearGradient(colors: [Color(0xFF00C6FF), Color(0xFF0072FF)], begin: Alignment.topLeft, end: Alignment.bottomRight),
            boxShadow: [BoxShadow(color: Color(0x660072FF), blurRadius: 10, offset: Offset(0, 4))]
          ),
-         child: FloatingActionButton(
-          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateGroupPage())),
-          backgroundColor: Colors.transparent, 
-          elevation: 0,
-          child: const Icon(Icons.add, color: Colors.white, size: 28),
-        ),
+         child: Semantics(
+           button: true,
+           label: t.a11yChatCreate,
+           child: FloatingActionButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CreateGroupPage()),
+            ).then((_) => _loadMyChatIds()),
+            backgroundColor: Colors.transparent, 
+            elevation: 0,
+            child: const Icon(Icons.add, color: Colors.white, size: 28),
+          ),
+         ),
       ),
       body: Column(
         children: [
@@ -189,104 +264,130 @@ class _ChatPageState extends State<ChatPage> {
           
           // 2. CHAT LIST (EXPANDED) 
           Expanded(
-            child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: _supabase
-                  .from('social_chats')
-                  .stream(primaryKey: ['id'])
-                  .contains('participants', [myId])
-                  .order('updated_at', ascending: false),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-                  return const AppStateView(state: AppViewState.loading);
-                }
-
-                if (snapshot.hasError) {
-                  return AppStateView(
-                    state: AppViewState.error,
-                    error: const AppError(
-                      title: "Gagal memuat chat",
-                      message: "Koneksi bermasalah. Coba lagi.",
-                    ),
-                    onRetry: () => setState(() {}),
-                  );
-                }
-                
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const AppStateView(
-                    state: AppViewState.empty,
-                    emptyTitle: "Belum ada pesan",
-                    emptyMessage: "Mulai percakapan baru dari tombol +",
-                  );
-                }
-                
-                final allChats = snapshot.data!;
-                final myChats = allChats.where((chat) {
-                   final participants = List<dynamic>.from(chat['participants'] ?? []);
-                   return participants.contains(myId);
-                }).toList();
-
-                if (myChats.isEmpty) {
-                  return const AppStateView(
-                    state: AppViewState.empty,
-                    emptyTitle: "Belum ada pesan",
-                    emptyMessage: "Mulai percakapan baru dari tombol +",
-                  );
-                }
-
-                // --- BATCH FETCHING TRIGGER ---
-                final missingIds = <String>[];
-                for (var chat in myChats) {
-                  if (chat['is_group'] != true) {
-                    final participants = List<dynamic>.from(chat['participants'] ?? []);
-                    final partnerId = participants.firstWhere((id) => id != myId, orElse: () => null);
-                    if (partnerId != null && !_profileCache.containsKey(partnerId)) {
-                      missingIds.add(partnerId);
-                    }
-                  }
-                }
-                
-                if (missingIds.isNotEmpty) {
-                  Future.microtask(() => _fetchMissingProfiles(missingIds));
-                }
-                // ------------------------------
-
-                return AnimationLimiter(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 80, top: 12),
-                    itemCount: myChats.length,
-                    itemBuilder: (context, index) {
-                      final chat = myChats[index];
-                      Map<String, dynamic>? partnerProfile;
-                      String myIdVerified = myId;
-
-                      if (chat['is_group'] != true) {
-                         final participants = List<dynamic>.from(chat['participants'] ?? []);
-                         final partnerId = participants.firstWhere((id) => id != myId, orElse: () => null);
-                         if (partnerId != null) {
-                           partnerProfile = _profileCache[partnerId];
-                         }
-                      }
-
-                      return AnimationConfiguration.staggeredList(
-                        position: index,
-                        duration: const Duration(milliseconds: 375),
-                        child: SlideAnimation(
-                          verticalOffset: 50.0,
-                          child: FadeInAnimation(
-                            child: _ChatTile(
-                              chatData: chat, 
-                              myId: myIdVerified,
-                              partnerProfile: partnerProfile,
-                              backgroundColor: _pastelColors[index % _pastelColors.length], // Cyclic Color
-                            ),
-                          ),
+            child: _loadingChatIds
+                ? const AppStateView(state: AppViewState.loading)
+                : _chatIdsError != null
+                    ? AppStateView(
+                        state: AppViewState.error,
+                        error: AppError(
+                          title: t.chatLoadErrorTitle,
+                          message: t.chatLoadErrorMessage,
                         ),
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
+                        onRetry: _loadMyChatIds,
+                      )
+                    : _myChatIds.isEmpty || _chatStream == null
+                        ? AppStateView(
+                            state: AppViewState.empty,
+                            emptyTitle: t.chatEmptyTitle,
+                            emptyMessage: t.chatEmptyMessage,
+                          )
+                        : StreamBuilder<List<Map<String, dynamic>>>(
+                            stream: _chatStream,
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                      ConnectionState.waiting &&
+                                  !snapshot.hasData) {
+                                return const AppStateView(
+                                  state: AppViewState.loading,
+                                );
+                              }
+
+                              if (snapshot.hasError) {
+                                return AppStateView(
+                                  state: AppViewState.error,
+                                  error: AppError(
+                                    title: t.chatLoadErrorTitle,
+                                    message: t.chatLoadErrorMessage,
+                                  ),
+                                  onRetry: _loadMyChatIds,
+                                );
+                              }
+
+                              final chats =
+                                  snapshot.data ?? <Map<String, dynamic>>[];
+                              if (chats.isEmpty) {
+                                return AppStateView(
+                                  state: AppViewState.empty,
+                                  emptyTitle: t.chatEmptyTitle,
+                                  emptyMessage: t.chatEmptyMessage,
+                                );
+                              }
+
+                              // --- BATCH FETCHING TRIGGER ---
+                              final missingIds = <String>[];
+                              for (var chat in chats) {
+                                if (chat['is_group'] != true) {
+                                  final participants = List<dynamic>.from(
+                                      chat['participants'] ?? []);
+                                  final partnerId = participants.firstWhere(
+                                    (id) => id != myId,
+                                    orElse: () => null,
+                                  );
+                                  if (partnerId != null &&
+                                      !_profileCache.containsKey(partnerId)) {
+                                    missingIds.add(partnerId);
+                                  }
+                                }
+                              }
+
+                              if (missingIds.isNotEmpty) {
+                                Future.microtask(
+                                    () => _fetchMissingProfiles(missingIds));
+                              }
+                              // ------------------------------
+
+                              return RefreshIndicator(
+                                onRefresh: _loadMyChatIds,
+                                child: AnimationLimiter(
+                                  child: ListView.builder(
+                                    padding: const EdgeInsets.only(
+                                      bottom: 80,
+                                      top: 12,
+                                    ),
+                                    itemCount: chats.length,
+                                    itemBuilder: (context, index) {
+                                      final chat = chats[index];
+                                      Map<String, dynamic>? partnerProfile;
+                                      String myIdVerified = myId;
+
+                                      if (chat['is_group'] != true) {
+                                        final participants =
+                                            List<dynamic>.from(
+                                                chat['participants'] ?? []);
+                                        final partnerId = participants
+                                            .firstWhere((id) => id != myId,
+                                                orElse: () => null);
+                                        if (partnerId != null) {
+                                          partnerProfile =
+                                              _profileCache[partnerId];
+                                        }
+                                      }
+
+                                      return AnimationConfiguration
+                                          .staggeredList(
+                                        position: index,
+                                        duration:
+                                            const Duration(milliseconds: 375),
+                                        child: SlideAnimation(
+                                          verticalOffset: 50.0,
+                                          child: FadeInAnimation(
+                                            child: _ChatTile(
+                                              chatData: chat,
+                                              myId: myIdVerified,
+                                              partnerProfile: partnerProfile,
+                                              backgroundColor: _pastelColors[
+                                                  index %
+                                                      _pastelColors.length],
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
           ),
         ],
       ),
@@ -309,18 +410,19 @@ class _ChatTile extends StatelessWidget {
   });
 
   Future<void> _deleteChat(BuildContext context) async {
+    final t = AppLocalizations.of(context)!;
     final chatId = chatData['id'];
     final supabase = Supabase.instance.client;
     
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Hapus Chat?", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-        content: Text("Obrolan ini akan dihapus permanen.", style: GoogleFonts.outfit()),
+        title: Text(t.chatDeleteTitle, style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        content: Text(t.chatDeleteMessage, style: GoogleFonts.outfit()),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text("Batal", style: GoogleFonts.outfit(color: Colors.grey)),
+            child: Text(t.chatDeleteCancel, style: GoogleFonts.outfit(color: Colors.grey)),
           ),
           TextButton(
             onPressed: () async {
@@ -329,15 +431,15 @@ class _ChatTile extends StatelessWidget {
                 // Delete logic
                 await supabase.from('social_chats').delete().eq('id', chatId);
                 if (context.mounted) {
-                  AppSnackBar.showSuccess(context, "Chat berhasil dihapus");
+                  AppSnackBar.showSuccess(context, t.chatDeleteSuccess);
                 }
               } catch (e) {
                 if (context.mounted) {
-                  AppSnackBar.showError(context, "Gagal hapus chat.");
+                  AppSnackBar.showError(context, t.chatDeleteFailed);
                 }
               }
             },
-            child: Text("Hapus", style: GoogleFonts.outfit(color: Colors.red, fontWeight: FontWeight.bold)),
+            child: Text(t.chatDeleteConfirm, style: GoogleFonts.outfit(color: Colors.red, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -396,7 +498,10 @@ class _ChatTile extends StatelessWidget {
               if (!isGroup && partnerProfile == null) return; 
           
               Navigator.push(context, MaterialPageRoute(builder: (_) => SocialChatDetailPage(
-                chatId: chatData['id'], isGroup: isGroup, opponentProfile: profileForNav
+                chatId: chatData['id'],
+                isGroup: isGroup,
+                opponentProfile: profileForNav,
+                source: 'chat_list',
               )));
             },
             onLongPress: () => _deleteChat(context),

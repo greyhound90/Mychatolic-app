@@ -6,6 +6,8 @@ import 'package:mychatolic_app/core/widgets/app_button.dart';
 import 'package:mychatolic_app/core/widgets/app_card.dart';
 import 'package:mychatolic_app/core/widgets/app_text_field.dart';
 import 'package:mychatolic_app/core/ui/app_snackbar.dart';
+import 'package:mychatolic_app/core/analytics/analytics_service.dart';
+import 'package:mychatolic_app/core/analytics/analytics_events.dart';
 
 class ChangeEmailPage extends StatefulWidget {
   final String currentEmail;
@@ -59,6 +61,7 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
     }
 
     setState(() => _isLoading = true);
+    AnalyticsService.instance.track(AnalyticsEvents.settingsChangeEmailAttempt);
     try {
       await _supabase.auth.signInWithPassword(
         email: currentEmail,
@@ -66,12 +69,17 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
       );
       await _supabase.auth.updateUser(UserAttributes(email: newEmail));
       if (!mounted) return;
+      AnalyticsService.instance.track(AnalyticsEvents.settingsChangeEmailSuccess);
       AppSnackBar.showSuccess(
         context,
         "Email baru perlu verifikasi. Cek inbox Anda.",
       );
       Navigator.pop(context);
     } catch (e) {
+      AnalyticsService.instance.track(
+        AnalyticsEvents.settingsChangeEmailFail,
+        props: {'error_code': AnalyticsService.errorCode(e)},
+      );
       _showError("Gagal ganti email: $e");
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -105,7 +113,12 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          20 + MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: Column(
           children: [
             AppCard(

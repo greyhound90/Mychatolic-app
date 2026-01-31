@@ -4,6 +4,7 @@ import 'package:image_cropper/image_cropper.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:mychatolic_app/models/profile.dart';
 import 'package:mychatolic_app/models/user_post.dart';
 import 'package:mychatolic_app/models/story_model.dart';
@@ -29,6 +30,9 @@ import 'package:mychatolic_app/core/ui/app_state_view.dart';
 import 'package:mychatolic_app/core/ui/app_snackbar.dart';
 import 'package:mychatolic_app/core/log/app_logger.dart';
 import 'package:mychatolic_app/core/ui/image_prefetch.dart';
+import 'package:mychatolic_app/core/ui/permission_prompt.dart';
+import 'package:mychatolic_app/core/analytics/analytics_service.dart';
+import 'package:mychatolic_app/core/analytics/analytics_events.dart';
 import 'package:share_plus/share_plus.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -60,6 +64,7 @@ class _ProfilePageState extends State<ProfilePage>
   Map<String, int> _stats = {'followers': 0, 'following': 0, 'posts': 0};
   bool _isFollowing = false;
   bool _isMe = false;
+  bool _profileViewTracked = false;
 
   _ProfilePalette get _palette => _ProfilePalette.of(context);
 
@@ -132,10 +137,11 @@ class _ProfilePageState extends State<ProfilePage>
     });
 
     try {
+      final t = AppLocalizations.of(context)!;
       final targetUserId = widget.userId ?? _supabase.auth.currentUser?.id;
       if (targetUserId == null) {
         safeSetState(() {
-          _error = "User not found";
+          _error = t.commonErrorGeneric;
           _isLoading = false;
         });
         return;
@@ -158,6 +164,13 @@ class _ProfilePageState extends State<ProfilePage>
         };
         _userStories = stories;
       });
+      if (!_profileViewTracked && _profile != null) {
+        AnalyticsService.instance.track(
+          AnalyticsEvents.profileView,
+          props: {'is_self': _isMe},
+        );
+        _profileViewTracked = true;
+      }
       await _refreshPhotoPosts(targetUserId);
       await _refreshTextPosts(targetUserId);
 
@@ -167,7 +180,7 @@ class _ProfilePageState extends State<ProfilePage>
     } catch (e, st) {
       AppLogger.logError("Error loading profile", error: e, stackTrace: st);
       safeSetState(() {
-        _error = "Gagal memuat profil. Silakan coba lagi.";
+        _error = AppLocalizations.of(context)!.commonErrorGeneric;
       });
     } finally {
       safeSetState(() {
@@ -369,6 +382,13 @@ class _ProfilePageState extends State<ProfilePage>
     if (_profile == null) return;
     final bool previousState = _isFollowing;
     final int previousCount = _stats['followers'] ?? 0;
+    AnalyticsService.instance.track(
+      AnalyticsEvents.follow,
+      props: {
+        'target_type': 'user',
+        'action': previousState ? 'unfollow' : 'follow',
+      },
+    );
 
     setState(() {
       if (previousState) {
@@ -427,6 +447,7 @@ class _ProfilePageState extends State<ProfilePage>
 
   void _handleBannerTap() {
     if (!_isMe) return;
+    final t = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       builder: (ctx) => Column(
@@ -434,7 +455,7 @@ class _ProfilePageState extends State<ProfilePage>
         children: [
           ListTile(
             leading: const Icon(Icons.visibility),
-            title: const Text("Lihat Banner"),
+            title: Text(t.profileViewBanner),
             onTap: () {
               Navigator.pop(ctx);
               _showBannerPreview();
@@ -442,7 +463,7 @@ class _ProfilePageState extends State<ProfilePage>
           ),
           ListTile(
             leading: const Icon(Icons.photo_camera),
-            title: const Text("Ganti Banner"),
+            title: Text(t.profileChangeBanner),
             onTap: () {
               Navigator.pop(ctx);
               _pickAndUploadBanner();
@@ -455,10 +476,11 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   void _showBannerPreview() {
+    final t = AppLocalizations.of(context)!;
     final url = _profile?.bannerUrl;
     if (url == null || url.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Banner belum tersedia")),
+        SnackBar(content: Text(t.profileBannerUnavailable)),
       );
       return;
     }
@@ -482,10 +504,10 @@ class _ProfilePageState extends State<ProfilePage>
 
   Future<void> _shareProfile() async {
     if (_profile == null) return;
+    final t = AppLocalizations.of(context)!;
     final name = _profile!.fullName ?? "User";
     final userId = _profile!.id;
-    final message =
-        "Cek profil saya di MyChatolic!\nNama: $name\nID: $userId";
+    final message = t.profileShareMessage(name, userId);
     await Share.share(message);
   }
 
@@ -527,6 +549,7 @@ class _ProfilePageState extends State<ProfilePage>
       return;
     }
 
+    final t = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       builder: (ctx) => Column(
@@ -534,7 +557,7 @@ class _ProfilePageState extends State<ProfilePage>
         children: [
           ListTile(
             leading: const Icon(Icons.visibility),
-            title: const Text("Lihat Foto"),
+            title: Text(t.profileViewPhoto),
             onTap: () {
               Navigator.pop(ctx);
               if (_userStories.isNotEmpty) {
@@ -555,7 +578,7 @@ class _ProfilePageState extends State<ProfilePage>
           ),
           ListTile(
             leading: const Icon(Icons.photo_camera),
-            title: const Text("Ganti Foto Profil"),
+            title: Text(t.profileChangePhoto),
             onTap: () {
               Navigator.pop(ctx);
               _pickAndUploadAvatar();
@@ -563,7 +586,7 @@ class _ProfilePageState extends State<ProfilePage>
           ),
           ListTile(
             leading: const Icon(Icons.image),
-            title: const Text("Ganti Sampul (Banner)"),
+            title: Text(t.profileChangeBanner),
             onTap: () {
               Navigator.pop(ctx);
               _pickAndUploadBanner();
@@ -576,6 +599,8 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   Future<void> _pickAndUploadAvatar() async {
+    final allowed = await PermissionPrompt.requestGallery(context);
+    if (!allowed) return;
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked == null) return;
@@ -605,6 +630,8 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   Future<void> _pickAndUploadBanner() async {
+    final allowed = await PermissionPrompt.requestGallery(context);
+    if (!allowed) return;
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked == null) return;
@@ -669,25 +696,26 @@ class _ProfilePageState extends State<ProfilePage>
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     // DEBUG: Check Status
     if (_profile != null) {
       AppLogger.logInfo(
           'Current Verification Status: ${_profile!.verificationStatus}');
     }
     final hasError = _error != null || _profile == null;
-    final errorMessage = _error ?? "Data profil tidak ditemukan.";
+    final errorMessage = _error ?? t.commonErrorGeneric;
     final displayProfile = _profile;
 
     return AppStateScaffold(
       loading: _isLoading,
       error: hasError ? errorMessage : null,
-      title: "Profil",
+      title: t.profileTitle,
       onRetry: hasError ? _loadProfileData : null,
       child: displayProfile == null
           ? AppStateView(
               state: AppViewState.empty,
-              emptyTitle: "Profil belum tersedia",
-              emptyMessage: "Silakan coba lagi.",
+              emptyTitle: t.profileNoProfile,
+              emptyMessage: t.profileRetry,
               onRetry: _loadProfileData,
             )
           : Scaffold(
@@ -730,9 +758,9 @@ class _ProfilePageState extends State<ProfilePage>
                       letterSpacing: 0.4,
                     ),
                             tabs: [
-                              const Tab(text: "GALERI"),
-                              const Tab(text: "STATUS"),
-                              if (_isMe) const Tab(text: "DISIMPAN"),
+                              Tab(text: t.profileGalleryTab),
+                              Tab(text: t.profileStatusTab),
+                              if (_isMe) Tab(text: t.profileSavedTab),
                             ],
                           ),
                         ),
@@ -748,14 +776,14 @@ class _ProfilePageState extends State<ProfilePage>
                         controller: _photoScrollController,
                         isLoading: _photoLoading,
                         isLoadingMore: _photoLoadingMore,
-                        emptyMessage: "Belum ada postingan",
+                        emptyMessage: t.profileEmptyPosts,
                       ),
                       _buildListPosts(
                         _textPosts,
                         controller: _textScrollController,
                         isLoading: _textLoading,
                         isLoadingMore: _textLoadingMore,
-                        emptyMessage: "Belum ada postingan",
+                        emptyMessage: t.profileEmptyPosts,
                       ),
                       if (_isMe)
                         _buildGridPosts(
@@ -763,7 +791,7 @@ class _ProfilePageState extends State<ProfilePage>
                           controller: _savedScrollController,
                           isLoading: _savedLoading,
                           isLoadingMore: _savedLoadingMore,
-                          emptyMessage: "Belum ada postingan disimpan",
+                          emptyMessage: t.profileEmptySaved,
                           isSavedView: true,
                         ),
                     ],
@@ -990,6 +1018,7 @@ class ProfileHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final _palette = _ProfilePalette.of(context);
+    final t = AppLocalizations.of(context)!;
     // LAYOUT CONSTANTS
     const double coverHeight = 180;
     const double avatarSize = 104;
@@ -1012,7 +1041,7 @@ class ProfileHeader extends StatelessWidget {
       child: isFollowing
           ? AppPrimaryButton(
               key: const ValueKey('following'),
-              label: "Mengikuti",
+              label: t.profileUnfollow,
               icon: Icons.check,
               onPressed: onFollowToggle,
               backgroundColor: _palette.muted,
@@ -1020,7 +1049,7 @@ class ProfileHeader extends StatelessWidget {
             )
           : AppPrimaryButton(
               key: const ValueKey('follow'),
-              label: "Follow",
+              label: t.profileFollow,
               icon: Icons.person_add,
               onPressed: onFollowToggle,
               backgroundColor: _palette.primary,
@@ -1049,26 +1078,31 @@ class ProfileHeader extends StatelessWidget {
     Widget floatingIconButton({
       required VoidCallback? onTap,
       required IconData icon,
+      required String semanticsLabel,
     }) {
-      return GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: 44,
-          height: 44,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.88),
-            shape: BoxShape.circle,
-            border: Border.all(color: _palette.border.withOpacity(0.7)),
-            boxShadow: [
-              BoxShadow(
-                color: _palette.shadow.withOpacity(0.15),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+      return Semantics(
+        button: onTap != null,
+        label: semanticsLabel,
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            width: 48,
+            height: 48,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.88),
+              shape: BoxShape.circle,
+              border: Border.all(color: _palette.border.withOpacity(0.7)),
+              boxShadow: [
+                BoxShadow(
+                  color: _palette.shadow.withOpacity(0.15),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Icon(icon, color: _palette.primary, size: 20),
           ),
-          child: Icon(icon, color: _palette.primary, size: 20),
         ),
       );
     }
@@ -1097,19 +1131,24 @@ class ProfileHeader extends StatelessWidget {
         alignment: Alignment.topCenter,
         children: [
         // 1. BANNER IMAGE
-        GestureDetector(
-          onTap: isMe ? onBannerTap : null,
-          child: Container(
-            height: coverHeight,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: _palette.backgroundAlt,
-              image: profile.bannerUrl != null
-                  ? DecorationImage(
-                      image: NetworkImage(profile.bannerUrl!),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
+        Semantics(
+          image: true,
+          button: isMe,
+          label: t.a11yProfileBanner,
+          child: GestureDetector(
+            onTap: isMe ? onBannerTap : null,
+            child: Container(
+              height: coverHeight,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: _palette.backgroundAlt,
+                image: profile.bannerUrl != null
+                    ? DecorationImage(
+                        image: NetworkImage(profile.bannerUrl!),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+              ),
             ),
           ),
         ),
@@ -1143,12 +1182,14 @@ class ProfileHeader extends StatelessWidget {
                   floatingIconButton(
                     onTap: onSettingsTap,
                     icon: Icons.settings,
+                    semanticsLabel: t.settingsTitle,
                   ),
                 if (isMe) ...[
                   const SizedBox(height: 10),
                   floatingIconButton(
                     onTap: onBannerTap,
                     icon: Icons.photo_camera,
+                    semanticsLabel: t.a11yChangeBanner,
                   ),
                 ],
               ],
@@ -1162,6 +1203,7 @@ class ProfileHeader extends StatelessWidget {
             child: floatingIconButton(
               onTap: () => Navigator.pop(context),
               icon: Icons.arrow_back,
+              semanticsLabel: t.a11yBack,
             ),
           ),
         // 2. WHITE CARD BODY
@@ -1197,6 +1239,8 @@ class ProfileHeader extends StatelessWidget {
                             child: Text(
                               displayName,
                               textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.outfit(
                                 fontSize: 21,
                                 fontWeight: FontWeight.bold,
@@ -1225,7 +1269,7 @@ class ProfileHeader extends StatelessWidget {
                                   size: 14, color: _palette.disabled),
                               const SizedBox(width: 4),
                               Text(
-                                "Nama Baptis: ${profile.baptismName}",
+                                t.profileBaptismName(profile.baptismName ?? ''),
                                 style: GoogleFonts.outfit(
                                   fontSize: 13,
                                   color: _palette.mutedText,
@@ -1250,7 +1294,7 @@ class ProfileHeader extends StatelessWidget {
                                   color: _palette.text.withOpacity(0.12)),
                             ),
                             child: Text(
-                              "${profile.age} Tahun",
+                              t.profileAge(profile.age ?? 0),
                               style: GoogleFonts.outfit(
                                 fontSize: 12,
                                 color: _palette.mutedText,
@@ -1336,13 +1380,14 @@ class ProfileHeader extends StatelessWidget {
                 sectionCard(
                   LayoutBuilder(
                     builder: (context, constraints) {
-                    final bool isNarrow = constraints.maxWidth < 360;
+                    final scale = MediaQuery.textScaleFactorOf(context);
+                    final bool isNarrow = constraints.maxWidth < 360 || scale > 1.2;
                     if (isMe) {
                       return Row(
                         children: [
                           Expanded(
                             child: AppPrimaryButton(
-                              label: "Edit Profil",
+                              label: t.profileEdit,
                               icon: Icons.edit,
                               onPressed: onEditTap,
                               backgroundColor: _palette.primary,
@@ -1352,7 +1397,7 @@ class ProfileHeader extends StatelessWidget {
                           const SizedBox(width: 12),
                           Expanded(
                             child: AppSecondaryButton(
-                              label: "Share Profile",
+                              label: t.profileShare,
                               icon: Icons.share_outlined,
                               onPressed: onShareTap,
                               borderColor: _palette.text.withOpacity(0.2),
@@ -1364,7 +1409,7 @@ class ProfileHeader extends StatelessWidget {
                     }
 
                     final Widget chatButton = AppSecondaryButton(
-                      label: "Chat",
+                      label: t.profileChat,
                       icon: Icons.mark_chat_unread_outlined,
                       onPressed: onChatTap,
                       borderColor: _palette.text.withOpacity(0.2),
@@ -1372,7 +1417,7 @@ class ProfileHeader extends StatelessWidget {
                     );
 
                     final Widget inviteButton = AppSecondaryButton(
-                      label: "Ajak Misa",
+                      label: t.profileInviteMass,
                       onPressed: onInviteTap,
                       borderColor: _palette.text.withOpacity(0.2),
                       foregroundColor: _palette.text,
@@ -1423,9 +1468,9 @@ class ProfileHeader extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildStatItem(context, "${stats['posts'] ?? 0}", "Post"),
-                      _buildStatItem(context, "${stats['followers'] ?? 0}", "Pengikut"),
-                      _buildStatItem(context, "${stats['following'] ?? 0}", "Mengikuti"),
+                      _buildStatItem(context, "${stats['posts'] ?? 0}", t.profileStatsPosts),
+                      _buildStatItem(context, "${stats['followers'] ?? 0}", t.profileStatsFollowers),
+                      _buildStatItem(context, "${stats['following'] ?? 0}", t.profileStatsFollowing),
                     ],
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -1439,62 +1484,67 @@ class ProfileHeader extends StatelessWidget {
         // 3. AVATAR (Positioned to overlap)
         Positioned(
           top: cardTopMargin - (avatarSize / 2),
-          child: GestureDetector(
-            onTap: onAvatarTap,
-            child: Container(
-              width: avatarSize,
-              height: avatarSize,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: _palette.backgroundAlt, width: 4),
-                boxShadow: [
-                  BoxShadow(
-                    color: _palette.shadow.withOpacity(0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  ClipOval(
-                    child: SafeNetworkImage(
-                      imageUrl: profile.avatarUrl ?? "",
-                      width: avatarSize,
-                      height: avatarSize,
-                      fit: BoxFit.cover,
-                      fallbackIcon: Icons.person,
-                      fallbackColor: _palette.backgroundAlt,
+          child: Semantics(
+            image: true,
+            button: onAvatarTap != null,
+            label: t.a11yProfileAvatar,
+            child: GestureDetector(
+              onTap: onAvatarTap,
+              child: Container(
+                width: avatarSize,
+                height: avatarSize,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: _palette.backgroundAlt, width: 4),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _palette.shadow.withOpacity(0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
                     ),
-                  ),
-                  if (isMe)
-                    Positioned(
-                      right: 2,
-                      bottom: 2,
-                      child: Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: _palette.border),
-                          boxShadow: [
-                            BoxShadow(
-                              color: _palette.shadow.withOpacity(0.18),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.camera_alt,
-                          size: 16,
-                          color: _palette.primary,
-                        ),
+                  ],
+                ),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    ClipOval(
+                      child: SafeNetworkImage(
+                        imageUrl: profile.avatarUrl ?? "",
+                        width: avatarSize,
+                        height: avatarSize,
+                        fit: BoxFit.cover,
+                        fallbackIcon: Icons.person,
+                        fallbackColor: _palette.backgroundAlt,
                       ),
                     ),
-                ],
+                    if (isMe)
+                      Positioned(
+                        right: 2,
+                        bottom: 2,
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: _palette.border),
+                            boxShadow: [
+                              BoxShadow(
+                                color: _palette.shadow.withOpacity(0.18),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.camera_alt,
+                            size: 16,
+                            color: _palette.primary,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1510,6 +1560,8 @@ class ProfileHeader extends StatelessWidget {
       children: [
         Text(
           count,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: GoogleFonts.outfit(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -1518,6 +1570,8 @@ class ProfileHeader extends StatelessWidget {
         ),
         Text(
           label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: GoogleFonts.outfit(
             fontSize: 12,
             color: palette.mutedText,
@@ -1528,6 +1582,7 @@ class ProfileHeader extends StatelessWidget {
   }
 
   Widget _buildVerificationBanner(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     if (!isMe) return const SizedBox.shrink();
     // Logic: verified -> hidden
     if (profile.isVerified) return const SizedBox.shrink();
@@ -1547,14 +1602,14 @@ class ProfileHeader extends StatelessWidget {
       borderColor = Colors.transparent; 
       contentColor = palette.primaryDark;
       icon = Icons.hourglass_top;
-      text = "Dokumen Anda sedang ditinjau oleh Admin.";
+      text = t.profileVerificationPending;
     } else {
       // unverified, rejected, unknown
       bgColor = palette.danger.withOpacity(0.12);
       borderColor = palette.danger;
       contentColor = palette.danger;
       icon = Icons.warning_amber_rounded;
-      text = "Akun belum terverifikasi. Upload dokumen untuk akses fitur penuh.";
+      text = t.profileVerificationNeeded;
       actionButton = TextButton(
         onPressed: () {
           Navigator.push(
@@ -1568,7 +1623,7 @@ class ProfileHeader extends StatelessWidget {
            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
         child: Text(
-          "VERIFIKASI",
+          t.profileVerifyAction,
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.bold,
             color: contentColor,
@@ -1610,6 +1665,7 @@ class ProfileHeader extends StatelessWidget {
 
   Widget _buildTrustBadge(BuildContext context) {
     final palette = _ProfilePalette.of(context);
+    final t = AppLocalizations.of(context)!;
     String label;
     Color color;
     Color textColor;
@@ -1618,29 +1674,29 @@ class ProfileHeader extends StatelessWidget {
     if (profile.verificationStatus == AccountStatus.verified_catholic ||
         profile.verificationStatus == AccountStatus.verified_pastoral) {
       if (profile.isClergy) {
-        label = "${profile.roleLabel} Terverifikasi";
+        label = t.profileTrustVerifiedClergy(profile.roleLabel);
         color = palette.primary.withOpacity(0.12);
         textColor = palette.primaryDark;
         icon = Icons.verified_user;
       } else {
-        label = "100% Katolik";
+        label = t.profileTrustCatholic;
         color = palette.success.withOpacity(0.12);
         textColor = palette.success;
         icon = Icons.star;
       }
     } else if (profile.verificationStatus == AccountStatus.pending) {
-      label = "Menunggu Verifikasi";
+      label = t.profileTrustPending;
       color = palette.backgroundAlt;
       textColor = palette.mutedText;
       icon = Icons.hourglass_empty;
     } else if (profile.role == UserRole.katekumen) {
-      label = "Katekumen";
+      label = t.profileTrustCatechumen;
       color = palette.muted.withOpacity(0.12);
       textColor = palette.primaryDark;
       icon = Icons.local_florist;
     } else {
       // Unverified Badge
-      label = "Belum Verifikasi";
+      label = t.profileTrustUnverified;
       color = palette.danger.withOpacity(0.12);
       textColor = palette.danger;
       icon = Icons.error_outline;

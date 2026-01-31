@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:mychatolic_app/features/profile/pages/edit_profile_page.dart';
 import 'package:mychatolic_app/features/auth/pages/verification_page.dart';
 import 'package:mychatolic_app/features/auth/pages/login_page.dart';
@@ -8,6 +9,11 @@ import 'package:mychatolic_app/models/profile.dart';
 import 'package:mychatolic_app/features/settings/pages/change_password_page.dart';
 import 'package:mychatolic_app/features/settings/pages/account_security_page.dart';
 import 'package:mychatolic_app/core/ui/app_snackbar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:mychatolic_app/core/analytics/analytics_service.dart';
+import 'package:mychatolic_app/core/analytics/analytics_events.dart';
+import 'package:mychatolic_app/providers/locale_provider.dart';
+import 'package:provider/provider.dart';
 
 class SettingsPage extends StatefulWidget {
   final Profile profile;
@@ -20,10 +26,100 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   final SupabaseClient _supabase = Supabase.instance.client;
+  bool _analyticsEnabled = true;
+  bool _analyticsLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAnalyticsPref();
+  }
+
+  Future<void> _loadAnalyticsPref() async {
+    final prefs = await SharedPreferences.getInstance();
+    final enabled = prefs.getBool('analytics_enabled') ?? true;
+    if (!mounted) return;
+    setState(() {
+      _analyticsEnabled = enabled;
+      _analyticsLoaded = true;
+    });
+  }
 
   void _showSnack(String message) {
     if (!mounted) return;
     AppSnackBar.showInfo(context, message);
+  }
+
+  Future<void> _showLanguageSheet(LocaleProvider localeProvider) async {
+    final t = AppLocalizations.of(context)!;
+    final current = localeProvider.localeCode ?? 'system';
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text(
+                  t.settingsLanguageTitle,
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  t.settingsLanguageSubtitle,
+                  style: GoogleFonts.outfit(),
+                ),
+              ),
+              RadioListTile<String>(
+                value: 'system',
+                groupValue: current,
+                onChanged: (value) async {
+                  await localeProvider.setLocaleCode(null);
+                  if (mounted) Navigator.pop(ctx);
+                },
+                title: Text(t.settingsLanguageSystem),
+              ),
+              RadioListTile<String>(
+                value: 'id',
+                groupValue: current,
+                onChanged: (value) async {
+                  await localeProvider.setLocaleCode('id');
+                  if (mounted) Navigator.pop(ctx);
+                },
+                title: Text(t.settingsLanguageIndonesian),
+              ),
+              RadioListTile<String>(
+                value: 'en',
+                groupValue: current,
+                onChanged: (value) async {
+                  await localeProvider.setLocaleCode('en');
+                  if (mounted) Navigator.pop(ctx);
+                },
+                title: Text(t.settingsLanguageEnglish),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _toggleAnalytics(bool value) async {
+    if (!_analyticsLoaded) return;
+    setState(() => _analyticsEnabled = value);
+    if (!value) {
+      AnalyticsService.instance.track(
+        AnalyticsEvents.analyticsOptOut,
+        props: const {'enabled': false},
+      );
+      await AnalyticsService.instance.flush();
+    }
+    AnalyticsService.instance.setEnabled(value);
   }
 
   bool _isValidEmail(String email) {
@@ -36,6 +132,7 @@ class _SettingsPageState extends State<SettingsPage> {
     String? initialValue,
     TextInputType keyboardType = TextInputType.text,
   }) async {
+    final t = AppLocalizations.of(context)!;
     final controller = TextEditingController(text: initialValue ?? "");
     final result = await showDialog<String?>(
       context: context,
@@ -49,11 +146,11 @@ class _SettingsPageState extends State<SettingsPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, null),
-            child: const Text("Batal"),
+            child: Text(t.commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text("Simpan"),
+            child: Text(t.commonSave),
           ),
         ],
       ),
@@ -64,7 +161,9 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildStatusChip({required bool verified}) {
     final colors = Theme.of(context).colorScheme;
     final color = verified ? colors.secondary : colors.error;
-    final label = verified ? "Terverifikasi" : "Belum terverifikasi";
+    final t = AppLocalizations.of(context)!;
+    final label =
+        verified ? t.profileVerified : t.profileNotVerified;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -87,6 +186,7 @@ class _SettingsPageState extends State<SettingsPage> {
     required User user,
     required bool isVerified,
   }) async {
+    final t = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -101,47 +201,47 @@ class _SettingsPageState extends State<SettingsPage> {
               if (!isVerified)
                 ListTile(
                   leading: const Icon(Icons.mark_email_read_outlined),
-                  title: const Text("Kirim ulang verifikasi email"),
+                  title: Text(t.settingsEmailResend),
                   onTap: () async {
                     Navigator.pop(ctx);
                     try {
                       if (user.email == null || user.email!.isEmpty) {
-                        _showSnack("Email tidak tersedia");
+                        _showSnack(t.settingsEmailNotAvailable);
                         return;
                       }
                       await _supabase.auth.resend(
                         type: OtpType.signup,
                         email: user.email!,
                       );
-                      _showSnack("Email verifikasi dikirim");
+                      _showSnack(t.settingsEmailSent);
                     } catch (e) {
-                      _showSnack("Gagal kirim verifikasi: $e");
+                      _showSnack(t.commonErrorGeneric);
                     }
                   },
                 ),
               ListTile(
                 leading: const Icon(Icons.email_outlined),
-                title: const Text("Ganti email"),
+                title: Text(t.settingsChangeEmail),
                 onTap: () async {
                   Navigator.pop(ctx);
                   final newEmail = await _showTextInputDialog(
-                    title: "Ganti Email",
-                    hint: "nama@email.com",
+                    title: t.settingsChangeEmailTitle,
+                    hint: t.settingsEmailHint,
                     keyboardType: TextInputType.emailAddress,
                   );
                   if (newEmail == null) return;
                   if (!_isValidEmail(newEmail)) {
-                    _showSnack("Format email tidak valid");
+                    _showSnack(t.settingsInvalidEmail);
                     return;
                   }
                   try {
                     await _supabase.auth.updateUser(
                       UserAttributes(email: newEmail),
                     );
-                    _showSnack("Cek email untuk konfirmasi perubahan");
+                    _showSnack(t.settingsEmailSent);
                     if (mounted) setState(() {});
                   } catch (e) {
-                    _showSnack("Gagal ganti email: $e");
+                    _showSnack(t.commonErrorGeneric);
                   }
                 },
               ),
@@ -153,21 +253,22 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _handleLogout() async {
+    final t = AppLocalizations.of(context)!;
     // Show Confirmation Dialog
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Keluar Akun"),
-        content: const Text("Apakah Anda yakin ingin keluar dari aplikasi?"),
+        title: Text(t.settingsLogoutConfirmTitle),
+        content: Text(t.settingsLogoutConfirmMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text("Batal"),
+            child: Text(t.commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(
-              "Keluar",
+              t.settingsLogoutButton,
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
@@ -189,7 +290,7 @@ class _SettingsPageState extends State<SettingsPage> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Gagal keluar: $e")),
+            SnackBar(content: Text(t.settingsLogoutFailed(e.toString()))),
           );
         }
       }
@@ -198,6 +299,8 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    final localeProvider = Provider.of<LocaleProvider>(context);
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final bgColor = theme.scaffoldBackgroundColor;
@@ -213,22 +316,19 @@ class _SettingsPageState extends State<SettingsPage> {
     final isEmailVerified = user?.emailConfirmedAt != null;
 
     // Determine Logic for Verification Tile
-    String statusLabel;
     Widget trailingWidget;
     String subtitleText;
 
     switch (widget.profile.verificationStatus) {
       case AccountStatus.verified_catholic:
       case AccountStatus.verified_pastoral:
-        statusLabel = "Terverifikasi";
-        subtitleText = "Status: Terverifikasi";
+        subtitleText = t.settingsVerificationStatus(t.profileVerified);
         trailingWidget = Icon(Icons.verified, color: primary);
         break;
       case AccountStatus.pending:
-        statusLabel = "Menunggu";
-        subtitleText = "Status: Menunggu Verifikasi";
+        subtitleText = t.settingsVerificationStatus(t.profileTrustPending);
         trailingWidget = Text(
-          "Menunggu",
+          t.settingsVerificationPendingShort,
           style: GoogleFonts.outfit(
             color: colors.secondary,
             fontWeight: FontWeight.bold,
@@ -237,13 +337,11 @@ class _SettingsPageState extends State<SettingsPage> {
         );
         break;
       case AccountStatus.rejected:
-        statusLabel = "Ditolak";
-        subtitleText = "Status: Verifikasi Ditolak";
+        subtitleText = t.settingsVerificationStatus(t.profileTrustUnverified);
         trailingWidget = Icon(Icons.chevron_right, color: textMuted);
         break;
       default:
-        statusLabel = "Belum";
-        subtitleText = "Status: Belum Terverifikasi";
+        subtitleText = t.settingsVerificationStatus(t.profileNotVerified);
         trailingWidget = Icon(Icons.chevron_right, color: textMuted);
     }
 
@@ -251,7 +349,7 @@ class _SettingsPageState extends State<SettingsPage> {
       backgroundColor: bgColor,
       appBar: AppBar(
         title: Text(
-          "Pengaturan",
+          t.settingsTitle,
           style: GoogleFonts.outfit(
             color: textPrimary,
             fontWeight: FontWeight.bold,
@@ -259,9 +357,13 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         backgroundColor: bgColor,
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: textPrimary),
-          onPressed: () => Navigator.pop(context),
+        leading: Semantics(
+          button: true,
+          label: t.commonBack,
+          child: IconButton(
+            icon: Icon(Icons.arrow_back, color: textPrimary),
+            onPressed: () => Navigator.pop(context),
+          ),
         ),
       ),
       body: SingleChildScrollView(
@@ -269,10 +371,10 @@ class _SettingsPageState extends State<SettingsPage> {
         child: Column(
           children: [
             // SECTION: AKUN
-            _buildSectionHeader("AKUN"),
+            _buildSectionHeader(t.settingsAccountSection),
             _buildListTile(
               icon: Icons.edit_outlined,
-              title: "Edit Profil",
+              title: t.profileEdit,
               onTap: () async {
                final result = await Navigator.push(
                   context,
@@ -289,7 +391,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             _buildListTile(
               icon: Icons.verified_user_outlined,
-              title: "Verifikasi Akun",
+              title: t.settingsVerifyAccount,
               subtitle: subtitleText,
               trailing: trailingWidget,
               onTap: () {
@@ -322,7 +424,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       Icon(Icons.email_outlined, color: textSecondary, size: 20),
                 ),
                 title: Text(
-                  "Email",
+                  t.emailLabel,
                   style: GoogleFonts.outfit(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
@@ -330,7 +432,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
                 subtitle: Text(
-                  "$email • ${isEmailVerified ? "Terverifikasi" : "Belum terverifikasi"}",
+                  "$email • ${isEmailVerified ? t.profileVerified : t.profileNotVerified}",
                   style: GoogleFonts.outfit(
                     fontSize: 12,
                     color: textSecondary,
@@ -339,7 +441,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 trailing: _buildStatusChip(verified: isEmailVerified),
                 onTap: () {
                   if (user == null) {
-                    _showSnack("User tidak ditemukan");
+                    _showSnack(t.settingsUserNotFound);
                     return;
                   }
                   _showEmailActionsSheet(
@@ -351,8 +453,8 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             _buildListTile(
               icon: Icons.security_outlined,
-              title: "Keamanan Akun",
-              subtitle: "Kelola email, nomor HP, password, dan sesi",
+              title: t.settingsSecurityTitle,
+              subtitle: t.settingsAccountSecuritySubtitle,
               onTap: () {
                 Navigator.push(
                   context,
@@ -366,10 +468,10 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(height: 24),
 
             // SECTION: KEAMANAN
-            _buildSectionHeader("KEAMANAN"),
+            _buildSectionHeader(t.settingsSecuritySection),
             _buildListTile(
               icon: Icons.lock_outline,
-              title: "Ubah Kata Sandi",
+              title: t.settingsChangePassword,
               onTap: () {
                 Navigator.push(
                   context,
@@ -379,7 +481,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             _buildListTile(
               icon: Icons.block_outlined,
-              title: "Pengguna yang Diblokir",
+              title: t.settingsBlockedUsers,
               onTap: () {
                 // Navigate to Blocked Users
               },
@@ -388,15 +490,42 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(height: 24),
 
             // SECTION: UMUM
-            _buildSectionHeader("UMUM"),
+            _buildSectionHeader(t.settingsGeneralSection),
+            _buildListTile(
+              icon: Icons.language_outlined,
+              title: t.settingsLanguageTitle,
+              subtitle: t.settingsLanguageSubtitle,
+              onTap: () => _showLanguageSheet(localeProvider),
+              trailing: Text(
+                localeProvider.localeCode == 'id'
+                    ? t.settingsLanguageIndonesian
+                    : localeProvider.localeCode == 'en'
+                        ? t.settingsLanguageEnglish
+                        : t.settingsLanguageSystem,
+                style: GoogleFonts.outfit(
+                  fontSize: 12,
+                  color: textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            _buildSwitchTile(
+              icon: Icons.analytics_outlined,
+              title: t.settingsAnalyticsTitle,
+              subtitle: t.settingsAnalyticsSubtitle,
+              value: _analyticsEnabled,
+              onChanged: _toggleAnalytics,
+            ),
             _buildListTile(
               icon: Icons.info_outline,
-              title: "Tentang Aplikasi",
+              title: t.settingsAbout,
               onTap: () {},
             ),
             _buildListTile(
               icon: Icons.help_outline,
-              title: "Bantuan & Dukungan",
+              title: t.settingsHelp,
               onTap: () {},
             ),
 
@@ -415,7 +544,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   child: Icon(Icons.logout, color: dangerColor, size: 20),
                 ),
                 title: Text(
-                  "Keluar",
+                  t.settingsLogout,
                   style: GoogleFonts.outfit(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -429,7 +558,7 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(height: 20),
             Center(
               child: Text(
-                "Versi 1.0.0",
+                t.settingsVersion("1.0.0"),
                 style: GoogleFonts.outfit(color: textMuted, fontSize: 12),
               ),
             ),
@@ -509,6 +638,62 @@ class _SettingsPageState extends State<SettingsPage> {
             : null,
         trailing: trailing ?? Icon(Icons.chevron_right, color: textMuted),
         onTap: onTap,
+      ),
+    );
+  }
+
+  Widget _buildSwitchTile({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final surface = colors.surface;
+    final textPrimary = colors.onSurface;
+    final textSecondary = colors.onSurface.withOpacity(0.7);
+    final border = theme.dividerColor;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: border.withOpacity(0.8)),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: textSecondary.withOpacity(0.12),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: textSecondary, size: 20),
+        ),
+        title: Text(
+          title,
+          style: GoogleFonts.outfit(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: textPrimary,
+          ),
+        ),
+        subtitle: subtitle != null
+            ? Text(
+                subtitle,
+                style: GoogleFonts.outfit(
+                  fontSize: 12,
+                  color: textSecondary,
+                ),
+              )
+            : null,
+        trailing: Switch(
+          value: value,
+          onChanged: onChanged,
+        ),
+        onTap: () => onChanged(!value),
       ),
     );
   }

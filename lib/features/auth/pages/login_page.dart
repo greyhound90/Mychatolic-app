@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'package:mychatolic_app/pages/main_page.dart';
 import 'package:mychatolic_app/features/auth/pages/register_page.dart';
@@ -12,6 +13,8 @@ import 'package:mychatolic_app/core/widgets/app_button.dart';
 import 'package:mychatolic_app/core/design_tokens.dart';
 import 'package:mychatolic_app/core/widgets/app_card.dart';
 import 'package:mychatolic_app/core/ui/app_snackbar.dart';
+import 'package:mychatolic_app/core/analytics/analytics_service.dart';
+import 'package:mychatolic_app/core/analytics/analytics_events.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -59,6 +62,7 @@ class _LoginPageState extends State<LoginPage> {
   // 3. LOGIC (EMPTY FOR NOW)
   // ---------------------------------------------------------------------------
   Future<void> _handleLogin() async {
+    final t = AppLocalizations.of(context)!;
     if (mounted) {
       setState(() => _errorMessage = null);
     }
@@ -67,11 +71,11 @@ class _LoginPageState extends State<LoginPage> {
 
     // 1. Validation
     if (email.isEmpty || !email.contains('@')) {
-      _showError("Format email tidak valid");
+      _showError(t.emailInvalidFormat);
       return;
     }
     if (password.isEmpty) {
-      _showError("Masukkan password anda");
+      _showError(t.loginPasswordRequired);
       return;
     }
 
@@ -97,8 +101,12 @@ class _LoginPageState extends State<LoginPage> {
       if (user.emailConfirmedAt == null) {
          await Supabase.instance.client.auth.signOut();
          if (mounted) {
-           _showError("Email belum diverifikasi. Cek inbox Anda.");
+           _showError(t.loginEmailUnverified);
          }
+         AnalyticsService.instance.track(
+           AnalyticsEvents.authLoginFailed,
+           props: const {'reason': 'email_unverified'},
+         );
          return;
       }
 
@@ -112,7 +120,7 @@ class _LoginPageState extends State<LoginPage> {
       if (profile == null) {
         await Supabase.instance.client.auth.signOut();
         if (mounted) {
-          _showError("Data profil korup. Silakan daftar ulang.");
+          _showError(t.loginProfileCorrupt);
         }
         return;
       }
@@ -124,6 +132,10 @@ class _LoginPageState extends State<LoginPage> {
          if (mounted) {
            _showBannedDialog();
          }
+         AnalyticsService.instance.track(
+           AnalyticsEvents.authLoginFailed,
+           props: const {'reason': 'banned'},
+         );
          return;
       }
 
@@ -141,6 +153,7 @@ class _LoginPageState extends State<LoginPage> {
       
       // 4. Success -> Navigation
       if (mounted) {
+        AnalyticsService.instance.track(AnalyticsEvents.authLoginSuccess);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const HomePage()),
@@ -150,15 +163,32 @@ class _LoginPageState extends State<LoginPage> {
     } on AuthException catch (e) {
       String msg = e.message;
       if (msg.toLowerCase().contains("invalid login credentials")) {
-        msg = "Email atau sandi salah.";
+        msg = t.loginInvalidCredentials;
+        AnalyticsService.instance.track(
+          AnalyticsEvents.authLoginFailed,
+          props: const {'reason': 'invalid_credentials'},
+        );
+      } else {
+        AnalyticsService.instance.track(
+          AnalyticsEvents.authLoginFailed,
+          props: const {'reason': 'auth_error'},
+        );
       }
       if (mounted) _showError(msg);
     } catch (e) {
       if (mounted) {
         if (e.toString().contains("SocketException")) {
-           _showError("Periksa koneksi internet.");
+           _showError(t.loginNetworkError);
+           AnalyticsService.instance.track(
+             AnalyticsEvents.authLoginFailed,
+             props: const {'reason': 'network'},
+           );
         } else {
-           _showError("Terjadi kesalahan: $e");
+           _showError(t.loginUnknownError(e.toString()));
+           AnalyticsService.instance.track(
+             AnalyticsEvents.authLoginFailed,
+             props: const {'reason': 'unknown'},
+           );
         }
       }
     } finally {
@@ -174,25 +204,26 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _showBannedDialog() {
+    final t = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.surface,
         title: Text(
-          "Akses Ditolak",
+          t.loginBannedTitle,
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.bold,
             color: AppColors.text,
           ),
         ),
         content: Text(
-          "Akun Anda telah dinonaktifkan/ditangguhkan. Harap hubungi admin paroki untuk info lebih lanjut.",
+          t.loginBannedMessage,
           style: GoogleFonts.outfit(color: AppColors.textBody),
         ),
           actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text("Tutup", style: GoogleFonts.outfit(color: AppColors.primary)),
+            child: Text(t.commonClose, style: GoogleFonts.outfit(color: AppColors.primary)),
           )
         ],
       ),
@@ -204,6 +235,7 @@ class _LoginPageState extends State<LoginPage> {
   // ---------------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     final emailText = _emailController.text.trim();
     final showEmailHelper = emailText.isNotEmpty && !emailText.contains('@');
     return Scaffold(
@@ -274,7 +306,7 @@ class _LoginPageState extends State<LoginPage> {
                                         ],
                                       ),
                                       child: Text(
-                                        "MyChatolic",
+                                        t.appName,
                                         style: GoogleFonts.outfit(
                                           fontSize: 11,
                                           color: Colors.white,
@@ -288,7 +320,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             const SizedBox(height: 24),
                             Text(
-                              "Selamat Datang Kembali",
+                              t.loginTitle,
                               style: GoogleFonts.outfit(
                                 fontSize: 26,
                                 fontWeight: FontWeight.bold,
@@ -297,7 +329,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              "Masuk untuk melanjutkan perjalanan imanmu",
+                              t.loginSubtitle,
                               textAlign: TextAlign.center,
                               style: GoogleFonts.outfit(
                                 fontSize: 13,
@@ -358,21 +390,21 @@ class _LoginPageState extends State<LoginPage> {
                               if (_errorMessage != null)
                                 const SizedBox(height: 14),
                               _buildTextField(
-                                label: "Email",
-                                hint: "Masukkan email",
+                                label: t.emailLabel,
+                                hint: t.emailHint,
                                 controller: _emailController,
                                 icon: Icons.email_outlined,
                                 keyboardType: TextInputType.emailAddress,
                                 focusNode: _emailFocus,
                                 helperText: showEmailHelper
-                                    ? "Format email belum valid"
+                                    ? t.emailInvalidFormat
                                     : null,
                                 onChanged: (_) => setState(() {}),
                               ),
                               const SizedBox(height: 18),
                               _buildTextField(
-                                label: "Password",
-                                hint: "Masukkan password",
+                                label: t.passwordLabel,
+                                hint: t.passwordHint,
                                 controller: _passwordController,
                                 icon: Icons.lock_outline,
                                 isObscure: _obscurePassword,
@@ -393,7 +425,7 @@ class _LoginPageState extends State<LoginPage> {
                                     );
                                   },
                                   child: Text(
-                                    "Lupa Password?",
+                                    t.loginForgotPassword,
                                     style: GoogleFonts.outfit(
                                       color: AppColors.primary,
                                       fontWeight: FontWeight.bold,
@@ -410,7 +442,7 @@ class _LoginPageState extends State<LoginPage> {
                                   switchOutCurve: Curves.easeOut,
                                   child: AppPrimaryButton(
                                     key: ValueKey(_isLoading),
-                                    label: _isLoading ? "Memproses..." : "Masuk",
+                                    label: _isLoading ? t.loginProcessing : t.loginButton,
                                     isLoading: _isLoading,
                                     onPressed:
                                         _isLoading ? null : _handleLogin,
@@ -420,11 +452,13 @@ class _LoginPageState extends State<LoginPage> {
                               const SizedBox(height: 22),
                               Divider(color: AppColors.border, thickness: 0.6),
                               const SizedBox(height: 16),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                              Wrap(
+                                alignment: WrapAlignment.center,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 2,
                                 children: [
                                   Text(
-                                    "Belum punya akun? ",
+                                    t.loginNoAccount,
                                     style: GoogleFonts.outfit(
                                       color: AppColors.textBody,
                                     ),
@@ -438,7 +472,7 @@ class _LoginPageState extends State<LoginPage> {
                                       );
                                     },
                                     child: Text(
-                                      "DAFTAR",
+                                      t.loginGoToRegister,
                                       style: GoogleFonts.outfit(
                                         color: AppColors.primary,
                                         fontWeight: FontWeight.bold,

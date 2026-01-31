@@ -131,7 +131,44 @@ class AppStateView extends StatelessWidget {
           ),
         );
       case AppViewState.ready:
-        return child ?? const SizedBox.shrink();
+        return child ?? const _ReadyFallback();
     }
+  }
+}
+
+class _ReadyFallback extends StatelessWidget {
+  const _ReadyFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: AppCard(
+        margin: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.info_outline, color: AppColors.textMuted, size: 28),
+            const SizedBox(height: 8),
+            Text(
+              "Konten belum tersedia",
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.w600,
+                color: AppColors.text,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              "Silakan coba lagi sebentar.",
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                color: AppColors.textBody,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

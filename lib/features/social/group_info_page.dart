@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mychatolic_app/widgets/safe_network_image.dart';
 import 'package:mychatolic_app/features/social/pages/social_chat_detail_page.dart';
 import 'package:mychatolic_app/features/profile/pages/profile_page.dart';
+import 'package:mychatolic_app/core/ui/permission_prompt.dart';
 
 class GroupInfoPage extends StatefulWidget {
   final String chatId;
@@ -108,6 +109,8 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
   // --- ACTIONS: GROUP ---
 
   Future<void> _updateGroupIcon() async {
+    final allowed = await PermissionPrompt.requestGallery(context);
+    if (!allowed) return;
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (picked == null) return;
 

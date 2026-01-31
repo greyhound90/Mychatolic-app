@@ -53,5 +53,7 @@
 	<string>Kami membutuhkan akses kamera untuk mengambil gambar.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Kami membutuhkan akses galeri untuk memilih gambar.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Kami membutuhkan akses galeri untuk menyimpan gambar.</string>
 </dict>
 </plist>

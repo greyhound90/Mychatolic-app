@@ -6,6 +6,8 @@ import 'package:mychatolic_app/core/widgets/app_button.dart';
 import 'package:mychatolic_app/core/widgets/app_card.dart';
 import 'package:mychatolic_app/core/widgets/app_text_field.dart';
 import 'package:mychatolic_app/core/ui/app_snackbar.dart';
+import 'package:mychatolic_app/core/analytics/analytics_service.dart';
+import 'package:mychatolic_app/core/analytics/analytics_events.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
@@ -53,6 +55,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     }
 
     setState(() => _isLoading = true);
+    AnalyticsService.instance.track(AnalyticsEvents.settingsChangePasswordAttempt);
     try {
       await _supabase.auth.signInWithPassword(
         email: email,
@@ -62,8 +65,13 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
         UserAttributes(password: newPassword),
       );
       _showSnack("Password berhasil diubah");
+      AnalyticsService.instance.track(AnalyticsEvents.settingsChangePasswordSuccess);
       if (mounted) Navigator.pop(context);
     } catch (e) {
+      AnalyticsService.instance.track(
+        AnalyticsEvents.settingsChangePasswordFail,
+        props: {'error_code': AnalyticsService.errorCode(e)},
+      );
       setState(() => _errorMessage = "Gagal ubah password: $e");
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -98,7 +106,12 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          20 + MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: Column(
           children: [
             AppCard(
