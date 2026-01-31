@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:mychatolic_app/l10n/gen/app_localizations.dart';
 
 import 'package:mychatolic_app/pages/main_page.dart';
 import 'package:mychatolic_app/features/auth/pages/register_page.dart';

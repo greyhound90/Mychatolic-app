@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:dropdown_search/dropdown_search.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:mychatolic_app/l10n/gen/app_localizations.dart';
 import 'package:mychatolic_app/core/widgets/app_text_field.dart';
 import 'package:mychatolic_app/core/widgets/app_button.dart';
 import 'package:mychatolic_app/core/design_tokens.dart';
@@ -1211,6 +1211,12 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
     );
   }
+}
+
+class _Option {
+  final String value;
+  final String label;
+  const _Option({required this.value, required this.label});
 }
 
 class _AuthBackground extends StatelessWidget {

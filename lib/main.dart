@@ -6,7 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:mychatolic_app/l10n/gen/app_localizations.dart';
 import 'package:mychatolic_app/features/auth/pages/splash_page.dart';
 import 'package:mychatolic_app/features/auth/pages/reset_password_page.dart';
 import 'package:mychatolic_app/features/auth/pages/login_page.dart';
