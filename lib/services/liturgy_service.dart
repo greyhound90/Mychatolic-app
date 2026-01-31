@@ -64,6 +64,8 @@ class LiturgyService {
       case 'rose':
       case 'pink':
         return Colors.pink[300]!;
+      case 'black':
+        return const Color(0xFF111111);
       default:
         return Colors.blue; // Safe fallback
     }
@@ -75,6 +77,8 @@ class LiturgyService {
       case 'white':
       case 'gold':
         return Colors.brown[900]!; // Dark text for light background
+      case 'black':
+        return Colors.white;
       default:
         return Colors
             .white; // Light text for dark backgrounds (Red, Green, Purple)

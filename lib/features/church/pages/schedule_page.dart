@@ -634,9 +634,13 @@ class _SchedulePageState extends State<SchedulePage> {
       return DateFormat(pattern, localeTag).format(_selectedDate);
     } catch (_) {
       try {
-        return DateFormat(pattern, 'id').format(_selectedDate);
+        return DateFormat(pattern, 'id_ID').format(_selectedDate);
       } catch (_) {
-        return DateFormat(pattern).format(_selectedDate);
+        try {
+          return DateFormat(pattern, 'id').format(_selectedDate);
+        } catch (_) {
+          return DateFormat(pattern).format(_selectedDate);
+        }
       }
     }
   }
@@ -1233,7 +1237,18 @@ class _SchedulePageState extends State<SchedulePage> {
       // Re-fetching on build to ensure updates are caught if user edits profile.
       stream: Stream.fromFuture(_profileService.fetchUserProfile(user.id)),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const SizedBox.shrink();
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildParishPlaceholder(message: "Memuat paroki...");
+        }
+        if (snapshot.hasError) {
+          return _buildParishErrorCard(
+            message: "Gagal memuat data paroki.",
+            onRetry: () => setState(() {}),
+          );
+        }
+        if (!snapshot.hasData) {
+          return _buildParishPlaceholder(message: "Data paroki belum tersedia.");
+        }
 
         final profile = snapshot.data!;
         final theme = Theme.of(context);
@@ -1265,8 +1280,7 @@ class _SchedulePageState extends State<SchedulePage> {
         // Wait, ProfileService fetchUserProfile returns `Profile` object.
         // Profile class has `parish`.
 
-        final parishId =
-            profile.parish; // Assuming this stores the UUID or foreign key.
+        final parishId = profile.churchId;
 
         if (parishId == null || parishId.isEmpty) {
           return _buildSetParishCard();
@@ -1276,11 +1290,15 @@ class _SchedulePageState extends State<SchedulePage> {
           future: _scheduleService.fetchSchedules(churchId: parishId),
           builder: (context, scheduleSnapshot) {
             if (scheduleSnapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(8),
-                  child: CircularProgressIndicator.adaptive(),
-                ),
+              return _buildParishPlaceholder(
+                message: "Memuat jadwal paroki...",
+              );
+            }
+
+            if (scheduleSnapshot.hasError) {
+              return _buildParishErrorCard(
+                message: "Gagal memuat jadwal paroki.",
+                onRetry: () => setState(() {}),
               );
             }
 
@@ -1401,6 +1419,93 @@ class _SchedulePageState extends State<SchedulePage> {
     );
   }
 
+  Widget _buildParishPlaceholder({required String message}) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.onSurface.withOpacity(0.08)),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: GoogleFonts.outfit(
+                color: colors.onSurface.withOpacity(0.7),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildParishErrorCard({
+    required String message,
+    required VoidCallback onRetry,
+  }) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.onSurface.withOpacity(0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.error_outline, color: colors.error),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  message,
+                  style: GoogleFonts.outfit(
+                    color: colors.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: onRetry,
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: colors.primary),
+              ),
+              child: Text(
+                "Coba lagi",
+                style: GoogleFonts.outfit(
+                  color: colors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSetParishCard({bool isUpdate = false}) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
@@ -1424,7 +1529,7 @@ class _SchedulePageState extends State<SchedulePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isUpdate ? "Data Paroki Tidak Sesuai?" : "Atur Paroki Anda",
+                  isUpdate ? "Jadwal Paroki Belum Tersedia" : "Atur Paroki Anda",
                   style: GoogleFonts.outfit(
                     fontWeight: FontWeight.bold,
                     color: textPrimary,
@@ -1432,7 +1537,7 @@ class _SchedulePageState extends State<SchedulePage> {
                 ),
                 Text(
                   isUpdate
-                      ? "Perbarui profil untuk melihat jadwal yang tepat."
+                      ? "Perbarui profil untuk melihat jadwal paroki yang benar."
                       : "Pilih paroki di profil untuk lihat jadwal otomatis.",
                   style: GoogleFonts.outfit(
                     fontSize: 12,

@@ -3,14 +3,15 @@ import 'package:google_fonts/google_fonts.dart';
 
 // --- 1. DEFINISI PALET WARNA (Lengkap) ---
 const Color kPrimary = Color(0xFF0088CC); // Biru Branding
-const Color kSecondary = Color(0xFF005580);
-const Color kBackground = Color(0xFFF0F2F5); // Abu-abu sangat muda
-const Color kSurface = Colors.white; // Putih
-const Color kBorder = Color(0xFFEEEEEE); // Abu-abu batas
-const Color kTextTitle = Color(0xFF1A1A1A);
-const Color kTextBody = Color(0xFF4A4A4A);
-const Color kTextMeta = Color(0xFF858585);
-const Color kError = Color(0xFFE53935);
+const Color kSecondary = Color(0xFF4DA3D9);
+const Color kBackground = Color(0xFFF5F5F5); // Abu-abu sangat muda
+const Color kSurface = Color(0xFFFFFFFF); // Putih
+const Color kBorder = Color(0xFFE6E6E6); // Abu-abu batas
+const Color kTextTitle = Color(0xFF121212);
+const Color kTextBody = Color(0xFF555555);
+const Color kTextMeta = Color(0xFF9E9E9E);
+const Color kError = Color(0xFFE74C3C);
+const Color kSuccess = Color(0xFF2ECC71);
 
 // --- Dark Premium Palette ---
 const Color kDarkPrimary = Color(0xFF0088CC);
@@ -30,20 +31,35 @@ class MyCatholicTheme {
       useMaterial3: false,
       primaryColor: kPrimary,
       scaffoldBackgroundColor: kBackground,
+      cardColor: kSurface,
+      dividerColor: kBorder,
 
       // Color Scheme
       colorScheme: const ColorScheme.light(
         primary: kPrimary,
         secondary: kSecondary,
+        background: kBackground,
         surface: kSurface,
         error: kError,
         onPrimary: Colors.white,
+        onSurface: kTextTitle,
+        onBackground: kTextTitle,
       ),
 
       // Typography
       textTheme: GoogleFonts.outfitTextTheme().apply(
         bodyColor: kTextBody,
         displayColor: kTextTitle,
+      ),
+
+      cardTheme: CardTheme(
+        color: kSurface,
+        elevation: 1,
+        shadowColor: Colors.black.withOpacity(0.06),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: kBorder),
+        ),
       ),
 
       // AppBar Theme (Biru)
@@ -61,9 +77,9 @@ class MyCatholicTheme {
 
       // Bottom Nav Theme
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: Colors.white,
+        backgroundColor: kSurface,
         selectedItemColor: kPrimary,
-        unselectedItemColor: Colors.grey,
+        unselectedItemColor: kTextMeta,
         selectedLabelStyle: GoogleFonts.outfit(
           fontWeight: FontWeight.bold,
           fontSize: 12,
@@ -83,6 +99,94 @@ class MyCatholicTheme {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           textStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold),
         ),
+      ),
+
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: kSurface,
+        hintStyle: const TextStyle(color: kTextMeta),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: kBorder),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: kBorder),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: kPrimary, width: 1.4),
+        ),
+      ),
+
+      dialogTheme: DialogThemeData(
+        backgroundColor: kSurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        titleTextStyle: GoogleFonts.outfit(
+          color: kTextTitle,
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
+        ),
+        contentTextStyle: GoogleFonts.outfit(
+          color: kTextBody,
+          fontSize: 14,
+        ),
+      ),
+
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: kSurface,
+        modalBackgroundColor: kSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+      ),
+
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: kSurface,
+        headerForegroundColor: kTextTitle,
+        dayForegroundColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) return Colors.white;
+          if (states.contains(MaterialState.disabled)) return kTextMeta;
+          return kTextTitle;
+        }),
+        dayBackgroundColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) return kPrimary;
+          return Colors.transparent;
+        }),
+        yearForegroundColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) return kTextTitle;
+          return kTextBody;
+        }),
+        yearBackgroundColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
+            return kPrimary.withOpacity(0.15);
+          }
+          return Colors.transparent;
+        }),
+        todayForegroundColor: const MaterialStatePropertyAll(kPrimary),
+        todayBorder: const BorderSide(color: kPrimary, width: 1.2),
+      ),
+
+      checkboxTheme: CheckboxThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        side: const BorderSide(color: kTextMeta, width: 1.4),
+        checkColor: const MaterialStatePropertyAll(Colors.white),
+        fillColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) return kPrimary;
+          return Colors.transparent;
+        }),
+      ),
+
+      tabBarTheme: TabBarThemeData(
+        labelColor: kTextTitle,
+        unselectedLabelColor: kTextMeta,
+        indicatorColor: kPrimary,
+        labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+      ),
+
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: kTextTitle,
+        contentTextStyle: GoogleFonts.outfit(color: Colors.white),
       ),
     );
   }

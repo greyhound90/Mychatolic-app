@@ -28,8 +28,8 @@ void main() async {
   );
 
   // Initialize Date Formatting Locale
-  await initializeDateFormatting('id', null);
   await initializeDateFormatting('id_ID', null);
+  await initializeDateFormatting('id', null);
 
   runApp(
     MultiProvider(
