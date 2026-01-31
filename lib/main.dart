@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:intl/date_symbol_data_local.dart';
@@ -84,6 +85,16 @@ class _MyChatolicAppState extends State<MyChatolicApp> {
       debugShowCheckedModeBanner: false,
       title: 'MyCatholic',
       navigatorKey: MyChatolicApp.navigatorKey,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('id', 'ID'),
+        Locale('en', 'US'),
+      ],
+      locale: const Locale('id', 'ID'),
       theme: MyCatholicTheme.lightTheme,
       darkTheme: MyCatholicTheme.darkTheme,
       themeMode: themeProvider.themeMode,

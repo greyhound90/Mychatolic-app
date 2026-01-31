@@ -53,17 +53,17 @@ class LiturgyService {
   static Color getLiturgicalColor(String? colorCode) {
     switch (colorCode?.toLowerCase()) {
       case 'red':
-        return Colors.red[800]!;
+        return const Color(0xFFC62828);
       case 'green':
-        return Colors.green[800]!;
+        return const Color(0xFF2E7D32);
       case 'purple':
-        return Colors.purple[800]!;
+        return const Color(0xFF6A1B9A);
       case 'white':
       case 'gold':
-        return Colors.amber[100]!; // Gold/Yellowish for visible 'White' theme
+        return const Color(0xFFF5F5F5);
       case 'rose':
       case 'pink':
-        return Colors.pink[300]!;
+        return const Color(0xFFEC407A);
       case 'black':
         return const Color(0xFF111111);
       default:
@@ -76,12 +76,18 @@ class LiturgyService {
     switch (colorCode?.toLowerCase()) {
       case 'white':
       case 'gold':
-        return Colors.brown[900]!; // Dark text for light background
+        return const Color(0xFF1A1A1A);
+      case 'rose':
+      case 'pink':
+        return const Color(0xFF1A1A1A);
       case 'black':
         return Colors.white;
+      case 'red':
+      case 'green':
+      case 'purple':
+        return Colors.white;
       default:
-        return Colors
-            .white; // Light text for dark backgrounds (Red, Green, Purple)
+        return Colors.white;
     }
   }
 }

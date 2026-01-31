@@ -48,9 +48,9 @@ class ScheduleService {
       // 4. Convert to List<MassSchedule>
       final List<dynamic> data = response as List<dynamic>;
       return data.map((json) => MassSchedule.fromJson(json)).toList();
-    } catch (e) {
-      debugPrint("Schedule Fetch Error: $e");
-      return [];
+    } catch (e, st) {
+      debugPrint("Schedule Fetch Error: $e\n$st");
+      rethrow;
     }
   }
 

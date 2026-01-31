@@ -66,6 +66,18 @@ class _SchedulePageState extends State<SchedulePage> {
     _loadDailySchedules(); // Initial Load (Global/Nearby logic or just by day)
   }
 
+  Future<void> _loadLiturgy() async {
+    await _fetchLiturgy();
+  }
+
+  Future<void> _loadSchedules() async {
+    if (_isChurchSearchMode) {
+      await _searchByChurch();
+    } else {
+      await _loadDailySchedules();
+    }
+  }
+
   // --- LITURGY LOGIC ---
   Future<void> _fetchLiturgy() async {
     setState(() {
@@ -266,365 +278,484 @@ class _SchedulePageState extends State<SchedulePage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     final bgColor = theme.scaffoldBackgroundColor;
-    final surface = colors.surface;
-    final border = theme.dividerColor;
-    final textPrimary = colors.onSurface;
-    final textSecondary = colors.onSurface.withOpacity(0.7);
-    final textMuted = colors.onSurface.withOpacity(0.5);
-
-    // Liturgical Color Logic
-    final liturgicalColor = _currentLiturgy != null
-        ? LiturgyService.getLiturgicalColor(_currentLiturgy!.color)
-        : colors.primary; // Default fallback
-
-    final isInitialLoading = _isLoadingSchedules && _schedules.isEmpty;
-    final showErrorState = _scheduleError != null && _schedules.isEmpty;
-
-    if (isInitialLoading) {
-      return Scaffold(
-        backgroundColor: bgColor,
-        appBar: const MyCatholicAppBar(title: "Kalender & Misa"),
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator.adaptive(),
-              const SizedBox(height: 12),
-              Text(
-                "Memuat jadwal...",
-                style: GoogleFonts.outfit(color: textSecondary),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (showErrorState) {
-      return Scaffold(
-        backgroundColor: bgColor,
-        appBar: const MyCatholicAppBar(title: "Kalender & Misa"),
-        body: Center(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 24),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: textPrimary.withOpacity(0.08)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.error_outline, color: colors.error, size: 32),
-                const SizedBox(height: 8),
-                Text(
-                  _scheduleError ?? "Terjadi kesalahan.",
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(color: textPrimary),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _retryAll,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: colors.primary,
-                    ),
-                    child: Text(
-                      "Coba lagi",
-                      style: GoogleFonts.outfit(
-                        color: colors.onPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
 
     return Scaffold(
       backgroundColor: bgColor,
       appBar: const MyCatholicAppBar(title: "Kalender & Misa"),
-      body: CustomScrollView(
-        slivers: [
-          // 1. Calendar
+      body: Builder(
+        builder: (context) {
+          try {
+            return _buildScheduleBody(context);
+          } catch (e, st) {
+            debugPrint("SchedulePage build error: $e");
+            debugPrint("$st");
+            return _buildFatalErrorBody(context);
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildScheduleBody(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = Theme.of(context).colorScheme;
+    final border = theme.dividerColor;
+    final textPrimary = colors.onSurface;
+    final textSecondary = colors.onSurface.withOpacity(0.7);
+    final textMuted = colors.onSurface.withOpacity(0.5);
+    final litPalette = _resolveLiturgicalPalette(colors);
+
+    final showLoading = _isLoadingSchedules && _schedules.isEmpty;
+    final showError = _scheduleError != null && _schedules.isEmpty;
+    final showEmpty = !_isLoadingSchedules && _schedules.isEmpty && _scheduleError == null;
+
+    return CustomScrollView(
+      slivers: [
+        // 1. Calendar
+        SliverToBoxAdapter(
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: border.withOpacity(0.6)),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.shadowColor.withValues(alpha: 0.12),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: EasyDateTimeLine(
+              initialDate: _selectedDate,
+              onDateChange: (d) {
+                setState(() {
+                  _selectedDate = d;
+                });
+                _loadLiturgy();
+                if (!_isChurchSearchMode) _loadDailySchedules();
+              },
+              headerProps: const EasyHeaderProps(
+                monthPickerType: MonthPickerType.switcher,
+                dateFormatter: DateFormatter.fullDateDMY(),
+              ),
+              dayProps: EasyDayProps(
+                dayStructure: DayStructure.dayStrDayNum,
+                activeDayStyle: DayStyle(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: litPalette.accentColor,
+                    border: Border.all(
+                      color: litPalette.borderColor,
+                      width: 1.4,
+                    ),
+                  ),
+                  dayNumStyle: GoogleFonts.outfit(
+                    color: litPalette.textOnAccent,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  dayStrStyle: GoogleFonts.outfit(
+                    color: litPalette.textOnAccent.withOpacity(0.9),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                todayStyle: DayStyle(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: litPalette.accentColor.withValues(alpha: 0.9),
+                      width: 1.4,
+                    ),
+                    color: litPalette.tintBackground,
+                  ),
+                  dayNumStyle: GoogleFonts.outfit(
+                    color: textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  dayStrStyle: GoogleFonts.outfit(
+                    color: textSecondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                inactiveDayStyle: DayStyle(
+                  dayNumStyle: GoogleFonts.outfit(
+                    color: textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  dayStrStyle: GoogleFonts.outfit(
+                    color: textSecondary,
+                    fontSize: 11,
+                  ),
+                ),
+                disabledDayStyle: DayStyle(
+                  dayNumStyle: GoogleFonts.outfit(
+                    color: textMuted,
+                  ),
+                  dayStrStyle: GoogleFonts.outfit(
+                    color: textMuted,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // 2. Liturgy Card
+        SliverToBoxAdapter(child: _buildLiturgyHeader()),
+
+        // 2.5 Personalized Parish Schedule
+        SliverToBoxAdapter(child: _buildPersonalParishSection()),
+
+        // 3. Advanced Search Toggle
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: border.withValues(alpha: 0.6)),
+              ),
+              color: colors.surface,
+              child: ExpansionTile(
+                title: Text(
+                  "Cari Jadwal Misa",
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    color: textPrimary,
+                  ),
+                ),
+                leading: Icon(
+                  Icons.search,
+                  color: colors.primary,
+                ),
+                childrenPadding: const EdgeInsets.all(16),
+                children: [
+                  _buildDropdown<String>(
+                    label: "Negara",
+                    value: _selectedCountryId,
+                    items: _countries
+                        .map(
+                          (c) => DropdownMenuItem(
+                            value: c.id,
+                            child: Text(c.name),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: _onCountryChanged,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildDropdown<String>(
+                    label: "Keuskupan",
+                    value: _selectedDioceseId,
+                    items: _dioceses
+                        .map(
+                          (d) => DropdownMenuItem(
+                            value: d.id,
+                            child: Text(d.name),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: _selectedCountryId == null
+                        ? null
+                        : _onDioceseChanged,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildDropdown<String>(
+                    label: "Paroki / Gereja",
+                    value: _selectedChurchId,
+                    items: _churches
+                        .map(
+                          (c) => DropdownMenuItem(
+                            value: c.id,
+                            child: Text(c.name),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: _selectedDioceseId == null
+                        ? null
+                        : (val) => setState(() => _selectedChurchId = val),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: colors.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: _searchByChurch,
+                      child: Text(
+                        "Lihat Jadwal",
+                        style: GoogleFonts.outfit(
+                          color: colors.onPrimary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_isChurchSearchMode) ...[
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: _loadDailySchedules, // Reset to Daily View
+                      child: Text(
+                        "Reset ke Tampilan Harian",
+                        style: GoogleFonts.outfit(color: colors.error),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // 4. Results Header
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+            child: Text(
+              _isChurchSearchMode
+                  ? "Jadwal Lengkap Gereja"
+                  : "Jadwal Misa Hari Ini",
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: textPrimary,
+              ),
+            ),
+          ),
+        ),
+
+        if (_scheduleError != null && _schedules.isNotEmpty)
           SliverToBoxAdapter(
-            child: Container(
-              color: surface,
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: EasyDateTimeLine(
-                initialDate: _selectedDate,
-                onDateChange: (d) {
-                  // Optimistic update for UI responsiveness
-                  setState(() {
-                    _selectedDate = d;
-                    // Reset liturgy to null or keep previous? Better to keep previous to avoid flash,
-                    // or show loading. But the color needs to update.
-                    // We'll let the fetch update the state.
-                  });
-                  _fetchLiturgy();
-                  if (!_isChurchSearchMode) _loadDailySchedules();
+            child: _buildScheduleInlineError(_scheduleError!, colors),
+          ),
+
+        if (showLoading)
+          SliverToBoxAdapter(
+            child: _buildScheduleLoadingState(colors, textSecondary),
+          )
+        else if (showError)
+          SliverToBoxAdapter(
+            child: _buildScheduleErrorState(colors, _scheduleError),
+          )
+        else if (showEmpty)
+          SliverToBoxAdapter(
+            child: _buildScheduleEmptyState(
+              textSecondary: textSecondary,
+              textMuted: textMuted,
+            ),
+          )
+        else
+          SliverList(
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final item = _schedules[index];
+              return Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
+                child: _buildTicketCard(item),
+              );
+            }, childCount: _schedules.length),
+          ),
+
+        const SliverToBoxAdapter(child: SizedBox(height: 40)),
+      ],
+    );
+  }
+
+  Widget _buildFatalErrorBody(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colors.onSurface.withOpacity(0.08)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, color: colors.error, size: 32),
+            const SizedBox(height: 8),
+            Text(
+              "Gagal memuat jadwal",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(color: colors.onSurface),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  _loadLiturgy();
+                  _loadSchedules();
                 },
-                headerProps: const EasyHeaderProps(
-                  monthPickerType: MonthPickerType.switcher,
-                  dateFormatter: DateFormatter.fullDateDMY(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colors.primary,
                 ),
-                dayProps: EasyDayProps(
-                  dayStructure: DayStructure.dayStrDayNum,
-                  activeDayStyle: DayStyle(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: liturgicalColor.withValues(alpha: 0.22),
-                      border: Border.all(
-                        color: liturgicalColor.withValues(alpha: 0.9),
-                        width: 1.6,
-                      ),
-                    ),
-                    dayNumStyle: GoogleFonts.outfit(
-                      color: _litText(liturgicalColor),
-                      fontWeight: FontWeight.bold,
-                    ),
-                    dayStrStyle: GoogleFonts.outfit(
-                      color: _litText(liturgicalColor).withOpacity(0.9),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  todayStyle: DayStyle(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: liturgicalColor.withValues(alpha: 0.9),
-                        width: 1.6,
-                      ),
-                    ),
-                    dayNumStyle: GoogleFonts.outfit(
-                      color: textPrimary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    dayStrStyle: GoogleFonts.outfit(
-                      color: textSecondary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  inactiveDayStyle: DayStyle(
-                    dayNumStyle: GoogleFonts.outfit(
-                      color: textPrimary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    dayStrStyle: GoogleFonts.outfit(
-                      color: textSecondary,
-                      fontSize: 11,
-                    ),
-                  ),
-                  disabledDayStyle: DayStyle(
-                    dayNumStyle: GoogleFonts.outfit(
-                      color: textMuted,
-                    ),
-                    dayStrStyle: GoogleFonts.outfit(
-                      color: textMuted,
-                      fontSize: 11,
-                    ),
+                child: Text(
+                  "Coba lagi",
+                  style: GoogleFonts.outfit(
+                    color: colors.onPrimary,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ),
-          ),
+          ],
+        ),
+      ),
+    );
+  }
 
-          // 2. Liturgy Card
-          SliverToBoxAdapter(child: _buildLiturgyHeader()),
+  Widget _buildScheduleLoadingState(
+    ColorScheme colors,
+    Color textSecondary,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 28),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: colors.primary),
+            const SizedBox(height: 12),
+            Text(
+              "Memuat jadwal...",
+              style: GoogleFonts.outfit(color: textSecondary),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-          // 2.5 Personalized Parish Schedule
-          SliverToBoxAdapter(child: _buildPersonalParishSection()),
-
-          // 3. Advanced Search Toggle
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: border.withValues(alpha: 0.6)),
+  Widget _buildScheduleErrorState(ColorScheme colors, String? message) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colors.onSurface.withOpacity(0.08)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, color: colors.error, size: 28),
+            const SizedBox(height: 8),
+            Text(
+              message ?? "Gagal memuat jadwal.",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(color: colors.onSurface),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _loadSchedules,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colors.primary,
                 ),
-                color: surface,
-                child: ExpansionTile(
-                  title: Text(
-                    "Cari Jadwal Misa",
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.bold,
-                      color: textPrimary,
-                    ),
+                child: Text(
+                  "Coba Lagi",
+                  style: GoogleFonts.outfit(
+                    color: colors.onPrimary,
+                    fontWeight: FontWeight.w600,
                   ),
-                  leading: Icon(
-                    Icons.search,
-                    color: colors.primary,
-                  ),
-                  childrenPadding: const EdgeInsets.all(16),
-                  children: [
-                    _buildDropdown<String>(
-                      label: "Negara",
-                      value: _selectedCountryId,
-                      items: _countries
-                          .map(
-                            (c) => DropdownMenuItem(
-                              value: c.id,
-                              child: Text(c.name),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: _onCountryChanged,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildDropdown<String>(
-                      label: "Keuskupan",
-                      value: _selectedDioceseId,
-                      items: _dioceses
-                          .map(
-                            (d) => DropdownMenuItem(
-                              value: d.id,
-                              child: Text(d.name),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: _selectedCountryId == null
-                          ? null
-                          : _onDioceseChanged,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildDropdown<String>(
-                      label: "Paroki / Gereja",
-                      value: _selectedChurchId,
-                      items: _churches
-                          .map(
-                            (c) => DropdownMenuItem(
-                              value: c.id,
-                              child: Text(c.name),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: _selectedDioceseId == null
-                          ? null
-                          : (val) => setState(() => _selectedChurchId = val),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: colors.primary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        onPressed: _searchByChurch,
-                        child: Text(
-                          "Lihat Jadwal",
-                          style: GoogleFonts.outfit(
-                            color: colors.onPrimary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (_isChurchSearchMode) ...[
-                      const SizedBox(height: 12),
-                      TextButton(
-                        onPressed: _loadDailySchedules, // Reset to Daily View
-                        child: Text(
-                          "Reset ke Tampilan Harian",
-                          style: GoogleFonts.outfit(color: colors.error),
-                        ),
-                      ),
-                    ],
-                  ],
                 ),
               ),
             ),
-          ),
+          ],
+        ),
+      ),
+    );
+  }
 
-          // 4. Results Header
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+  Widget _buildScheduleInlineError(String message, ColorScheme colors) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: colors.error.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: colors.error.withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline, color: colors.error, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
               child: Text(
-                _isChurchSearchMode
-                    ? "Jadwal Lengkap Gereja"
-                    : "Jadwal Misa Hari Ini",
+                message,
                 style: GoogleFonts.outfit(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: textPrimary,
+                  color: colors.error,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-          ),
-
-          // 5. List
-          if (_isLoadingSchedules)
-            SliverFillRemaining(
-              child: Center(
-                child: CircularProgressIndicator(color: colors.primary),
-              ),
-            )
-          else if (_schedules.isEmpty)
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.event_busy, size: 60, color: textMuted),
-                    const SizedBox(height: 10),
-                    Text(
-                      _isChurchSearchMode
-                          ? "Jadwal belum tersedia"
-                          : "Tidak ada jadwal (Data sample)", // Friendly fallback
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(color: textSecondary),
-                    ),
-                  ],
+            TextButton(
+              onPressed: _loadSchedules,
+              child: Text(
+                "Coba Lagi",
+                style: GoogleFonts.outfit(
+                  color: colors.error,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-            )
-          else
-            SliverList(
-              delegate: SliverChildBuilderDelegate((context, index) {
-                final item = _schedules[index];
-                // If in Church Mode, we might want to show day header or just list all
-                // For simplicity: List all, maybe showing Day Name if different
-                return Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 6,
-                  ),
-                  child: _buildTicketCard(item),
-                );
-              }, childCount: _schedules.length),
             ),
+          ],
+        ),
+      ),
+    );
+  }
 
-          const SliverToBoxAdapter(child: SizedBox(height: 40)),
-        ],
+  Widget _buildScheduleEmptyState({
+    required Color textSecondary,
+    required Color textMuted,
+  }) {
+    final message = _isChurchSearchMode
+        ? "Jadwal belum tersedia untuk paroki ini"
+        : "Belum ada jadwal untuk tanggal ini";
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 28),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.event_busy, size: 60, color: textMuted),
+            const SizedBox(height: 10),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(color: textSecondary),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   void _retryAll() {
-    _fetchLiturgy();
-    if (_isChurchSearchMode) {
-      _searchByChurch();
-    } else {
-      _loadDailySchedules();
-    }
+    _loadLiturgy();
+    _loadSchedules();
   }
 
   String _formatSelectedDate(BuildContext context) {
@@ -647,54 +778,82 @@ class _SchedulePageState extends State<SchedulePage> {
 
   // --- UI COMPONENTS ---
   Widget _buildLiturgyHeader() {
+    final colors = Theme.of(context).colorScheme;
+    final textPrimary = colors.onSurface;
+    final textSecondary = colors.onSurface.withOpacity(0.7);
+    final litPalette = _resolveLiturgicalPalette(colors);
+    final accent = litPalette.accentColor;
+    final readingColor =
+        accent.computeLuminance() > 0.82 ? textPrimary : accent;
+
     if (_loadingLiturgy) {
-      return const Padding(
-        padding: EdgeInsets.all(20),
-        child: Center(child: CircularProgressIndicator()),
+      return _buildLiturgyCard(
+        palette: litPalette,
+        child: Row(
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: accent,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                "Memuat info liturgi…",
+                style: GoogleFonts.outfit(
+                  color: textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
       );
     }
 
-    if (_liturgyError != null && _currentLiturgy == null) {
-      final theme = Theme.of(context);
-      final colors = theme.colorScheme;
-      return Container(
-        margin: const EdgeInsets.all(16),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: colors.onSurface.withOpacity(0.08)),
-        ),
+    if (_currentLiturgy == null) {
+      return _buildLiturgyCard(
+        palette: litPalette,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.error_outline, color: colors.error),
+                Icon(Icons.info_outline, color: accent),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    _liturgyError ?? "Gagal memuat liturgi.",
+                    "Info liturgi belum tersedia",
                     style: GoogleFonts.outfit(
-                      color: colors.onSurface,
+                      color: textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
               ],
             ),
+            if (_liturgyError != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                _liturgyError!,
+                style: GoogleFonts.outfit(color: textSecondary),
+              ),
+            ],
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
-                onPressed: _fetchLiturgy,
+                onPressed: _loadLiturgy,
                 style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: colors.primary),
+                  side: BorderSide(color: accent),
                 ),
                 child: Text(
                   "Coba lagi",
                   style: GoogleFonts.outfit(
-                    color: colors.primary,
+                    color: accent,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -705,48 +864,24 @@ class _SchedulePageState extends State<SchedulePage> {
       );
     }
 
-    // Default values if no liturgy
-    final bgColor = _currentLiturgy != null
-        ? LiturgyService.getLiturgicalColor(_currentLiturgy!.color)
-        : Theme.of(context).colorScheme.primary;
-
-    final textColor = LiturgyService.getLiturgicalTextColor(
-      _currentLiturgy?.color,
-    ); // Use helper
-
-    return Container(
-      margin: const EdgeInsets.all(16),
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: bgColor.withValues(alpha: 0.4),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+    return _buildLiturgyCard(
+      palette: litPalette,
       child: Stack(
         children: [
-          // Background Pattern (Optional)
           Positioned(
             right: -20,
             top: -20,
             child: Icon(
               Icons.church,
-              size: 150,
-              color: Colors.white.withValues(alpha: 0.1),
+              size: 140,
+              color: accent.withValues(alpha: 0.08),
             ),
           ),
-
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(4),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
                 Row(
                   children: [
                     Container(
@@ -755,14 +890,14 @@ class _SchedulePageState extends State<SchedulePage> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: _litBg(bgColor),
-                        border: Border.all(color: _litBorder(bgColor)),
+                        color: accent,
+                        border: Border.all(color: litPalette.borderColor),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         _formatSelectedDate(context),
                         style: GoogleFonts.outfit(
-                          color: _litText(bgColor),
+                          color: litPalette.textOnAccent,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -770,55 +905,67 @@ class _SchedulePageState extends State<SchedulePage> {
                     const Spacer(),
                     Icon(
                       Icons.auto_awesome,
-                      color: _litText(bgColor).withValues(alpha: 0.8),
+                      color: accent.withValues(alpha: 0.8),
                       size: 20,
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-
-                // Feast Name
+                const SizedBox(height: 14),
                 Text(
                   _currentLiturgy?.feastName ?? "Hari Biasa",
                   style: GoogleFonts.outfit(
-                    fontSize: 24,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: textColor,
+                    color: textPrimary,
                   ),
                 ),
-                Text(
-                  "Warna Liturgi: ${_currentLiturgy?.color.toUpperCase() ?? '-'}",
-                  style: GoogleFonts.outfit(
-                    fontSize: 14,
-                    color: textColor.withValues(alpha: 0.9),
-                  ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: accent,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: litPalette.borderColor),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "Warna Liturgi: ${_currentLiturgy?.color.toUpperCase() ?? '-'}",
+                        style: GoogleFonts.outfit(
+                          fontSize: 13,
+                          color: textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 20),
-
-                // Readings
-                if (_currentLiturgy != null &&
-                    _currentLiturgy!.readings.isNotEmpty) ...[
+                const SizedBox(height: 18),
+                if (_currentLiturgy!.readings.isNotEmpty) ...[
                   _buildReadingRow(
                     "Bacaan 1",
                     _currentLiturgy!.readings['bacaan1'] ?? '-',
-                    textColor,
+                    readingColor,
                   ),
                   if (_currentLiturgy!.readings['mazmur'] != null)
                     _buildReadingRow(
                       "Mazmur",
                       _currentLiturgy!.readings['mazmur'] ?? '-',
-                      textColor,
+                      readingColor,
                     ),
                   _buildReadingRow(
                     "Injil",
                     _currentLiturgy!.readings['injil'] ?? '-',
-                    textColor,
+                    readingColor,
                   ),
                 ] else
                   Text(
                     "Data bacaan belum tersedia.",
                     style: GoogleFonts.outfit(
-                      color: textColor.withValues(alpha: 0.7),
+                      color: textSecondary,
                       fontStyle: FontStyle.italic,
                     ),
                   ),
@@ -827,6 +974,30 @@ class _SchedulePageState extends State<SchedulePage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildLiturgyCard({
+    required _LiturgicalPalette palette,
+    required Widget child,
+  }) {
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: palette.tintBackground,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: palette.borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: theme.shadowColor.withValues(alpha: 0.12),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: child,
     );
   }
 
@@ -991,30 +1162,64 @@ class _SchedulePageState extends State<SchedulePage> {
     );
   }
 
-  Color _litBg(Color c) => c.withOpacity(0.14);
-  Color _litBorder(Color c) => c.withOpacity(0.55);
-  Color _litText(Color c) =>
-      (c.computeLuminance() > 0.65) ? const Color(0xFF121212) : Colors.white;
+  _LiturgicalPalette _resolveLiturgicalPalette(ColorScheme colors) {
+    final code = _currentLiturgy?.color;
+    final accent = _currentLiturgy != null
+        ? LiturgyService.getLiturgicalColor(code)
+        : colors.primary;
+    return _LiturgicalPalette(
+      accentColor: accent,
+      tintBackground: accent.withOpacity(0.12),
+      textOnAccent: _litTextOnAccent(accent, code),
+      borderColor: _litBorder(accent),
+    );
+  }
+
+  Color _litBg(Color c) => c.withOpacity(0.12);
+
+  Color _litBorder(Color c) {
+    final lum = c.computeLuminance();
+    if (lum > 0.85) return const Color(0xFFBDBDBD);
+    if (lum < 0.08) return const Color(0xFF444444);
+    return c.withOpacity(0.55);
+  }
+
+  Color _litTextOnAccent(Color c, String? code) {
+    switch (code?.toLowerCase()) {
+      case 'white':
+      case 'gold':
+        return const Color(0xFF1A1A1A);
+      case 'rose':
+      case 'pink':
+        return const Color(0xFF1A1A1A);
+      case 'red':
+      case 'green':
+      case 'purple':
+      case 'black':
+        return Colors.white;
+      default:
+        return c.computeLuminance() > 0.6
+            ? const Color(0xFF1A1A1A)
+            : Colors.white;
+    }
+  }
 
   Color _litChipBg(Color c) {
     final lum = c.computeLuminance();
-    if (lum > 0.8) return c.withOpacity(0.18);
+    if (lum > 0.85) return const Color(0xFFF0F0F0);
     if (lum < 0.08) return Colors.black.withOpacity(0.45);
     return _litBg(c);
   }
 
   Color _litChipBorder(Color c) {
     final lum = c.computeLuminance();
-    if (lum > 0.8) return c.withOpacity(0.6);
+    if (lum > 0.85) return const Color(0xFFBDBDBD);
     if (lum < 0.08) return const Color(0xFF555555);
     return _litBorder(c);
   }
 
   Color _litChipText(Color c) {
-    final lum = c.computeLuminance();
-    if (lum > 0.8) return const Color(0xFF121212);
-    if (lum < 0.08) return Colors.white;
-    return _litText(c);
+    return _litTextOnAccent(c, _currentLiturgy?.color);
   }
 
   Widget _buildTicketCard(MassSchedule item) {
@@ -1025,9 +1230,8 @@ class _SchedulePageState extends State<SchedulePage> {
     final colors = theme.colorScheme;
     final textPrimary = colors.onSurface;
     final textSecondary = colors.onSurface.withOpacity(0.7);
-    final litColor = _currentLiturgy != null
-        ? LiturgyService.getLiturgicalColor(_currentLiturgy!.color)
-        : colors.primary;
+    final litPalette = _resolveLiturgicalPalette(colors);
+    final litColor = litPalette.accentColor;
     final litLabel = (_currentLiturgy?.color ?? "Liturgi").toUpperCase();
 
     return Container(
@@ -1574,4 +1778,18 @@ class _SchedulePageState extends State<SchedulePage> {
       ),
     );
   }
+}
+
+class _LiturgicalPalette {
+  final Color accentColor;
+  final Color tintBackground;
+  final Color textOnAccent;
+  final Color borderColor;
+
+  const _LiturgicalPalette({
+    required this.accentColor,
+    required this.tintBackground,
+    required this.textOnAccent,
+    required this.borderColor,
+  });
 }
