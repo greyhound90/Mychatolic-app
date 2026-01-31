@@ -215,7 +215,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 activeThumbColor: Theme.of(context).primaryColor,
                 activeTrackColor: Theme.of(
                   context,
-                ).primaryColor.withValues(alpha: 0.4),
+                ).primaryColor.withOpacity(0.4),
               ),
             ),
 
@@ -233,7 +233,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.1),
+                    color: Colors.red.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(Icons.logout, color: Colors.red),
@@ -302,7 +302,7 @@ class _SettingsPageState extends State<SettingsPage> {
       value: value,
       onChanged: onChanged,
       activeThumbColor: Theme.of(context).primaryColor,
-      activeTrackColor: Theme.of(context).primaryColor.withValues(alpha: 0.4),
+      activeTrackColor: Theme.of(context).primaryColor.withOpacity(0.4),
     );
   }
 }

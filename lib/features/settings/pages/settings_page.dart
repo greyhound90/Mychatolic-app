@@ -6,6 +6,8 @@ import 'package:mychatolic_app/features/auth/pages/verification_page.dart';
 import 'package:mychatolic_app/features/auth/pages/login_page.dart';
 import 'package:mychatolic_app/models/profile.dart';
 import 'package:mychatolic_app/features/settings/pages/change_password_page.dart';
+import 'package:mychatolic_app/features/settings/pages/account_security_page.dart';
+import 'package:mychatolic_app/core/ui/app_snackbar.dart';
 
 class SettingsPage extends StatefulWidget {
   final Profile profile;
@@ -21,7 +23,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _showSnack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    AppSnackBar.showInfo(context, message);
   }
 
   bool _isValidEmail(String email) {
@@ -346,6 +348,19 @@ class _SettingsPageState extends State<SettingsPage> {
                   );
                 },
               ),
+            ),
+            _buildListTile(
+              icon: Icons.security_outlined,
+              title: "Keamanan Akun",
+              subtitle: "Kelola email, nomor HP, password, dan sesi",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AccountSecurityPage(),
+                  ),
+                );
+              },
             ),
 
             const SizedBox(height: 24),

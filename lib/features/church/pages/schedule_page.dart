@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:easy_date_timeline/easy_date_timeline.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -13,6 +12,12 @@ import 'package:mychatolic_app/services/schedule_service.dart';
 import 'package:mychatolic_app/services/liturgy_service.dart';
 import 'package:mychatolic_app/services/master_data_service.dart';
 import 'package:mychatolic_app/widgets/my_catholic_app_bar.dart';
+import 'package:mychatolic_app/core/widgets/app_card.dart';
+import 'package:mychatolic_app/core/widgets/app_button.dart';
+import 'package:mychatolic_app/core/ui/app_state.dart';
+import 'package:mychatolic_app/core/ui/app_state_view.dart';
+import 'package:mychatolic_app/core/ui/app_snackbar.dart';
+import 'package:mychatolic_app/core/log/app_logger.dart';
 
 import 'package:mychatolic_app/services/profile_service.dart';
 import 'package:mychatolic_app/features/profile/pages/edit_profile_page.dart';
@@ -81,28 +86,22 @@ class _SchedulePageState extends State<SchedulePage> {
 
   // --- LITURGY LOGIC ---
   Future<void> _fetchLiturgy() async {
-    setState(() {
+    safeSetState(() {
       _loadingLiturgy = true;
       _liturgyError = null;
     });
     try {
       final liturgy = await _liturgyService.getLiturgyByDate(_selectedDate);
-      if (mounted) {
-        setState(() {
-          _currentLiturgy = liturgy;
-          _loadingLiturgy = false;
-        });
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint("Fetch Liturgy Error: $e");
-      }
-      if (mounted) {
-        setState(() {
-          _loadingLiturgy = false;
-          _liturgyError = "Gagal memuat liturgi.";
-        });
-      }
+      safeSetState(() {
+        _currentLiturgy = liturgy;
+        _loadingLiturgy = false;
+      });
+    } catch (e, st) {
+      AppLogger.logError("Fetch Liturgy Error", error: e, stackTrace: st);
+      safeSetState(() {
+        _loadingLiturgy = false;
+        _liturgyError = mapErrorMessage(e);
+      });
     }
   }
 
@@ -110,33 +109,27 @@ class _SchedulePageState extends State<SchedulePage> {
   Future<void> _fetchCountries() async {
     try {
       final data = await _masterService.fetchCountries();
-      if (mounted) setState(() => _countries = data);
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint("Fetch Countries Error: $e");
-      }
+      safeSetState(() => _countries = data);
+    } catch (e, st) {
+      AppLogger.logError("Fetch Countries Error", error: e, stackTrace: st);
     }
   }
 
   Future<void> _fetchDioceses(String countryId) async {
     try {
       final data = await _masterService.fetchDioceses(countryId);
-      if (mounted) setState(() => _dioceses = data);
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint("Fetch Dioceses Error: $e");
-      }
+      safeSetState(() => _dioceses = data);
+    } catch (e, st) {
+      AppLogger.logError("Fetch Dioceses Error", error: e, stackTrace: st);
     }
   }
 
   Future<void> _fetchChurches(String dioceseId) async {
     try {
       final data = await _masterService.fetchChurches(dioceseId);
-      if (mounted) setState(() => _churches = data);
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint("Fetch Churches Error: $e");
-      }
+      safeSetState(() => _churches = data);
+    } catch (e, st) {
+      AppLogger.logError("Fetch Churches Error", error: e, stackTrace: st);
     }
   }
 
@@ -164,7 +157,7 @@ class _SchedulePageState extends State<SchedulePage> {
 
   // 1. Load by Date (Default View)
   Future<void> _loadDailySchedules() async {
-    setState(() {
+    safeSetState(() {
       _isLoadingSchedules = true;
       _isChurchSearchMode = false;
       _scheduleError = null;
@@ -176,35 +169,27 @@ class _SchedulePageState extends State<SchedulePage> {
       final data = await _scheduleService.fetchSchedules(
         dayOfWeek: _selectedDate.weekday,
       );
-      if (mounted) {
-        setState(() {
-          _schedules = data;
-          _isLoadingSchedules = false;
-        });
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint("Load Daily Schedules Error: $e");
-      }
-      if (mounted) {
-        setState(() {
-          _isLoadingSchedules = false;
-          _scheduleError = "Gagal memuat jadwal.";
-        });
-      }
+      safeSetState(() {
+        _schedules = data;
+        _isLoadingSchedules = false;
+      });
+    } catch (e, st) {
+      AppLogger.logError("Load Daily Schedules Error", error: e, stackTrace: st);
+      safeSetState(() {
+        _isLoadingSchedules = false;
+        _scheduleError = mapErrorMessage(e);
+      });
     }
   }
 
   // 2. Search Specific Church (Advanced View)
   Future<void> _searchByChurch() async {
     if (_selectedChurchId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Pilih Gereja terlebih dahulu")),
-      );
+      AppSnackBar.showInfo(context, "Pilih Gereja terlebih dahulu");
       return;
     }
 
-    setState(() {
+    safeSetState(() {
       _isLoadingSchedules = true;
       _isChurchSearchMode = true;
       _scheduleError = null;
@@ -216,22 +201,16 @@ class _SchedulePageState extends State<SchedulePage> {
         churchId: _selectedChurchId!,
       );
 
-      if (mounted) {
-        setState(() {
-          _schedules = data;
-          _isLoadingSchedules = false;
-        });
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint("Search Error: $e");
-      }
-      if (mounted) {
-        setState(() {
-          _isLoadingSchedules = false;
-          _scheduleError = "Gagal memuat jadwal.";
-        });
-      }
+      safeSetState(() {
+        _schedules = data;
+        _isLoadingSchedules = false;
+      });
+    } catch (e, st) {
+      AppLogger.logError("Search Error", error: e, stackTrace: st);
+      safeSetState(() {
+        _isLoadingSchedules = false;
+        _scheduleError = mapErrorMessage(e);
+      });
     }
   }
   
@@ -270,8 +249,9 @@ class _SchedulePageState extends State<SchedulePage> {
     );
     
     if (result == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Berhasil Check-in! Lihat status di Radar Misa."))
+      AppSnackBar.showSuccess(
+        context,
+        "Berhasil Check-in! Lihat status di Radar Misa.",
       );
     }
   }
@@ -289,9 +269,21 @@ class _SchedulePageState extends State<SchedulePage> {
           try {
             return _buildScheduleBody(context);
           } catch (e, st) {
-            debugPrint("SchedulePage build error: $e");
-            debugPrint("$st");
-            return _buildFatalErrorBody(context);
+            AppLogger.logError("SchedulePage build error",
+                error: e, stackTrace: st);
+            return AppStateView(
+              state: AppViewState.error,
+              error: AppError(
+                title: "Gagal memuat jadwal",
+                message: "Terjadi kesalahan saat memuat data.",
+                raw: e,
+                st: st,
+              ),
+              onRetry: () {
+                _loadLiturgy();
+                _loadSchedules();
+              },
+            );
           }
         },
       ),
@@ -299,16 +291,13 @@ class _SchedulePageState extends State<SchedulePage> {
   }
 
   Widget _buildScheduleBody(BuildContext context) {
-    final theme = Theme.of(context);
     final colors = Theme.of(context).colorScheme;
-    final border = theme.dividerColor;
     final textPrimary = colors.onSurface;
     final textSecondary = colors.onSurface.withOpacity(0.7);
     final textMuted = colors.onSurface.withOpacity(0.5);
     final palette = _resolvePalette(colors);
     final isWhite = _isWhiteLiturgy();
-    final whiteAccent =
-        palette.secondaryAccent ?? const Color(0xFF0088CC);
+    final accentForWhite = palette.accent;
 
     final showLoading = _isLoadingSchedules && _schedules.isEmpty;
     final showError = _scheduleError != null && _schedules.isEmpty;
@@ -322,128 +311,127 @@ class _SchedulePageState extends State<SchedulePage> {
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeOut,
             margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: colors.surface,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: border.withOpacity(0.6)),
-              boxShadow: [
-                BoxShadow(
-                  color: theme.shadowColor.withValues(alpha: 0.12),
-                  blurRadius: 14,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Stack(
-              children: [
-                Positioned(
-                  left: 6,
-                  top: 2,
-                  child: Text(
-                    "Kalender",
-                    style: GoogleFonts.outfit(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: textSecondary,
-                      letterSpacing: 0.2,
+            child: AppCard(
+              padding: const EdgeInsets.all(12),
+              child: Stack(
+                children: [
+                  Positioned(
+                    left: 6,
+                    top: 2,
+                    child: Text(
+                      "Kalender",
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: textSecondary,
+                        letterSpacing: 0.2,
+                      ),
                     ),
                   ),
-                ),
-                Positioned(
-                  right: 6,
-                  top: 0,
-                  child: _buildLiturgyChip(palette),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 26),
-                  child: EasyDateTimeLine(
-                    initialDate: _selectedDate,
-                    onDateChange: (d) {
-                      setState(() {
-                        _selectedDate = d;
-                      });
-                      _loadLiturgy();
-                      if (!_isChurchSearchMode) _loadDailySchedules();
-                    },
-                    headerProps: const EasyHeaderProps(
-                      monthPickerType: MonthPickerType.switcher,
-                      dateFormatter: DateFormatter.fullDateDMY(),
+                  Positioned(
+                    right: 6,
+                    top: 0,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      child: _buildLiturgyChip(palette),
                     ),
-                    dayProps: EasyDayProps(
-                      dayStructure: DayStructure.dayStrDayNum,
-                      activeDayStyle: DayStyle(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          color: palette.accent,
-                          border: Border.all(
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 26),
+                    child: EasyDateTimeLine(
+                      initialDate: _selectedDate,
+                      onDateChange: (d) {
+                        setState(() {
+                          _selectedDate = d;
+                        });
+                        _loadLiturgy();
+                        if (!_isChurchSearchMode) _loadDailySchedules();
+                      },
+                      headerProps: const EasyHeaderProps(
+                        monthPickerType: MonthPickerType.switcher,
+                        dateFormatter: DateFormatter.fullDateDMY(),
+                      ),
+                      dayProps: EasyDayProps(
+                        dayStructure: DayStructure.dayStrDayNum,
+                        activeDayStyle: DayStyle(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color:
+                                isWhite ? palette.base : palette.accent,
+                            border: Border.all(
+                              color: isWhite
+                                  ? accentForWhite.withOpacity(0.6)
+                                  : palette.border,
+                              width: 1.4,
+                            ),
+                            boxShadow: isWhite
+                                ? [
+                                    BoxShadow(
+                                      color: accentForWhite.withOpacity(0.12),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          dayNumStyle: GoogleFonts.outfit(
                             color: isWhite
-                                ? whiteAccent.withOpacity(0.6)
-                                : palette.border,
-                            width: 1.4,
+                                ? const Color(0xFF121212)
+                                : palette.onAccent,
+                            fontWeight: FontWeight.bold,
                           ),
-                          boxShadow: isWhite
-                              ? [
-                                  BoxShadow(
-                                    color: whiteAccent.withOpacity(0.12),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ]
-                              : null,
-                        ),
-                        dayNumStyle: GoogleFonts.outfit(
-                          color: palette.onAccent,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        dayStrStyle: GoogleFonts.outfit(
-                          color: palette.onAccent.withOpacity(0.9),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      todayStyle: DayStyle(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: palette.accent.withValues(alpha: 0.9),
-                            width: 1.4,
+                          dayStrStyle: GoogleFonts.outfit(
+                            color: isWhite
+                                ? const Color(0xFF121212)
+                                    .withOpacity(0.85)
+                                : palette.onAccent.withOpacity(0.9),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
                           ),
-                          color: palette.tint,
                         ),
-                        dayNumStyle: GoogleFonts.outfit(
-                          color: textPrimary,
-                          fontWeight: FontWeight.bold,
+                        todayStyle: DayStyle(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: palette.accent.withOpacity(0.9),
+                              width: 1.4,
+                            ),
+                            color: palette.tint,
+                          ),
+                          dayNumStyle: GoogleFonts.outfit(
+                            color: textPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          dayStrStyle: GoogleFonts.outfit(
+                            color: textSecondary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                        dayStrStyle: GoogleFonts.outfit(
-                          color: textSecondary,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                        inactiveDayStyle: DayStyle(
+                          dayNumStyle: GoogleFonts.outfit(
+                            color: textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          dayStrStyle: GoogleFonts.outfit(
+                            color: textSecondary,
+                            fontSize: 11,
+                          ),
                         ),
-                      ),
-                      inactiveDayStyle: DayStyle(
-                        dayNumStyle: GoogleFonts.outfit(
-                          color: textPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        dayStrStyle: GoogleFonts.outfit(
-                          color: textSecondary,
-                          fontSize: 11,
-                        ),
-                      ),
-                      disabledDayStyle: DayStyle(
-                        dayNumStyle: GoogleFonts.outfit(
-                          color: textMuted,
-                        ),
-                        dayStrStyle: GoogleFonts.outfit(
-                          color: textMuted,
-                          fontSize: 11,
+                        disabledDayStyle: DayStyle(
+                          dayNumStyle: GoogleFonts.outfit(
+                            color: textMuted,
+                          ),
+                          dayStrStyle: GoogleFonts.outfit(
+                            color: textMuted,
+                            fontSize: 11,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -464,13 +452,8 @@ class _SchedulePageState extends State<SchedulePage> {
           child: Padding(
             key: _searchSectionKey,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: border.withValues(alpha: 0.6)),
-              ),
-              color: colors.surface,
+            child: AppCard(
+              padding: EdgeInsets.zero,
               child: ExpansionTile(
                 title: Text(
                   "Cari Jadwal Misa",
@@ -624,54 +607,6 @@ class _SchedulePageState extends State<SchedulePage> {
     );
   }
 
-  Widget _buildFatalErrorBody(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    return Center(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 24),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: colors.onSurface.withOpacity(0.08)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, color: colors.error, size: 32),
-            const SizedBox(height: 8),
-            Text(
-              "Gagal memuat jadwal",
-              textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(color: colors.onSurface),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  _loadLiturgy();
-                  _loadSchedules();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colors.primary,
-                ),
-                child: Text(
-                  "Coba lagi",
-                  style: GoogleFonts.outfit(
-                    color: colors.onPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildScheduleLoadingState(
     ColorScheme colors,
     Color textSecondary,
@@ -697,13 +632,7 @@ class _SchedulePageState extends State<SchedulePage> {
   Widget _buildScheduleErrorState(ColorScheme colors, String? message) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: colors.onSurface.withOpacity(0.08)),
-        ),
+      child: AppCard(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -717,18 +646,9 @@ class _SchedulePageState extends State<SchedulePage> {
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
+              child: AppPrimaryButton(
+                label: "Coba Lagi",
                 onPressed: _loadSchedules,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colors.primary,
-                ),
-                child: Text(
-                  "Coba Lagi",
-                  style: GoogleFonts.outfit(
-                    color: colors.onPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
               ),
             ),
           ],
@@ -814,39 +734,14 @@ class _SchedulePageState extends State<SchedulePage> {
             ),
             const SizedBox(height: 16),
             if (_isChurchSearchMode)
-              ElevatedButton(
+              AppPrimaryButton(
+                label: "Reset Tampilan Harian",
                 onPressed: _loadDailySchedules,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colors.primary,
-                  foregroundColor: colors.onPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  "Reset Tampilan Harian",
-                  style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.w600,
-                    color: colors.onPrimary,
-                  ),
-                ),
               )
             else
-              OutlinedButton(
+              AppSecondaryButton(
+                label: "Cari Gereja",
                 onPressed: _scrollToSearchSection,
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: colors.primary),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  "Cari Gereja",
-                  style: GoogleFonts.outfit(
-                    color: colors.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
               ),
           ],
         ),
@@ -855,16 +750,15 @@ class _SchedulePageState extends State<SchedulePage> {
   }
 
   Widget _buildLiturgyChip(LiturgicalPalette palette) {
-    final label = (_currentLiturgy?.color ?? "Liturgi").toUpperCase();
+    final label = _liturgyLabel(_currentLiturgy?.color);
     final isWhite = _isWhiteLiturgy();
-    final secondaryAccent =
-        palette.secondaryAccent ?? const Color(0xFF0088CC);
     return AnimatedContainer(
+      key: ValueKey(label),
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOut,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: palette.accent,
+        color: isWhite ? palette.chipBg : palette.accent,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
           color: palette.border,
@@ -888,17 +782,16 @@ class _SchedulePageState extends State<SchedulePage> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (isWhite) ...[
-            Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: secondaryAccent.withOpacity(0.6),
-                shape: BoxShape.circle,
-              ),
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: palette.dot,
+              shape: BoxShape.circle,
+              border: isWhite ? Border.all(color: palette.border) : null,
             ),
-            const SizedBox(width: 6),
-          ],
+          ),
+          const SizedBox(width: 6),
           Text(
             label,
             style: GoogleFonts.outfit(
@@ -932,6 +825,7 @@ class _SchedulePageState extends State<SchedulePage> {
             item["code"] ?? '',
             brightness: Theme.of(context).brightness,
           );
+          final isWhite = (item["code"] ?? '') == 'white';
           return Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -939,9 +833,11 @@ class _SchedulePageState extends State<SchedulePage> {
                 width: 8,
                 height: 8,
                 decoration: BoxDecoration(
-                  color: palette.accent.withOpacity(0.9),
+                  color: palette.dot,
                   shape: BoxShape.circle,
-                  border: Border.all(color: palette.border),
+                  border: isWhite
+                      ? Border.all(color: palette.border)
+                      : Border.all(color: palette.border.withOpacity(0.35)),
                 ),
               ),
               const SizedBox(width: 6),
@@ -1002,10 +898,8 @@ class _SchedulePageState extends State<SchedulePage> {
     final palette = _resolvePalette(colors);
     final accent = palette.accent;
     final isWhite = _isWhiteLiturgy();
-    final whiteAccent =
-        palette.secondaryAccent ?? const Color(0xFF0088CC);
     final readingColor =
-        accent.computeLuminance() > 0.82 ? textPrimary : accent;
+        isWhite ? textPrimary : accent;
 
     if (_loadingLiturgy) {
       return _buildLiturgyCard(
@@ -1095,7 +989,7 @@ class _SchedulePageState extends State<SchedulePage> {
             child: Icon(
               Icons.church,
               size: 140,
-              color: accent.withValues(alpha: 0.08),
+              color: accent.withOpacity(0.08),
             ),
           ),
           Padding(
@@ -1135,19 +1029,23 @@ class _SchedulePageState extends State<SchedulePage> {
                     Icon(
                       Icons.auto_awesome,
                       color: isWhite
-                          ? whiteAccent.withOpacity(0.7)
-                          : accent.withValues(alpha: 0.8),
+                          ? accent.withOpacity(0.7)
+                          : accent.withOpacity(0.8),
                       size: 20,
                     ),
                   ],
                 ),
                 const SizedBox(height: 14),
-                Text(
-                  _currentLiturgy?.feastName ?? "Hari Biasa",
-                  style: GoogleFonts.outfit(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: textPrimary,
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: Text(
+                    _currentLiturgy?.feastName ?? "Hari Biasa",
+                    key: ValueKey(_currentLiturgy?.feastName ?? "Hari Biasa"),
+                    style: GoogleFonts.outfit(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: textPrimary,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -1165,7 +1063,7 @@ class _SchedulePageState extends State<SchedulePage> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        "Warna Liturgi: ${_currentLiturgy?.color.toUpperCase() ?? '-'}",
+                        "Warna Liturgi: ${_liturgyLabel(_currentLiturgy?.color)}",
                         style: GoogleFonts.outfit(
                           fontSize: 13,
                           color: textSecondary,
@@ -1212,43 +1110,27 @@ class _SchedulePageState extends State<SchedulePage> {
     required LiturgicalPalette palette,
     required Widget child,
   }) {
-    final theme = Theme.of(context);
-    final isWhite = _isWhiteLiturgy();
-    final secondaryAccent =
-        palette.secondaryAccent ?? const Color(0xFF0088CC);
-    return Container(
+    return AppCard(
       margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isWhite ? const Color(0xFFFFFFFF) : palette.tint,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isWhite ? const Color(0xFFE6E6E6) : palette.border,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: theme.shadowColor.withValues(alpha: 0.12),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      padding: EdgeInsets.zero,
+      color: palette.tint,
+      borderColor: palette.border,
       child: Stack(
         children: [
-          if (isWhite)
-            Positioned(
-              left: 0,
-              top: 10,
-              bottom: 10,
-              child: Container(
-                width: 4,
-                decoration: BoxDecoration(
-                  color: secondaryAccent.withOpacity(0.25),
-                  borderRadius: BorderRadius.circular(4),
-                ),
+          Positioned(
+            left: 0,
+            top: 10,
+            bottom: 10,
+            child: Container(
+              width: 4,
+              decoration: BoxDecoration(
+                color: palette.accent.withOpacity(0.85),
+                borderRadius: BorderRadius.circular(4),
               ),
             ),
+          ),
           Padding(
-            padding: EdgeInsets.fromLTRB(isWhite ? 18 : 16, 16, 16, 16),
+            padding: const EdgeInsets.fromLTRB(18, 16, 16, 16),
             child: child,
           ),
         ],
@@ -1270,7 +1152,7 @@ class _SchedulePageState extends State<SchedulePage> {
                 label,
                 style: GoogleFonts.outfit(
                   fontWeight: FontWeight.bold,
-                  color: color.withValues(alpha: 0.8),
+                  color: color.withOpacity(0.8),
                   fontSize: 13,
                 ),
               ),
@@ -1297,7 +1179,7 @@ class _SchedulePageState extends State<SchedulePage> {
         childrenPadding: const EdgeInsets.only(bottom: 12),
         dense: true,
         iconColor: color,
-        collapsedIconColor: color.withValues(alpha: 0.5),
+        collapsedIconColor: color.withOpacity(0.5),
         title: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1307,7 +1189,7 @@ class _SchedulePageState extends State<SchedulePage> {
                 label,
                 style: GoogleFonts.outfit(
                   fontWeight: FontWeight.bold,
-                  color: color.withValues(alpha: 0.8),
+                  color: color.withOpacity(0.8),
                   fontSize: 13,
                 ),
               ),
@@ -1320,7 +1202,7 @@ class _SchedulePageState extends State<SchedulePage> {
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                   decoration: TextDecoration.underline,
-                  decorationColor: color.withValues(alpha: 0.5),
+                  decorationColor: color.withOpacity(0.5),
                 ),
               ),
             ),
@@ -1358,14 +1240,14 @@ class _SchedulePageState extends State<SchedulePage> {
                 padding: const EdgeInsets.all(12),
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.05),
+                  color: color.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: color.withValues(alpha: 0.1)),
+                  border: Border.all(color: color.withOpacity(0.1)),
                 ),
                 child: Text(
                   snapshot.data!,
                   style: GoogleFonts.outfit(
-                    color: color.withValues(alpha: 0.9),
+                    color: color.withOpacity(0.9),
                     fontSize: 14,
                     height: 1.5,
                   ),
@@ -1426,13 +1308,14 @@ class _SchedulePageState extends State<SchedulePage> {
     if (_currentLiturgy == null) {
       final accent = colors.primary;
       return palette.copyWith(
+        base: accent,
         accent: accent,
         tint: accent.withOpacity(0.12),
         border: accent.withOpacity(0.45),
         onAccent: colors.onPrimary,
         chipBg: accent.withOpacity(0.12),
-        chipText: accent,
-        secondaryAccent: accent,
+        chipText: colors.onPrimary,
+        dot: accent,
       );
     }
     return palette;
@@ -1441,6 +1324,33 @@ class _SchedulePageState extends State<SchedulePage> {
   bool _isWhiteLiturgy() {
     final code = _currentLiturgy?.color.trim().toLowerCase();
     return code == 'white' || code == 'gold' || code == 'putih';
+  }
+
+  String _liturgyLabel(String? code) {
+    switch (code?.trim().toLowerCase()) {
+      case 'white':
+      case 'gold':
+      case 'putih':
+        return 'PUTIH';
+      case 'red':
+      case 'merah':
+        return 'MERAH';
+      case 'green':
+      case 'hijau':
+        return 'HIJAU';
+      case 'purple':
+      case 'ungu':
+        return 'UNGU';
+      case 'rose':
+      case 'pink':
+      case 'merah muda':
+        return 'ROSE';
+      case 'black':
+      case 'hitam':
+        return 'HITAM';
+      default:
+        return 'LITURGI';
+    }
   }
 
   Widget _buildTicketCard(MassSchedule item) {
@@ -1453,10 +1363,8 @@ class _SchedulePageState extends State<SchedulePage> {
     final textSecondary = colors.onSurface.withOpacity(0.7);
     final palette = _resolvePalette(colors);
     final isWhite = _isWhiteLiturgy();
-    final secondaryAccent =
-        palette.secondaryAccent ?? const Color(0xFF0088CC);
     final litColor = palette.accent;
-    final litLabel = (_currentLiturgy?.color ?? "Liturgi").toUpperCase();
+    final litLabel = _liturgyLabel(_currentLiturgy?.color);
 
     return Container(
       decoration: BoxDecoration(
@@ -1465,7 +1373,7 @@ class _SchedulePageState extends State<SchedulePage> {
         border: Border.all(color: colors.onSurface.withOpacity(0.08)),
         boxShadow: [
           BoxShadow(
-            color: theme.shadowColor.withValues(alpha: 0.2),
+            color: theme.shadowColor.withOpacity(0.2),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -1487,7 +1395,7 @@ class _SchedulePageState extends State<SchedulePage> {
                 boxShadow: isWhite
                     ? [
                         BoxShadow(
-                          color: secondaryAccent.withOpacity(0.12),
+                          color: palette.accent.withOpacity(0.12),
                           blurRadius: 6,
                           offset: const Offset(0, 2),
                         ),
@@ -1774,7 +1682,7 @@ class _SchedulePageState extends State<SchedulePage> {
                 color: surface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: colors.primary.withValues(alpha: 0.35),
+                  color: colors.primary.withOpacity(0.35),
                 ),
               ),
               child: Column(
@@ -1826,7 +1734,7 @@ class _SchedulePageState extends State<SchedulePage> {
                             border: Border.all(color: border.withOpacity(0.6)),
                             boxShadow: [
                               BoxShadow(
-                                color: theme.shadowColor.withValues(alpha: 0.2),
+                                color: theme.shadowColor.withOpacity(0.2),
                                 blurRadius: 4,
                                 offset: const Offset(0, 2),
                               ),
@@ -1972,7 +1880,7 @@ class _SchedulePageState extends State<SchedulePage> {
       decoration: BoxDecoration(
         color: surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.secondary.withValues(alpha: 0.45)),
+        border: Border.all(color: colors.secondary.withOpacity(0.45)),
       ),
       child: Row(
         children: [

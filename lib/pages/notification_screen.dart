@@ -164,7 +164,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           border: Border.all(color: _bg),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
+                              color: Colors.black.withOpacity(0.04),
                               blurRadius: 12,
                               offset: const Offset(0, 6),
                             ),
@@ -222,12 +222,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
           Positioned(
             right: -60,
             top: -40,
-            child: _buildGlow(_blue.withValues(alpha: 0.18), 200),
+            child: _buildGlow(_blue.withOpacity(0.18), 200),
           ),
           Positioned(
             left: -40,
             bottom: -50,
-            child: _buildGlow(_blueDark.withValues(alpha: 0.12), 180),
+            child: _buildGlow(_blueDark.withOpacity(0.12), 180),
           ),
         ],
       ),
@@ -257,7 +257,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: _blue.withValues(alpha: 0.28),
+            color: _blue.withOpacity(0.28),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -282,7 +282,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   "Update terbaru & undangan misa",
                   style: GoogleFonts.outfit(
                     fontSize: 12,
-                    color: _white.withValues(alpha: 0.9),
+                    color: _white.withOpacity(0.9),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -293,7 +293,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: _white.withValues(alpha: 0.2),
+              color: _white.withOpacity(0.2),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -326,8 +326,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
               borderRadius: BorderRadius.circular(2),
               gradient: LinearGradient(
                 colors: [
-                  _blue.withValues(alpha: 0.8),
-                  _blueDark.withValues(alpha: 0.0),
+                  _blue.withOpacity(0.8),
+                  _blueDark.withOpacity(0.0),
                 ],
               ),
             ),

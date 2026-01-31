@@ -152,7 +152,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
           decoration: BoxDecoration(
             color: isSelected ? Colors.white : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
-            boxShadow: isSelected ? [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4)] : [],
+            boxShadow: isSelected ? [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)] : [],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -210,7 +210,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                                setState(() => _selectedImage = null);
                             },
                             child: CircleAvatar(
-                              backgroundColor: Colors.black.withValues(alpha: 0.5),
+                              backgroundColor: Colors.black.withOpacity(0.5),
                               radius: 16,
                               child: const Icon(Icons.close, color: Colors.white, size: 18),
                             ),

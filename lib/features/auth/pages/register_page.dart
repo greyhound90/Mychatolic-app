@@ -2,17 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:dropdown_search/dropdown_search.dart';
-
-const Color _kBg = Color(0xFF121212);
-const Color _kSurface = Color(0xFF1C1C1C);
-const Color _kBorder = Color(0xFF2A2A2A);
-const Color _kText = Color(0xFFFFFFFF);
-const Color _kTextSecondary = Color(0xFFBBBBBB);
-const Color _kTextMuted = Color(0xFF9E9E9E);
-const Color _kPrimary = Color(0xFF0088CC);
-const Color _kPrimaryDark = Color(0xFF007AB8);
-const Color _kError = Color(0xFFE74C3C);
-const Color _kSuccess = Color(0xFF2ECC71);
+import 'package:mychatolic_app/core/widgets/app_text_field.dart';
+import 'package:mychatolic_app/core/widgets/app_button.dart';
+import 'package:mychatolic_app/core/design_tokens.dart';
+import 'package:mychatolic_app/core/widgets/app_card.dart';
+import 'package:mychatolic_app/core/ui/app_snackbar.dart';
+import 'package:mychatolic_app/core/log/app_logger.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -45,6 +40,7 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
+  String? _errorMessage;
 
   final _supabase = Supabase.instance.client;
 
@@ -96,6 +92,9 @@ class _RegisterPageState extends State<RegisterPage> {
   // ---------------------------------------------------------------------------
 
   bool _validateCurrentStep() {
+    if (_errorMessage != null) {
+      setState(() => _errorMessage = null);
+    }
     switch (_currentStep) {
       case 1:
         if (_emailController.text.trim().isEmpty || 
@@ -204,7 +203,7 @@ class _RegisterPageState extends State<RegisterPage> {
     } on AuthException catch (e) {
       if (mounted) _showError(e.message);
     } catch (e) {
-      debugPrint("Register Error: $e");
+      AppLogger.logError("Register Error", error: e);
       if (mounted) _showError("Terjadi kesalahan: $e");
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -222,7 +221,7 @@ class _RegisterPageState extends State<RegisterPage> {
       final data = await query.order('name', ascending: true).limit(100);
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
-      debugPrint("Error fetching countries: $e");
+      AppLogger.logError("Error fetching countries", error: e);
       return [];
     }
   }
@@ -240,7 +239,7 @@ class _RegisterPageState extends State<RegisterPage> {
       final data = await query.order('name', ascending: true).limit(100);
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
-      debugPrint("Error fetching dioceses: $e");
+      AppLogger.logError("Error fetching dioceses", error: e);
       return [];
     }
   }
@@ -258,7 +257,7 @@ class _RegisterPageState extends State<RegisterPage> {
       final data = await query.order('name', ascending: true).limit(100);
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
-      debugPrint("Error fetching churches: $e");
+      AppLogger.logError("Error fetching churches", error: e);
       return [];
     }
   }
@@ -278,16 +277,10 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message, 
-          style: GoogleFonts.outfit(color: Colors.white),
-        ),
-        backgroundColor: _kError,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    if (mounted) {
+      setState(() => _errorMessage = message);
+    }
+    AppSnackBar.showError(context, message);
   }
 
   void _showSuccessDialog() {
@@ -296,18 +289,18 @@ class _RegisterPageState extends State<RegisterPage> {
       barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: _kSurface,
+          backgroundColor: AppColors.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
             "Registrasi Berhasil",
             style: GoogleFonts.outfit(
               fontWeight: FontWeight.bold,
-              color: _kText,
+              color: AppColors.text,
             ),
           ),
           content: Text(
             "Akun Anda telah dibuat. Silakan verifikasi email terlebih dahulu, lalu login kembali.",
-            style: GoogleFonts.outfit(color: _kTextSecondary),
+            style: GoogleFonts.outfit(color: AppColors.textBody),
           ),
           actions: [
             TextButton(
@@ -318,7 +311,7 @@ class _RegisterPageState extends State<RegisterPage> {
               child: Text(
                 "Masuk Aplikasi",
                 style: GoogleFonts.outfit(
-                  color: _kPrimary, 
+                  color: AppColors.primary, 
                   fontWeight: FontWeight.bold
                 ),
               ),
@@ -349,96 +342,26 @@ class _RegisterPageState extends State<RegisterPage> {
       child: Builder(
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label.toUpperCase(),
-                style: GoogleFonts.outfit(
-                  color: _kTextSecondary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              InkWell(
-                onTap: onTap,
-                borderRadius: BorderRadius.circular(16),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 240),
-                  curve: Curves.easeOutCubic,
-                  decoration: BoxDecoration(
-                    color: _kSurface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isFocused ? _kPrimary : _kBorder,
-                      width: 1.2,
-                    ),
-                    boxShadow: [
-                      if (isFocused)
-                        BoxShadow(
-                          color: _kPrimary.withOpacity(0.25),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        )
-                      else
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.3),
-                          blurRadius: 12,
-                          offset: const Offset(0, 8),
-                        ),
-                    ],
-                  ),
-                  child: IgnorePointer(
-                    ignoring: isReadOnly && onTap != null,
-                    child: TextField(
-                      controller: controller,
-                      obscureText: isObscure,
-                      keyboardType: keyboardType,
-                      readOnly: isReadOnly,
-                      style: GoogleFonts.outfit(
-                        color: _kText,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: Colors.transparent,
-                        contentPadding: const EdgeInsets.all(16),
-                        hintText: hint,
-                        hintStyle: GoogleFonts.outfit(color: _kTextMuted),
-                        prefixIcon: icon != null
-                            ? Icon(
-                                icon,
-                                color: isFocused ? _kPrimary : _kTextSecondary,
-                              )
-                            : null,
-                        suffixIcon: toggleObscure != null
-                            ? IconButton(
-                                icon: Icon(
-                                  isObscure ? Icons.visibility_off : Icons.visibility,
-                                  color: _kTextSecondary,
-                                ),
-                                onPressed: toggleObscure,
-                              )
-                            : null,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide.none,
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide.none,
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+          return AppTextField(
+            label: label,
+            hint: hint,
+            controller: controller,
+            icon: icon,
+            isObscure: isObscure,
+            onToggleObscure: toggleObscure,
+            keyboardType: keyboardType,
+            readOnly: isReadOnly,
+            onTap: onTap,
+            isFocused: isFocused,
+            fillColor: AppColors.surface,
+            borderColor: AppColors.border,
+            focusBorderColor: AppColors.primary,
+            textColor: AppColors.text,
+            hintColor: AppColors.textMuted,
+            labelColor: AppColors.textMuted,
+            iconColor: AppColors.textMuted,
+            shadow: AppShadows.level1,
+            focusShadow: AppShadows.level2,
           );
         },
       ),
@@ -448,7 +371,7 @@ class _RegisterPageState extends State<RegisterPage> {
   void _openMaritalStatusSheet() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: _kSurface,
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -458,17 +381,17 @@ class _RegisterPageState extends State<RegisterPage> {
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: _maritalStatusMap.keys.length,
-            separatorBuilder: (_, __) => Divider(color: _kBorder, height: 1),
+            separatorBuilder: (_, __) => Divider(color: AppColors.border, height: 1),
             itemBuilder: (context, index) {
               final key = _maritalStatusMap.keys.elementAt(index);
               final selected = key == _maritalStatus;
               return ListTile(
                 title: Text(
                   key,
-                  style: GoogleFonts.outfit(color: _kText),
+                  style: GoogleFonts.outfit(color: AppColors.text),
                 ),
                 trailing: selected
-                    ? Icon(Icons.check_circle, color: _kSuccess)
+                    ? Icon(Icons.check_circle, color: AppColors.success)
                     : null,
                 onTap: () {
                   setState(() => _maritalStatus = key);
@@ -497,7 +420,7 @@ class _RegisterPageState extends State<RegisterPage> {
         Text(
           label.toUpperCase(),
           style: GoogleFonts.outfit(
-            color: _kTextSecondary,
+            color: AppColors.textMuted,
             fontSize: 12,
             fontWeight: FontWeight.bold,
           ),
@@ -514,7 +437,7 @@ class _RegisterPageState extends State<RegisterPage> {
             return Text(
               text,
               style: GoogleFonts.outfit(
-                color: _kText,
+                color: AppColors.text,
                 fontWeight: FontWeight.w600,
               ),
             );
@@ -528,25 +451,25 @@ class _RegisterPageState extends State<RegisterPage> {
           decoratorProps: DropDownDecoratorProps(
             decoration: InputDecoration(
               filled: true,
-              fillColor: enabled ? _kSurface : _kBorder,
+              fillColor: enabled ? AppColors.surface : AppColors.surfaceAlt,
               hintText: hint,
-              hintStyle: GoogleFonts.outfit(color: _kTextMuted),
+              hintStyle: GoogleFonts.outfit(color: AppColors.textMuted),
               contentPadding: const EdgeInsets.fromLTRB(16, 12, 0, 12),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: _kBorder),
+                borderSide: const BorderSide(color: AppColors.border),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: _kPrimary),
+                borderSide: const BorderSide(color: AppColors.primary),
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: _kBorder),
+                borderSide: const BorderSide(color: AppColors.border),
               ),
               disabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: _kBorder),
+                borderSide: const BorderSide(color: AppColors.border),
               ),
             ),
           ),
@@ -556,12 +479,12 @@ class _RegisterPageState extends State<RegisterPage> {
             itemBuilder: (context, item, isSelected, isHighlighted) {
               return ListTile(
                 tileColor: isHighlighted
-                    ? _kPrimary.withOpacity(0.12)
+                    ? AppColors.primary.withOpacity(0.12)
                     : Colors.transparent,
                 title: Text(
                   item['name']?.toString() ?? '',
                   style: GoogleFonts.outfit(
-                    color: _kText,
+                    color: AppColors.text,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                   ),
                 ),
@@ -570,18 +493,19 @@ class _RegisterPageState extends State<RegisterPage> {
             searchFieldProps: TextFieldProps(
               decoration: InputDecoration(
                 hintText: "Cari $label...",
-                prefixIcon: const Icon(Icons.search, color: _kTextSecondary),
+                prefixIcon:
+                    const Icon(Icons.search, color: AppColors.textMuted),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 filled: true,
-                fillColor: _kSurface,
-                hintStyle: GoogleFonts.outfit(color: _kTextMuted),
+                fillColor: AppColors.surfaceAlt,
+                hintStyle: GoogleFonts.outfit(color: AppColors.textMuted),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16),
               ),
             ),
             modalBottomSheetProps: const ModalBottomSheetProps(
-              backgroundColor: _kSurface,
+              backgroundColor: AppColors.surface,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
             ),
             title: Padding(
@@ -591,7 +515,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 style: GoogleFonts.outfit(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: _kText,
+                  color: AppColors.text,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -674,66 +598,68 @@ class _RegisterPageState extends State<RegisterPage> {
                 return Theme(
                   data: Theme.of(context).copyWith(
                     useMaterial3: true,
-                    colorScheme: const ColorScheme.dark(
-                      primary: _kPrimary,
+                    colorScheme: Theme.of(context).colorScheme.copyWith(
+                      primary: AppColors.primary,
                       onPrimary: Colors.white,
-                      surface: _kSurface,
-                      onSurface: _kText,
+                      surface: AppColors.surface,
+                      onSurface: AppColors.text,
                     ),
-                    dialogBackgroundColor: _kSurface,
+                    dialogBackgroundColor: AppColors.surface,
                     dialogTheme: DialogThemeData(
+                      backgroundColor: AppColors.surface,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(24),
                       ),
                     ),
                     textButtonTheme: TextButtonThemeData(
                       style: TextButton.styleFrom(
-                        foregroundColor: _kPrimary,
+                        foregroundColor: AppColors.primary,
                       ),
                     ),
                     datePickerTheme: DatePickerThemeData(
-                      backgroundColor: _kSurface,
+                      backgroundColor: AppColors.surface,
                       surfaceTintColor: Colors.transparent,
-                      headerBackgroundColor: _kSurface,
-                      headerForegroundColor: _kText,
-                      dividerColor: _kBorder,
+                      headerBackgroundColor: AppColors.surface,
+                      headerForegroundColor: AppColors.text,
+                      dividerColor: AppColors.border,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(24),
                       ),
                       dayForegroundColor:
                           MaterialStateProperty.resolveWith((states) {
                         if (states.contains(MaterialState.selected)) {
-                          return _kBg;
+                          return Colors.white;
                         }
                         if (states.contains(MaterialState.disabled)) {
-                          return _kTextMuted;
+                          return AppColors.textMuted;
                         }
-                        return _kText;
+                        return AppColors.text;
                       }),
                       dayBackgroundColor:
                           MaterialStateProperty.resolveWith((states) {
                         if (states.contains(MaterialState.selected)) {
-                          return _kPrimary;
+                          return AppColors.primary;
                         }
                         return Colors.transparent;
                       }),
                       yearForegroundColor:
                           MaterialStateProperty.resolveWith((states) {
                         if (states.contains(MaterialState.selected)) {
-                          return _kText;
+                          return AppColors.text;
                         }
-                        return _kTextSecondary;
+                        return AppColors.textMuted;
                       }),
                       yearBackgroundColor:
                           MaterialStateProperty.resolveWith((states) {
                         if (states.contains(MaterialState.selected)) {
-                          return _kPrimary.withOpacity(0.20);
+                          return AppColors.primary.withOpacity(0.20);
                         }
                         return Colors.transparent;
                       }),
                       todayForegroundColor:
-                          const MaterialStatePropertyAll(_kPrimary),
-                      todayBorder: const BorderSide(color: _kPrimary, width: 1.2),
+                          const MaterialStatePropertyAll(AppColors.primary),
+                      todayBorder: const BorderSide(
+                          color: AppColors.primary, width: 1.2),
                     ),
                   ),
                   child: child!,
@@ -753,7 +679,7 @@ class _RegisterPageState extends State<RegisterPage> {
         Text(
           "STATUS PERNIKAHAN",
           style: GoogleFonts.outfit(
-            color: _kTextSecondary,
+            color: AppColors.textMuted,
             fontSize: 12,
             fontWeight: FontWeight.bold,
           ),
@@ -761,9 +687,9 @@ class _RegisterPageState extends State<RegisterPage> {
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: _kSurface,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _kPrimary.withOpacity(0.12)),
+            border: Border.all(color: AppColors.border),
           ),
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
@@ -776,12 +702,14 @@ class _RegisterPageState extends State<RegisterPage> {
                     child: Text(
                       _maritalStatus ?? "Pilih Status Pernikahan",
                       style: GoogleFonts.outfit(
-                        color: _maritalStatus == null ? _kTextMuted : _kText,
+                        color: _maritalStatus == null
+                            ? AppColors.textMuted
+                            : AppColors.text,
                         fontSize: 14,
                       ),
                     ),
                   ),
-                  Icon(Icons.expand_more, color: _kTextSecondary),
+                  Icon(Icons.expand_more, color: AppColors.textMuted),
                 ],
               ),
             ),
@@ -856,7 +784,7 @@ class _RegisterPageState extends State<RegisterPage> {
         Text(
           "PILIH PERAN",
           style: GoogleFonts.outfit(
-            color: _kTextSecondary,
+            color: AppColors.textMuted,
             fontSize: 12,
             fontWeight: FontWeight.bold,
           ),
@@ -874,16 +802,16 @@ class _RegisterPageState extends State<RegisterPage> {
                   _selectedRole = selected ? role : null;
                 });
               },
-              backgroundColor: _kSurface,
-              selectedColor: _kPrimary,
+              backgroundColor: AppColors.surface,
+              selectedColor: AppColors.primary,
               labelStyle: GoogleFonts.outfit(
-                color: isSelected ? Colors.white : _kText,
+                color: isSelected ? Colors.white : AppColors.text,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide(
-                  color: isSelected ? _kPrimary : Colors.transparent,
+                  color: isSelected ? AppColors.primary : AppColors.border,
                 ),
               ),
             );
@@ -893,19 +821,19 @@ class _RegisterPageState extends State<RegisterPage> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: _kSurface,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _kPrimary.withOpacity(0.12)),
+            border: Border.all(color: AppColors.border),
           ),
           child: CheckboxListTile(
             value: _isCatechumen,
             onChanged: (val) {
               setState(() => _isCatechumen = val ?? false);
             },
-            activeColor: _kPrimary,
+            activeColor: AppColors.primary,
             title: Text(
               "Saya calon katekumen / sedang belajar agama Katolik",
-              style: GoogleFonts.outfit(fontSize: 14, color: _kTextSecondary),
+              style: GoogleFonts.outfit(fontSize: 14, color: AppColors.textBody),
             ),
             controlAffinity: ListTileControlAffinity.leading,
             contentPadding: EdgeInsets.zero,
@@ -918,20 +846,20 @@ class _RegisterPageState extends State<RegisterPage> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: _kPrimary.withOpacity(0.08),
+            color: AppColors.primary.withOpacity(0.08),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _kPrimary.withOpacity(0.25)),
+            border: Border.all(color: AppColors.primary.withOpacity(0.25)),
           ),
           child: Row(
             children: [
               Checkbox(
                 value: _agreedToTerms,
-                checkColor: _kBg,
+                checkColor: Colors.white,
                 side: BorderSide(
-                  color: _kTextSecondary.withOpacity(0.9),
+                  color: AppColors.textMuted.withOpacity(0.9),
                   width: 1.4,
                 ),
-                activeColor: _kPrimary,
+                activeColor: AppColors.primary,
                 onChanged: (val) {
                   setState(() {
                     _agreedToTerms = val ?? false;
@@ -941,7 +869,8 @@ class _RegisterPageState extends State<RegisterPage> {
               Expanded(
                 child: Text(
                   "Saya menyetujui S&K dan bersedia data iman saya diverifikasi.",
-                  style: GoogleFonts.outfit(fontSize: 12, color: _kPrimary),
+                  style:
+                      GoogleFonts.outfit(fontSize: 12, color: AppColors.primary),
                 ),
               )
             ],
@@ -988,13 +917,13 @@ class _RegisterPageState extends State<RegisterPage> {
                 borderRadius: BorderRadius.circular(6),
               ),
               side: BorderSide(
-                color: _kTextSecondary.withOpacity(0.9),
+                color: AppColors.textMuted.withOpacity(0.9),
                 width: 1.4,
               ),
-              checkColor: const MaterialStatePropertyAll(_kBg),
+              checkColor: const MaterialStatePropertyAll(Colors.white),
               fillColor: MaterialStateProperty.resolveWith((states) {
                 if (states.contains(MaterialState.selected)) {
-                  return _kPrimary;
+                  return AppColors.primary;
                 }
                 return Colors.transparent;
               }),
@@ -1006,7 +935,7 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: AppColors.background,
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: _AuthBackground(
@@ -1021,7 +950,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       if (_currentStep > 1)
                         IconButton(
                           icon: const Icon(Icons.arrow_back,
-                              color: _kText),
+                              color: AppColors.text),
                           onPressed: () {
                             setState(() {
                               _stepForward = false;
@@ -1032,7 +961,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       else
                         IconButton(
                           icon: const Icon(Icons.close,
-                              color: _kText),
+                              color: AppColors.text),
                           onPressed: () => Navigator.pop(context),
                         ),
                       const Spacer(),
@@ -1056,12 +985,56 @@ class _RegisterPageState extends State<RegisterPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 220),
+                                switchInCurve: Curves.easeOut,
+                                switchOutCurve: Curves.easeOut,
+                                transitionBuilder: (child, animation) {
+                                  return FadeTransition(
+                                    opacity: animation,
+                                    child: SizeTransition(
+                                      sizeFactor: animation,
+                                      axisAlignment: -1,
+                                      child: child,
+                                    ),
+                                  );
+                                },
+                                child: _errorMessage == null
+                                    ? const SizedBox.shrink()
+                                    : AppCard(
+                                        key: ValueKey(_errorMessage),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 14, vertical: 12),
+                                        color: AppColors.danger.withOpacity(0.08),
+                                        borderColor:
+                                            AppColors.danger.withOpacity(0.35),
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.error_outline,
+                                                color: AppColors.danger),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                _errorMessage!,
+                                                style: GoogleFonts.outfit(
+                                                  color: AppColors.danger,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                              ),
+                              if (_errorMessage != null)
+                                const SizedBox(height: 14),
                               Text(
                                 title,
                                 style: GoogleFonts.outfit(
                                   fontSize: 26,
                                   fontWeight: FontWeight.bold,
-                                  color: _kText,
+                                  color: AppColors.text,
                                 ),
                               ),
                               const SizedBox(height: 6),
@@ -1069,7 +1042,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 subtitle,
                                 style: GoogleFonts.outfit(
                                   fontSize: 13,
-                                  color: _kTextSecondary,
+                                  color: AppColors.textBody,
                                 ),
                               ),
                               const SizedBox(height: 24),
@@ -1102,7 +1075,8 @@ class _RegisterPageState extends State<RegisterPage> {
                               Expanded(
                                 child: SizedBox(
                                   height: 52,
-                                  child: OutlinedButton(
+                                  child: AppSecondaryButton(
+                                    label: _currentStep > 1 ? "KEMBALI" : "BATAL",
                                     onPressed: () {
                                       if (_currentStep > 1) {
                                         setState(() {
@@ -1113,18 +1087,8 @@ class _RegisterPageState extends State<RegisterPage> {
                                         Navigator.pop(context);
                                       }
                                     },
-                                    style: OutlinedButton.styleFrom(
-                                      side: const BorderSide(color: _kBorder),
-                                      shape: const StadiumBorder(),
-                                      foregroundColor: _kText,
-                                    ),
-                                    child: Text(
-                                      _currentStep > 1 ? "KEMBALI" : "BATAL",
-                                      style: GoogleFonts.outfit(
-                                        fontWeight: FontWeight.w600,
-                                        color: _kText,
-                                      ),
-                                    ),
+                                    borderColor: AppColors.border,
+                                    foregroundColor: AppColors.text,
                                   ),
                                 ),
                               ),
@@ -1132,89 +1096,32 @@ class _RegisterPageState extends State<RegisterPage> {
                               Expanded(
                                 child: SizedBox(
                                   height: 52,
-                                  child: ElevatedButton(
-                                    onPressed: _isLoading
-                                        ? null
-                                        : () async {
-                                            if (_currentStep < 4) {
-                                              if (_validateCurrentStep()) {
-                                                setState(() {
-                                                  _stepForward = true;
-                                                  _currentStep++;
-                                                });
+                                  child: AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 200),
+                                    switchInCurve: Curves.easeOut,
+                                    switchOutCurve: Curves.easeOut,
+                                    child: AppPrimaryButton(
+                                      key: ValueKey(_isLoading),
+                                      label: _isLoading
+                                          ? "Memproses..."
+                                          : _currentStep == 4
+                                              ? "DAFTAR"
+                                              : "LANJUT",
+                                      isLoading: _isLoading,
+                                      onPressed: _isLoading
+                                          ? null
+                                          : () async {
+                                              if (_currentStep < 4) {
+                                                if (_validateCurrentStep()) {
+                                                  setState(() {
+                                                    _stepForward = true;
+                                                    _currentStep++;
+                                                  });
+                                                }
+                                              } else {
+                                                await _submitRegistration();
                                               }
-                                            } else {
-                                              await _submitRegistration();
-                                            }
-                                          },
-                                    style: ButtonStyle(
-                                      backgroundColor:
-                                          MaterialStateProperty.resolveWith(
-                                        (states) => states.contains(
-                                                MaterialState.disabled)
-                                            ? _kPrimary.withOpacity(0.6)
-                                            : _kPrimary,
-                                      ),
-                                      shape: MaterialStateProperty.all(
-                                        const StadiumBorder(),
-                                      ),
-                                      elevation: MaterialStateProperty.all(0),
-                                    ),
-                                    child: AnimatedSwitcher(
-                                      duration: const Duration(milliseconds: 200),
-                                      transitionBuilder: (child, animation) {
-                                        return FadeTransition(
-                                          opacity: animation,
-                                          child: ScaleTransition(
-                                            scale: Tween<double>(
-                                              begin: 0.96,
-                                              end: 1.0,
-                                            ).animate(animation),
-                                            child: child,
-                                          ),
-                                        );
-                                      },
-                                      child: _isLoading
-                                          ? Row(
-                                              key: const ValueKey('loading'),
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                const SizedBox(
-                                                  width: 18,
-                                                  height: 18,
-                                                  child: CircularProgressIndicator(
-                                                    strokeWidth: 2,
-                                                    valueColor:
-                                                        AlwaysStoppedAnimation<
-                                                            Color>(Colors.white),
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Text(
-                                                  "Memproses...",
-                                                  style: GoogleFonts.outfit(
-                                                    color: Colors.white,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                              ],
-                                            )
-                                          : Text(
-                                              _currentStep == 4
-                                                  ? "DAFTAR"
-                                                  : "LANJUT",
-                                              key: ValueKey(
-                                                  _currentStep == 4
-                                                      ? 'submit'
-                                                      : 'next'),
-                                              style: GoogleFonts.outfit(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 15,
-                                                letterSpacing: 1.0,
-                                              ),
-                                            ),
+                                            },
                                     ),
                                   ),
                                 ),
@@ -1253,9 +1160,9 @@ class _AuthBackground extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                _kBg,
-                _kSurface,
-                _kBg,
+                AppColors.background,
+                AppColors.surfaceAlt,
+                AppColors.background,
               ],
             ),
           ),
@@ -1265,7 +1172,7 @@ class _AuthBackground extends StatelessWidget {
           right: -30,
           child: _Blob(
             size: 180,
-            color: _kPrimary.withOpacity(0.12),
+            color: AppColors.primary.withOpacity(0.10),
           ),
         ),
         Positioned(
@@ -1273,7 +1180,7 @@ class _AuthBackground extends StatelessWidget {
           left: -40,
           child: _Blob(
             size: 170,
-            color: _kPrimaryDark.withOpacity(0.10),
+            color: AppColors.primaryMuted.withOpacity(0.12),
           ),
         ),
         Positioned(
@@ -1281,7 +1188,7 @@ class _AuthBackground extends StatelessWidget {
           left: 20,
           child: _Blob(
             size: 90,
-            color: _kPrimary.withOpacity(0.08),
+            color: AppColors.primary.withOpacity(0.06),
           ),
         ),
         child,
@@ -1323,20 +1230,12 @@ class _AuthCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AppCard(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
-      decoration: BoxDecoration(
-        color: _kSurface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: _kBorder),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.35),
-            blurRadius: 28,
-            offset: const Offset(0, 14),
-          ),
-        ],
-      ),
+      borderRadius: BorderRadius.circular(AppRadius.xl),
+      color: AppColors.surface,
+      borderColor: AppColors.border,
+      shadow: AppShadows.level2,
       child: child,
     );
   }
@@ -1373,7 +1272,9 @@ class _StepDots extends StatelessWidget {
             final step = index + 1;
             final isActive = currentStep == step;
             final isDone = currentStep > step;
-            final color = isActive || isDone ? _kPrimary : _kBorder;
+            final color = isActive || isDone
+                ? AppColors.primary
+                : AppColors.border;
             final opacity = isActive ? 1.0 : (isDone ? 0.7 : 0.35);
             return AnimatedContainer(
               duration: const Duration(milliseconds: 260),
@@ -1386,7 +1287,7 @@ class _StepDots extends StatelessWidget {
                 boxShadow: isActive
                     ? [
                         BoxShadow(
-                          color: _kPrimary.withOpacity(0.35),
+                          color: AppColors.primary.withOpacity(0.25),
                           blurRadius: 10,
                           spreadRadius: 1,
                         ),
@@ -1416,7 +1317,7 @@ class _StepDots extends StatelessWidget {
             key: ValueKey(currentStep),
             style: GoogleFonts.outfit(
               fontSize: 11,
-              color: _kTextSecondary,
+              color: AppColors.textMuted,
               fontWeight: FontWeight.w600,
             ),
           ),

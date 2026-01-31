@@ -207,7 +207,7 @@ class _UploadDocumentPageState extends State<UploadDocumentPage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 elevation: 5,
-                shadowColor: accentOrange.withValues(alpha: 0.5),
+                shadowColor: accentOrange.withOpacity(0.5),
               ),
               child: _isUploading
                   ? const SizedBox(
@@ -274,14 +274,14 @@ class _UploadDocumentPageState extends State<UploadDocumentPage> {
                     children: [
                       Icon(
                         Icons.add_a_photo_rounded,
-                        color: accentOrange.withValues(alpha: 0.8),
+                        color: accentOrange.withOpacity(0.8),
                         size: 40,
                       ),
                       const SizedBox(height: 8),
                       Text(
                         "Ketuk untuk Upload",
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.5),
+                          color: Colors.white.withOpacity(0.5),
                           fontSize: 12,
                         ),
                       ),

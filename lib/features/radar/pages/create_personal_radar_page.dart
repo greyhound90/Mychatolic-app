@@ -310,7 +310,7 @@ class _CreatePersonalRadarPageState extends State<CreatePersonalRadarPage> {
                 decoration: BoxDecoration(
                   color: const Color(0xFFE3F2FD),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: _primaryColor.withValues(alpha: 0.3)),
+                  border: Border.all(color: _primaryColor.withOpacity(0.3)),
                 ),
                 child: Row(
                   children: [
@@ -354,7 +354,7 @@ class _CreatePersonalRadarPageState extends State<CreatePersonalRadarPage> {
                         ],
                       ),
                     ),
-                    Icon(Icons.church_rounded, color: _primaryColor.withValues(alpha: 0.5), size: 32)
+                    Icon(Icons.church_rounded, color: _primaryColor.withOpacity(0.5), size: 32)
                   ],
                 ),
               ),
@@ -371,7 +371,7 @@ class _CreatePersonalRadarPageState extends State<CreatePersonalRadarPage> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
+                      color: Colors.black.withOpacity(0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),

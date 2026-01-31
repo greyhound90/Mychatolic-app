@@ -5,7 +5,7 @@ import 'package:mychatolic_app/widgets/safe_network_image.dart';
 import 'package:mychatolic_app/services/master_data_service.dart';
 import 'package:mychatolic_app/services/radar_service.dart';
 import 'package:mychatolic_app/models/schedule.dart';
-import 'package:mychatolic_app/pages/search/friend_search_page.dart';
+import 'package:mychatolic_app/features/social/pages/friend_search_page.dart';
 
 class ChurchDetailPage extends StatefulWidget {
   final Map<String, dynamic> churchData;
@@ -441,7 +441,7 @@ class _ChurchDetailPageState extends State<ChurchDetailPage> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
+                color: color.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 24),
@@ -635,7 +635,7 @@ class _ChurchDetailPageState extends State<ChurchDetailPage> {
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: kTextPrimary.withValues(alpha: 0.05),
+                                color: kTextPrimary.withOpacity(0.05),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
@@ -711,7 +711,7 @@ class _ChurchDetailPageState extends State<ChurchDetailPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withOpacity(0.05),
             offset: const Offset(0, 2),
             blurRadius: 6,
           ),

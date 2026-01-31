@@ -267,7 +267,7 @@ class _MatchFinderPageState extends State<MatchFinderPage> {
     // Ideally we want it BEHIND, which Dismissible does.
     return Container(
       decoration: BoxDecoration(
-        color: Colors.transparent, // Or color.withValues(alpha: 0.2)
+        color: Colors.transparent, // Or color.withOpacity(0.2)
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: color, width: 4),
       ),
@@ -289,7 +289,7 @@ class _MatchFinderPageState extends State<MatchFinderPage> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.5),
+            color: Colors.black.withOpacity(0.5),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -321,7 +321,7 @@ class _MatchFinderPageState extends State<MatchFinderPage> {
                 end: Alignment.bottomCenter,
                 colors: [
                   Colors.transparent,
-                  Colors.black.withValues(alpha: 0.9),
+                  Colors.black.withOpacity(0.9),
                 ],
                 stops: const [0.6, 1.0],
               ),
@@ -398,10 +398,10 @@ class _MatchFinderPageState extends State<MatchFinderPage> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: cardPurple,
-          border: Border.all(color: color.withValues(alpha: 0.5), width: 2),
+          border: Border.all(color: color.withOpacity(0.5), width: 2),
           boxShadow: [
             BoxShadow(
-              color: color.withValues(alpha: 0.3),
+              color: color.withOpacity(0.3),
               blurRadius: 15,
               spreadRadius: 2,
             ),

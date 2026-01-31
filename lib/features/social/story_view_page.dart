@@ -526,7 +526,7 @@ class _StoryViewPageState extends State<StoryViewPage>
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(30),
                         ),
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -562,7 +562,7 @@ class _StoryViewPageState extends State<StoryViewPage>
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: Colors.white.withOpacity(0.2),
                         ),
                         child: const Icon(
                           Icons.send_rounded,
@@ -582,7 +582,7 @@ class _StoryViewPageState extends State<StoryViewPage>
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: _isLiked
-                              ? Colors.white.withValues(alpha: 0.2)
+                              ? Colors.white.withOpacity(0.2)
                               : Colors.transparent,
                           border: Border.all(color: Colors.white30, width: 1),
                         ),

@@ -57,10 +57,10 @@ class ArticleDetailScreen extends StatelessWidget {
                       ),
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
-                        color: kSecondary.withValues(alpha: 0.1),
+                        color: kSecondary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: kSecondary.withValues(alpha: 0.2),
+                          color: kSecondary.withOpacity(0.2),
                         ),
                       ),
                       child: Text(

@@ -262,7 +262,7 @@ class _ChurchSelectorScreenState extends State<ChurchSelectorScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 elevation: 4,
-                shadowColor: kPrimary.withValues(alpha: 0.4),
+                shadowColor: kPrimary.withOpacity(0.4),
               ),
               child: Text(
                 "LIHAT DETAIL",
@@ -306,7 +306,7 @@ class _ChurchSelectorScreenState extends State<ChurchSelectorScreen> {
             border: Border.all(color: kBorder),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: Colors.black.withOpacity(0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),

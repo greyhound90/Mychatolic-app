@@ -92,7 +92,7 @@ class SearchResultsPage extends StatelessWidget {
                 border: Border.all(color: Colors.white10),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
+                    color: Colors.black.withOpacity(0.1),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -155,7 +155,7 @@ class SearchResultsPage extends StatelessWidget {
                   else
                     Container(
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFF9F1C).withValues(alpha: 0.2),
+                        color: const Color(0xFFFF9F1C).withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: IconButton(

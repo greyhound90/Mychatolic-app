@@ -588,9 +588,9 @@ class _RadarChatPageState extends State<RadarChatPage>
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: _beebPrimary.withValues(alpha: 0.1),
+          color: _beebPrimary.withOpacity(0.1),
           border: Border.all(
-            color: _beebPrimary.withValues(alpha: 0.5),
+            color: _beebPrimary.withOpacity(0.5),
             width: 1,
           ),
           borderRadius: BorderRadius.circular(20),
@@ -613,7 +613,7 @@ class _RadarChatPageState extends State<RadarChatPage>
             Text(
               timeText,
               style: GoogleFonts.outfit(
-                color: _beebPrimary.withValues(alpha: 0.6),
+                color: _beebPrimary.withOpacity(0.6),
                 fontSize: 10,
               ),
             ),
@@ -635,10 +635,10 @@ class _RadarChatPageState extends State<RadarChatPage>
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+            border: Border.all(color: Colors.grey.withOpacity(0.2)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: Colors.black.withOpacity(0.05),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
@@ -695,14 +695,14 @@ class _RadarChatPageState extends State<RadarChatPage>
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: Colors.black.withOpacity(0.05),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
             ],
             border: isMe
                 ? null
-                : Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                : Border.all(color: Colors.grey.withOpacity(0.2)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -938,7 +938,7 @@ class _RadarChatPageState extends State<RadarChatPage>
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, -4),
           ),
@@ -1014,7 +1014,7 @@ class _RadarChatPageState extends State<RadarChatPage>
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primaryBrand.withValues(alpha: 0.3),
+                    color: AppColors.primaryBrand.withOpacity(0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),

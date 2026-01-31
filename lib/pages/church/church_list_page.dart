@@ -428,7 +428,7 @@ class _ChurchListPageState extends State<ChurchListPage> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: isActive
-              ? kPrimary.withValues(alpha: 0.1)
+              ? kPrimary.withOpacity(0.1)
               : kBackground,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(

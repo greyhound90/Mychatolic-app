@@ -15,7 +15,10 @@ import 'package:intl/intl.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 
-import 'package:mychatolic_app/core/app_colors.dart';
+import 'package:mychatolic_app/core/ui/app_state.dart';
+import 'package:mychatolic_app/core/ui/app_state_view.dart';
+import 'package:mychatolic_app/core/ui/app_snackbar.dart';
+import 'package:mychatolic_app/core/log/app_logger.dart';
 import 'package:mychatolic_app/widgets/safe_network_image.dart';
 import 'package:mychatolic_app/services/chat_service.dart';
 import 'package:mychatolic_app/features/profile/pages/profile_page.dart';
@@ -128,9 +131,11 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
            final profile = item['profiles'];
            if (profile != null) names[uid] = profile['full_name'] ?? 'Anggota';
         }
-        setState(() => _groupMemberNames = names);
+        safeSetState(() => _groupMemberNames = names);
       }
-    } catch (e) { debugPrint("Error members: $e"); }
+    } catch (e, st) {
+      AppLogger.logError("Error members", error: e, stackTrace: st);
+    }
   }
 
   void _subscribeToMessages() {
@@ -157,7 +162,7 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
                  _supabase.from('social_messages').update({'is_read': true}).match({'id': newMsg['id']}).then((_) {});
             }
              
-            // Note: No setState() needed here because StreamBuilder handles the UI update automatically.
+            // Note: No safeSetState() needed here because StreamBuilder handles the UI update automatically.
           },
         ).subscribe();
   }
@@ -175,15 +180,17 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
             final pStr = presence.toString();
             if (pStr.contains(opponentId)) { found = true; break; }
           }
-        } catch (e) { debugPrint("Presence Err: $e"); }
-        setState(() => _isOpponentOnline = found);
+        } catch (e, st) {
+          AppLogger.logError("Presence Err", error: e, stackTrace: st);
+        }
+        safeSetState(() => _isOpponentOnline = found);
       })
       .onBroadcast(event: 'typing', callback: (payload) {
         final senderId = payload['user_id'];
         if (senderId != myId) {
-          setState(() => _isOpponentTyping = true);
+          safeSetState(() => _isOpponentTyping = true);
           _typingTimer?.cancel();
-          _typingTimer = Timer(const Duration(seconds: 3), () { if (mounted) setState(() => _isOpponentTyping = false); });
+          _typingTimer = Timer(const Duration(seconds: 3), () { if (mounted) safeSetState(() => _isOpponentTyping = false); });
         }
       })
       .subscribe((status, error) async {
@@ -224,12 +231,12 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
   }
 
   void _startEdit(Map<String, dynamic> msg) {
-    setState(() { _editingMessageId = msg['id']; _textController.text = msg['content']; _replyMessage = null; });
+    safeSetState(() { _editingMessageId = msg['id']; _textController.text = msg['content']; _replyMessage = null; });
     _focusNode.requestFocus(); 
   }
 
   void _cancelEdit() {
-    setState(() { _editingMessageId = null; _textController.clear(); });
+    safeSetState(() { _editingMessageId = null; _textController.clear(); });
     _focusNode.unfocus();
   }
 
@@ -252,16 +259,19 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
          if (t=='beeb') newLastMsg='👋 BEEB!'; else if(t=='image') newLastMsg='📷 Gambar'; else if(t=='location') newLastMsg='📍 Lokasi'; else if(t=='audio') newLastMsg='🎤 Pesan Suara'; else newLastMsg=res['content']??'';
       }
       await _supabase.from('social_chats').update({'last_message': newLastMsg, 'updated_at': newUpdatedAt}).eq('id', widget.chatId);
-    } catch (e) { if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Err: $e"))); }
+    } catch (e, st) {
+      AppLogger.logError("Delete message error", error: e, stackTrace: st);
+      if (mounted) AppSnackBar.showError(context, "Gagal menghapus pesan.");
+    }
   }
 
   void _onSwipeToReply(Map<String, dynamic> msg) {
     HapticFeedback.lightImpact();
-    setState(() { _replyMessage = msg; _editingMessageId = null; });
+    safeSetState(() { _replyMessage = msg; _editingMessageId = null; });
     _focusNode.requestFocus();
   }
 
-  void _cancelReply() { setState(() => _replyMessage = null); }
+  void _cancelReply() { safeSetState(() => _replyMessage = null); }
 
   void _showAttachmentSheet() {
     showModalBottomSheet(context: context, backgroundColor: Colors.transparent, builder: (context) => Container(
@@ -291,7 +301,9 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
       await _supabase.storage.from('chat-uploads').upload(path, file);
       final url = _supabase.storage.from('chat-uploads').getPublicUrl(path);
       _sendMessage(type: 'image', content: url);
-    } catch (e) { debugPrint("Upload Err: $e"); }
+    } catch (e, st) {
+      AppLogger.logError("Upload Err", error: e, stackTrace: st);
+    }
   }
 
   Future<void> _handleLocation() async {
@@ -311,7 +323,7 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
       if (await _audioRecorder.hasPermission()) {
         HapticFeedback.mediumImpact();
         
-        setState(() {
+        safeSetState(() {
           _isRecording = true;
           _recordingDuration = 0;
           _dragOffset = 0.0;
@@ -328,12 +340,12 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
         _isRecorderInitialised = true; 
 
         _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-          if (mounted) setState(() => _recordingDuration++);
+          if (mounted) safeSetState(() => _recordingDuration++);
         });
       }
     } catch (e) {
-      debugPrint("Rec Err: $e");
-      setState(() => _isRecording = false);
+      AppLogger.logError("Rec Err", error: e);
+      safeSetState(() => _isRecording = false);
     }
   }
 
@@ -363,16 +375,16 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
            final url = _supabase.storage.from('voice-notes').getPublicUrl(fileName);
            _sendMessage(type: 'audio', content: url);
         } catch (storageErr) {
-           debugPrint("Storage Err: $storageErr");
+           AppLogger.logError("Storage Err", error: storageErr);
            String errorMsg = "Gagal upload Voice Note";
            if (storageErr.toString().contains("Bucket not found") || storageErr.toString().contains("404")) {
              errorMsg = "Error: Bucket 'voice-notes' belum dibuat di Supabase Dashboard";
            }
-           if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMsg), backgroundColor: Colors.red));
+           if (mounted) AppSnackBar.showError(context, errorMsg);
         }
       }
     } catch (e) {
-      debugPrint("Stop Rec Err: $e");
+      AppLogger.logError("Stop Rec Err", error: e);
     }
   }
 
@@ -389,7 +401,7 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
           if (await file.exists()) await file.delete();
         }
       } catch (e) {
-        debugPrint("Cancel/Stop Err: $e");
+        AppLogger.logError("Cancel/Stop Err", error: e);
       }
     }
     
@@ -399,7 +411,7 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
 
   void _cleanupRecorderState() {
      _recordingTimer?.cancel();
-     setState(() {
+     safeSetState(() {
        _isRecording = false;
        _recordingDuration = 0;
        _dragOffset = 0.0;
@@ -412,7 +424,7 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
     
     final offset = details.offsetFromOrigin.dx;
 
-    setState(() {
+    safeSetState(() {
       _dragOffset = offset;
     });
 
@@ -502,8 +514,9 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
       
       // Scroll to bottom after sending
       _scrollToBottom();
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal kirim: $e")));
+    } catch (e, st) {
+      AppLogger.logError("Send message error", error: e, stackTrace: st);
+      if (mounted) AppSnackBar.showError(context, "Gagal mengirim pesan.");
     }
   }
 
@@ -560,7 +573,7 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
 
     return AppBar(
       backgroundColor: Colors.transparent, elevation: 0, foregroundColor: Colors.black, leading: const BackButton(),
-      flexibleSpace: ClipRect(child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10), child: Container(color: Colors.white.withValues(alpha: 0.7)))),
+      flexibleSpace: ClipRect(child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10), child: Container(color: Colors.white.withOpacity(0.7)))),
       title: GestureDetector(
         onTap: () {
           if (widget.isGroup) {
@@ -608,10 +621,37 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
           .eq('chat_id', widget.chatId)
           .order('created_at', ascending: true), 
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+          return const AppStateView(state: AppViewState.loading);
+        }
+
+        if (snapshot.hasError) {
+          return AppStateView(
+            state: AppViewState.error,
+            error: const AppError(
+              title: "Gagal memuat pesan",
+              message: "Koneksi bermasalah. Coba lagi.",
+            ),
+            onRetry: () => safeSetState(() {}),
+          );
+        }
+
+        if (!snapshot.hasData) {
+          return const AppStateView(
+            state: AppViewState.empty,
+            emptyTitle: "Belum ada pesan",
+            emptyMessage: "Mulai percakapan sekarang.",
+          );
+        }
         final msgs = snapshot.data!;
         
-        if (msgs.isEmpty) return Center(child: Text("Mulai percakapan...", style: GoogleFonts.outfit(color: Colors.grey)));
+        if (msgs.isEmpty) {
+          return const AppStateView(
+            state: AppViewState.empty,
+            emptyTitle: "Belum ada pesan",
+            emptyMessage: "Mulai percakapan sekarang.",
+          );
+        }
         
         // Auto scroll on initial load or new message
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -991,13 +1031,13 @@ class _AudioPlayerBubbleState extends State<_AudioPlayerBubble> {
   void initState() {
     super.initState();
     _player.onPlayerStateChanged.listen((s) {
-       if (mounted) setState(() => _isPlaying = s == PlayerState.playing);
+       if (mounted) safeSetState(() => _isPlaying = s == PlayerState.playing);
     });
     _player.onDurationChanged.listen((d) {
-       if (mounted) setState(() => _duration = d);
+       if (mounted) safeSetState(() => _duration = d);
     });
     _player.onPositionChanged.listen((p) {
-       if (mounted) setState(() => _position = p);
+       if (mounted) safeSetState(() => _position = p);
     });
   }
 

@@ -58,12 +58,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.4),
+            color: color.withOpacity(0.4),
             blurRadius: 60,
             spreadRadius: 10,
           ),
           BoxShadow(
-            color: color.withValues(alpha: 0.2),
+            color: color.withOpacity(0.2),
             blurRadius: 100,
             spreadRadius: 20,
           ),

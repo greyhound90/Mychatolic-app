@@ -7,16 +7,11 @@ import 'package:mychatolic_app/pages/main_page.dart';
 import 'package:mychatolic_app/features/auth/pages/register_page.dart';
 import 'package:mychatolic_app/features/profile/pages/edit_profile_page.dart';
 import 'package:mychatolic_app/features/auth/pages/forgot_password_page.dart';
-
-const Color _kBg = Color(0xFF121212);
-const Color _kSurface = Color(0xFF1C1C1C);
-const Color _kBorder = Color(0xFF2A2A2A);
-const Color _kText = Color(0xFFFFFFFF);
-const Color _kTextSecondary = Color(0xFFBBBBBB);
-const Color _kTextMuted = Color(0xFF9E9E9E);
-const Color _kPrimary = Color(0xFF0088CC);
-const Color _kPrimaryDark = Color(0xFF007AB8);
-const Color _kError = Color(0xFFE74C3C);
+import 'package:mychatolic_app/core/widgets/app_text_field.dart';
+import 'package:mychatolic_app/core/widgets/app_button.dart';
+import 'package:mychatolic_app/core/design_tokens.dart';
+import 'package:mychatolic_app/core/widgets/app_card.dart';
+import 'package:mychatolic_app/core/ui/app_snackbar.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -36,6 +31,7 @@ class _LoginPageState extends State<LoginPage> {
 
   bool _isLoading = false;
   bool _obscurePassword = true;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -63,6 +59,9 @@ class _LoginPageState extends State<LoginPage> {
   // 3. LOGIC (EMPTY FOR NOW)
   // ---------------------------------------------------------------------------
   Future<void> _handleLogin() async {
+    if (mounted) {
+      setState(() => _errorMessage = null);
+    }
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
@@ -168,35 +167,32 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, style: GoogleFonts.outfit(color: Colors.white)),
-        backgroundColor: _kError,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    if (mounted) {
+      setState(() => _errorMessage = message);
+    }
+    AppSnackBar.showError(context, message);
   }
 
   void _showBannedDialog() {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: _kSurface,
+        backgroundColor: AppColors.surface,
         title: Text(
           "Akses Ditolak",
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.bold,
-            color: _kText,
+            color: AppColors.text,
           ),
         ),
         content: Text(
           "Akun Anda telah dinonaktifkan/ditangguhkan. Harap hubungi admin paroki untuk info lebih lanjut.",
-          style: GoogleFonts.outfit(color: _kTextSecondary),
+          style: GoogleFonts.outfit(color: AppColors.textBody),
         ),
           actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text("Tutup", style: GoogleFonts.outfit(color: _kPrimary)),
+            child: Text("Tutup", style: GoogleFonts.outfit(color: AppColors.primary)),
           )
         ],
       ),
@@ -210,9 +206,8 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     final emailText = _emailController.text.trim();
     final showEmailHelper = emailText.isNotEmpty && !emailText.contains('@');
-
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: AppColors.background,
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: _AuthBackground(
@@ -243,14 +238,14 @@ class _LoginPageState extends State<LoginPage> {
                                     width: 86,
                                     height: 86,
                                     decoration: BoxDecoration(
-                                      color: _kSurface,
+                                      color: AppColors.surface,
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                        color: _kBorder,
+                                        color: AppColors.border,
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: _kPrimary.withOpacity(0.25),
+                                          color: AppColors.primary.withOpacity(0.18),
                                           blurRadius: 26,
                                           offset: const Offset(0, 12),
                                         ),
@@ -259,7 +254,7 @@ class _LoginPageState extends State<LoginPage> {
                                     child: const Icon(
                                       Icons.church_rounded,
                                       size: 42,
-                                      color: _kPrimary,
+                                      color: AppColors.primary,
                                     ),
                                   ),
                                   Positioned(
@@ -268,11 +263,11 @@ class _LoginPageState extends State<LoginPage> {
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 10, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: _kPrimary,
+                                        color: AppColors.primary,
                                         borderRadius: BorderRadius.circular(12),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: _kPrimary.withOpacity(0.25),
+                                            color: AppColors.primary.withOpacity(0.2),
                                             blurRadius: 14,
                                             offset: const Offset(0, 8),
                                           ),
@@ -297,7 +292,7 @@ class _LoginPageState extends State<LoginPage> {
                               style: GoogleFonts.outfit(
                                 fontSize: 26,
                                 fontWeight: FontWeight.bold,
-                                color: _kText,
+                                color: AppColors.text,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -306,7 +301,7 @@ class _LoginPageState extends State<LoginPage> {
                               textAlign: TextAlign.center,
                               style: GoogleFonts.outfit(
                                 fontSize: 13,
-                                color: _kTextSecondary,
+                                color: AppColors.textBody,
                               ),
                             ),
                           ],
@@ -318,6 +313,50 @@ class _LoginPageState extends State<LoginPage> {
                         child: _AuthCard(
                           child: Column(
                             children: [
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 220),
+                                switchInCurve: Curves.easeOut,
+                                switchOutCurve: Curves.easeOut,
+                                transitionBuilder: (child, animation) {
+                                  return FadeTransition(
+                                    opacity: animation,
+                                    child: SizeTransition(
+                                      sizeFactor: animation,
+                                      axisAlignment: -1,
+                                      child: child,
+                                    ),
+                                  );
+                                },
+                                child: _errorMessage == null
+                                    ? const SizedBox.shrink()
+                                    : AppCard(
+                                        key: ValueKey(_errorMessage),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 14, vertical: 12),
+                                        color: AppColors.danger.withOpacity(0.08),
+                                        borderColor:
+                                            AppColors.danger.withOpacity(0.35),
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.error_outline,
+                                                color: AppColors.danger),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                _errorMessage!,
+                                                style: GoogleFonts.outfit(
+                                                  color: AppColors.danger,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                              ),
+                              if (_errorMessage != null)
+                                const SizedBox(height: 14),
                               _buildTextField(
                                 label: "Email",
                                 hint: "Masukkan email",
@@ -356,7 +395,7 @@ class _LoginPageState extends State<LoginPage> {
                                   child: Text(
                                     "Lupa Password?",
                                     style: GoogleFonts.outfit(
-                                      color: _kPrimary,
+                                      color: AppColors.primary,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -365,75 +404,21 @@ class _LoginPageState extends State<LoginPage> {
                               const SizedBox(height: 8),
                               SizedBox(
                                 width: double.infinity,
-                                height: 54,
-                                child: ElevatedButton(
-                                  onPressed: _isLoading ? null : _handleLogin,
-                                  style: ButtonStyle(
-                                    backgroundColor: MaterialStateProperty.resolveWith(
-                                      (states) => states.contains(MaterialState.disabled)
-                                          ? _kPrimary.withOpacity(0.6)
-                                          : _kPrimary,
-                                    ),
-                                    shape: MaterialStateProperty.all(
-                                      const StadiumBorder(),
-                                    ),
-                                    elevation: MaterialStateProperty.all(0),
-                                  ),
-                                  child: AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 200),
-                                    transitionBuilder: (child, animation) {
-                                      return FadeTransition(
-                                        opacity: animation,
-                                        child: ScaleTransition(
-                                          scale: Tween<double>(
-                                            begin: 0.96,
-                                            end: 1.0,
-                                          ).animate(animation),
-                                          child: child,
-                                        ),
-                                      );
-                                    },
-                                    child: _isLoading
-                                        ? Row(
-                                            key: const ValueKey('loading'),
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              const SizedBox(
-                                                width: 18,
-                                                height: 18,
-                                                child: CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  valueColor:
-                                                      AlwaysStoppedAnimation<Color>(
-                                                          Colors.white),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 10),
-                                              Text(
-                                                "Memproses...",
-                                                style: GoogleFonts.outfit(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                            ],
-                                          )
-                                        : Text(
-                                            "MASUK",
-                                            key: const ValueKey('label'),
-                                            style: GoogleFonts.outfit(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
-                                              letterSpacing: 1.1,
-                                            ),
-                                          ),
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  switchInCurve: Curves.easeOut,
+                                  switchOutCurve: Curves.easeOut,
+                                  child: AppPrimaryButton(
+                                    key: ValueKey(_isLoading),
+                                    label: _isLoading ? "Memproses..." : "Masuk",
+                                    isLoading: _isLoading,
+                                    onPressed:
+                                        _isLoading ? null : _handleLogin,
                                   ),
                                 ),
                               ),
                               const SizedBox(height: 22),
-                              const Divider(color: _kBorder, thickness: 0.6),
+                              Divider(color: AppColors.border, thickness: 0.6),
                               const SizedBox(height: 16),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -441,11 +426,11 @@ class _LoginPageState extends State<LoginPage> {
                                   Text(
                                     "Belum punya akun? ",
                                     style: GoogleFonts.outfit(
-                                      color: _kTextSecondary,
+                                      color: AppColors.textBody,
                                     ),
                                   ),
-                                  GestureDetector(
-                                    onTap: () {
+                                  TextButton(
+                                    onPressed: () {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
@@ -455,7 +440,7 @@ class _LoginPageState extends State<LoginPage> {
                                     child: Text(
                                       "DAFTAR",
                                       style: GoogleFonts.outfit(
-                                        color: _kPrimary,
+                                        color: AppColors.primary,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -497,84 +482,26 @@ class _LoginPageState extends State<LoginPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label.toUpperCase(),
-          style: GoogleFonts.outfit(
-            color: _kTextSecondary,
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 240),
-          curve: Curves.easeOutCubic,
-          decoration: BoxDecoration(
-            color: _kSurface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isFocused ? _kPrimary : _kBorder,
-              width: 1.2,
-            ),
-            boxShadow: [
-              if (isFocused)
-                BoxShadow(
-                  color: _kPrimary.withOpacity(0.25),
-                  blurRadius: 22,
-                  offset: const Offset(0, 10),
-                )
-              else
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 8),
-                ),
-            ],
-          ),
-          child: TextField(
-            controller: controller,
-            obscureText: isObscure,
-            keyboardType: keyboardType,
-            focusNode: focusNode,
-            onChanged: onChanged,
-            style: GoogleFonts.outfit(
-              color: _kText,
-              fontWeight: FontWeight.w600,
-            ),
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: Colors.transparent,
-              hintText: hint,
-              hintStyle: GoogleFonts.outfit(color: _kTextMuted),
-              prefixIcon: Icon(
-                icon,
-                color: isFocused ? _kPrimary : _kTextSecondary,
-              ),
-              suffixIcon: toggleObscure != null
-                  ? IconButton(
-                      icon: Icon(
-                        isObscure ? Icons.visibility_off : Icons.visibility,
-                        color: _kTextSecondary,
-                      ),
-                      onPressed: toggleObscure,
-                    )
-                  : null,
-              contentPadding:
-                  const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
+        AppTextField(
+          label: label,
+          hint: hint,
+          controller: controller,
+          icon: icon,
+          isObscure: isObscure,
+          onToggleObscure: toggleObscure,
+          keyboardType: keyboardType,
+          focusNode: focusNode,
+          onChanged: onChanged,
+          isFocused: isFocused,
+          fillColor: AppColors.surface,
+          borderColor: AppColors.border,
+          focusBorderColor: AppColors.primary,
+          textColor: AppColors.text,
+          hintColor: AppColors.textMuted,
+          labelColor: AppColors.textMuted,
+          iconColor: AppColors.textMuted,
+          shadow: AppShadows.level1,
+          focusShadow: AppShadows.level2,
         ),
         if (helperText != null) ...[
           const SizedBox(height: 6),
@@ -582,7 +509,7 @@ class _LoginPageState extends State<LoginPage> {
             helperText,
             style: GoogleFonts.outfit(
               fontSize: 11,
-              color: _kError,
+              color: AppColors.danger,
             ),
           ),
         ],
@@ -606,9 +533,9 @@ class _AuthBackground extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                _kBg,
-                _kSurface,
-                _kBg,
+                AppColors.background,
+                AppColors.surfaceAlt,
+                AppColors.background,
               ],
             ),
           ),
@@ -618,7 +545,7 @@ class _AuthBackground extends StatelessWidget {
           right: -40,
           child: _Blob(
             size: 180,
-            color: _kPrimary.withOpacity(0.12),
+            color: AppColors.primary.withOpacity(0.10),
           ),
         ),
         Positioned(
@@ -626,7 +553,7 @@ class _AuthBackground extends StatelessWidget {
           left: -40,
           child: _Blob(
             size: 160,
-            color: _kPrimaryDark.withOpacity(0.10),
+            color: AppColors.primaryMuted.withOpacity(0.12),
           ),
         ),
         Positioned(
@@ -634,7 +561,7 @@ class _AuthBackground extends StatelessWidget {
           left: 20,
           child: _Blob(
             size: 90,
-            color: _kPrimary.withOpacity(0.08),
+            color: AppColors.primary.withOpacity(0.06),
           ),
         ),
         child,
@@ -676,20 +603,12 @@ class _AuthCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AppCard(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
-      decoration: BoxDecoration(
-        color: _kSurface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: _kBorder),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.35),
-            blurRadius: 28,
-            offset: const Offset(0, 14),
-          ),
-        ],
-      ),
+      borderRadius: BorderRadius.circular(AppRadius.xl),
+      color: AppColors.surface,
+      borderColor: AppColors.border,
+      shadow: AppShadows.level2,
       child: child,
     );
   }

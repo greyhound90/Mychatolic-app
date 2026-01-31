@@ -6,6 +6,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mychatolic_app/features/auth/pages/login_page.dart';
 import 'package:mychatolic_app/pages/main_page.dart';
 import 'package:mychatolic_app/shared/widgets/app_state_scaffold.dart';
+import 'package:mychatolic_app/core/log/app_logger.dart';
+import 'package:mychatolic_app/core/ui/app_state.dart';
+import 'package:mychatolic_app/core/ui/app_state_view.dart';
+import 'package:mychatolic_app/core/ui/app_snackbar.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -19,6 +23,7 @@ class _SplashPageState extends State<SplashPage>
   late AnimationController _controller;
   late Animation<double> _arrowAnimation;
   bool _isNavigating = false;
+  AppError? _error;
 
   @override
   void initState() {
@@ -42,7 +47,10 @@ class _SplashPageState extends State<SplashPage>
 
   Future<void> _navigateToNextPage() async {
     if (_isNavigating) return;
-    if (mounted) setState(() => _isNavigating = true);
+    safeSetState(() {
+      _isNavigating = true;
+      _error = null;
+    });
     final supabase = Supabase.instance.client;
     final session = supabase.auth.currentSession;
 
@@ -73,11 +81,9 @@ class _SplashPageState extends State<SplashPage>
         await supabase.auth.signOut();
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Profil tidak ditemukan. Silakan login ulang."),
-              backgroundColor: Colors.red,
-            ),
+          AppSnackBar.showError(
+            context,
+            "Profil tidak ditemukan. Silakan login ulang.",
           );
           Navigator.pushReplacement(
             context,
@@ -132,19 +138,21 @@ class _SplashPageState extends State<SplashPage>
           MaterialPageRoute(builder: (context) => const HomePage()),
         );
       }
-    } catch (e) {
+    } catch (e, st) {
       // Fallback on error (e.g. network issue during profile fetch)
       // For safety, let's keep them on splash or go to login.
       // Going to login is safer to force retry.
-      debugPrint("Splash Gatekeeper Error: $e");
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginPage()),
+      AppLogger.logError("Splash Gatekeeper Error", error: e, stackTrace: st);
+      safeSetState(() {
+        _error = AppError(
+          title: "Gagal memuat sesi",
+          message: "Koneksi bermasalah. Coba lagi.",
+          raw: e,
+          st: st,
         );
-      }
+      });
     } finally {
-      if (mounted) setState(() => _isNavigating = false);
+      safeSetState(() => _isNavigating = false);
     }
   }
 
@@ -155,22 +163,26 @@ class _SplashPageState extends State<SplashPage>
 
     return AppStateScaffold(
       loading: _isNavigating,
-      error: null,
+      error: _error?.message,
+      onRetry: _navigateToNextPage,
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
-        // Wrap the entire Body in GestureDetector with Translucent behavior
-        body: GestureDetector(
-          behavior:
-              HitTestBehavior.translucent, // Critical for full screen interaction
-          onVerticalDragEnd: (details) {
-            // Detect upward swipe (negative velocity)
-            if (details.primaryVelocity != null &&
-                details.primaryVelocity! < -200) {
-              _navigateToNextPage();
-            }
-          },
-          child: Stack(
-            children: [
+        body: _error != null
+            ? AppStateView(
+                state: AppViewState.error,
+                error: _error,
+                onRetry: _navigateToNextPage,
+              )
+            : GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onVerticalDragEnd: (details) {
+                  if (details.primaryVelocity != null &&
+                      details.primaryVelocity! < -200) {
+                    _navigateToNextPage();
+                  }
+                },
+                child: Stack(
+                  children: [
               // Layer 1: Premium Gradient Background
               Container(
                 decoration: BoxDecoration(
@@ -252,7 +264,7 @@ class _SplashPageState extends State<SplashPage>
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: theme.primaryColor.withValues(alpha: 0.3),
+                          color: theme.primaryColor.withOpacity(0.3),
                           blurRadius: 40,
                           spreadRadius: 2,
                         ),
@@ -341,9 +353,9 @@ class _SplashPageState extends State<SplashPage>
                 ),
               ),
             ),
-            ],
-          ),
-        ),
+                  ],
+                ),
+              ),
       ),
     );
   }
@@ -365,7 +377,7 @@ class _SplashPageState extends State<SplashPage>
         child: Icon(
           icon,
           size: size,
-          color: color.withValues(alpha: 0.1), // Subtle styling
+          color: color.withOpacity(0.1), // Subtle styling
         ),
       ),
     );

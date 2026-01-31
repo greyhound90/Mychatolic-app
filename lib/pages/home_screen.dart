@@ -347,7 +347,7 @@ class HomeScreenState extends State<HomeScreen> {
           Container(
             margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: IconButton(

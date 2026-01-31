@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mychatolic_app/core/design_tokens.dart';
 
 // --- 1. DEFINISI PALET WARNA (Lengkap) ---
-const Color kPrimary = Color(0xFF0088CC); // Biru Branding
-const Color kSecondary = Color(0xFF4DA3D9);
-const Color kBackground = Color(0xFFF5F5F5); // Abu-abu sangat muda
-const Color kSurface = Color(0xFFFFFFFF); // Putih
-const Color kBorder = Color(0xFFE6E6E6); // Abu-abu batas
-const Color kTextTitle = Color(0xFF121212);
-const Color kTextBody = Color(0xFF555555);
-const Color kTextMeta = Color(0xFF9E9E9E);
-const Color kError = Color(0xFFE74C3C);
-const Color kSuccess = Color(0xFF2ECC71);
+const Color kPrimary = AppColors.primary; // Biru Branding
+const Color kSecondary = AppColors.primaryMuted;
+const Color kBackground = AppColors.background; // Abu-abu sangat muda
+const Color kSurface = AppColors.surface; // Putih
+const Color kBorder = AppColors.border; // Abu-abu batas
+const Color kTextTitle = AppColors.text;
+const Color kTextBody = AppColors.textBody;
+const Color kTextMeta = AppColors.textMuted;
+const Color kError = AppColors.danger;
+const Color kSuccess = AppColors.success;
 
 // --- Dark Premium Palette ---
 const Color kDarkPrimary = Color(0xFF0088CC);
@@ -47,17 +48,17 @@ class MyCatholicTheme {
       ),
 
       // Typography
-      textTheme: GoogleFonts.outfitTextTheme().apply(
+      textTheme: AppTextStyles.baseTextTheme.apply(
         bodyColor: kTextBody,
         displayColor: kTextTitle,
       ),
 
       cardTheme: CardThemeData(
         color: kSurface,
-        elevation: 1,
+        elevation: 0,
         shadowColor: Colors.black.withOpacity(0.06),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppRadius.xl),
           side: const BorderSide(color: kBorder),
         ),
       ),
@@ -96,32 +97,46 @@ class MyCatholicTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: kPrimary,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
           textStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: kPrimary,
+          side: const BorderSide(color: kBorder),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+          textStyle: GoogleFonts.outfit(fontWeight: FontWeight.w600),
         ),
       ),
 
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: kSurface,
+        fillColor: AppColors.surfaceAlt,
         hintStyle: const TextStyle(color: kTextMeta),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: const BorderSide(color: kBorder),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: const BorderSide(color: kBorder),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: const BorderSide(color: kPrimary, width: 1.4),
         ),
       ),
 
       dialogTheme: DialogThemeData(
         backgroundColor: kSurface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+        ),
         titleTextStyle: GoogleFonts.outfit(
           color: kTextTitle,
           fontWeight: FontWeight.bold,
@@ -133,11 +148,13 @@ class MyCatholicTheme {
         ),
       ),
 
-      bottomSheetTheme: const BottomSheetThemeData(
+      bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: kSurface,
         modalBackgroundColor: kSurface,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppRadius.xl),
+          ),
         ),
       ),
 
@@ -259,21 +276,23 @@ class MyCatholicTheme {
         fillColor: kDarkSurface,
         hintStyle: const TextStyle(color: kDarkTextMuted),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: const BorderSide(color: kDarkBorder),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: const BorderSide(color: kDarkBorder),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: const BorderSide(color: kDarkPrimary, width: 1.4),
         ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: kDarkSurface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+        ),
         titleTextStyle: GoogleFonts.outfit(
           color: Colors.white,
           fontWeight: FontWeight.bold,

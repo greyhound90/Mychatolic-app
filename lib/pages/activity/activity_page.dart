@@ -63,7 +63,7 @@ class _ActivityPageState extends State<ActivityPage> {
                   Icon(
                     Icons.notifications_none,
                     size: 80,
-                    color: Colors.white.withValues(alpha: 0.1),
+                    color: Colors.white.withOpacity(0.1),
                   ),
                   const SizedBox(height: 16),
                   const Text(

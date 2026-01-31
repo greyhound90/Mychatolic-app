@@ -9,6 +9,8 @@ import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mychatolic_app/widgets/safe_network_image.dart';
 import 'package:mychatolic_app/services/profile_service.dart';
+import 'package:mychatolic_app/core/widgets/app_text_field.dart';
+import 'package:mychatolic_app/core/widgets/app_button.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -516,34 +518,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   // SAVE BUTTON
                   SizedBox(
                     width: double.infinity,
-                    height: 54,
-                    child: ElevatedButton(
+                    child: AppPrimaryButton(
+                      label: "SIMPAN PERUBAHAN",
                       onPressed: _isLoading ? null : _saveProfile,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _primary,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: _isLoading
-                          ? SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: _onPrimary,
-                                strokeWidth: 3,
-                              ),
-                            )
-                          : Text(
-                              "SIMPAN PERUBAHAN",
-                              style: GoogleFonts.outfit(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                letterSpacing: 1,
-                                color: _onPrimary,
-                              ),
-                            ),
+                      isLoading: _isLoading,
+                      backgroundColor: _primary,
+                      foregroundColor: _onPrimary,
                     ),
                   ),
                   const SizedBox(height: 40),
@@ -617,39 +597,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
     int maxLines = 1,
     bool capitalize = false,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildLabel(label),
-        TextField(
-          controller: controller,
-          maxLines: maxLines,
-          textCapitalization: capitalize
-              ? TextCapitalization.words
-              : TextCapitalization.none,
-          style: GoogleFonts.outfit(color: _textPrimary),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: _surface,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: _border.withOpacity(0.6)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: _border.withOpacity(0.6)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: _primary, width: 1.5),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
-          ),
-        ),
-      ],
+    return AppTextField(
+      label: label,
+      hint: label,
+      controller: controller,
+      maxLines: maxLines,
+      textCapitalization: capitalize
+          ? TextCapitalization.words
+          : TextCapitalization.none,
+      fillColor: _surface,
+      borderColor: _border.withOpacity(0.6),
+      focusBorderColor: _primary,
+      textColor: _textPrimary,
+      hintColor: _textMuted,
+      labelColor: _textSecondary,
     );
   }
 
@@ -658,45 +619,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
     TextEditingController controller,
     VoidCallback onTap,
   ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildLabel(label),
-        GestureDetector(
-          onTap: onTap,
-          child: AbsorbPointer(
-            child: TextField(
-              controller: controller,
-              readOnly: true,
-              style: GoogleFonts.outfit(color: _textPrimary),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: _surface,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: _border.withOpacity(0.6)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: _border.withOpacity(0.6)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: _primary, width: 1.5),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-                suffixIcon: Icon(
-                  Icons.arrow_drop_down,
-                  color: _textSecondary,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
+    return AppTextField(
+      label: label,
+      hint: label,
+      controller: controller,
+      readOnly: true,
+      onTap: onTap,
+      fillColor: _surface,
+      borderColor: _border.withOpacity(0.6),
+      focusBorderColor: _primary,
+      textColor: _textPrimary,
+      hintColor: _textMuted,
+      labelColor: _textSecondary,
+      suffixIcon: Icon(
+        Icons.arrow_drop_down,
+        color: _textSecondary,
+      ),
     );
   }
 
@@ -709,6 +647,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         decoration: BoxDecoration(
           color: _surface,
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _border.withOpacity(0.6)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -750,6 +689,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       decoration: BoxDecoration(
         color: _surface,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _border.withOpacity(0.6)),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
@@ -777,6 +717,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       decoration: BoxDecoration(
         color: _surface,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _border.withOpacity(0.6)),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
@@ -922,29 +863,19 @@ class _SearchableListModalState extends State<_SearchableListModal> {
             ],
           ),
           const SizedBox(height: 16),
-          TextField(
+          AppTextField(
+            label: "Cari",
+            hint: "Cari...",
             controller: _searchController,
+            icon: Icons.search,
             onChanged: _performSearch,
-            style: GoogleFonts.outfit(color: onSurface),
-            decoration: InputDecoration(
-              prefixIcon: Icon(Icons.search, color: muted),
-              hintText: "Cari...",
-              hintStyle: GoogleFonts.outfit(color: muted),
-              filled: true,
-              fillColor: surface,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: border.withOpacity(0.6)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: border.withOpacity(0.6)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: colors.primary),
-              ),
-            ),
+            fillColor: surface,
+            borderColor: border.withOpacity(0.6),
+            focusBorderColor: colors.primary,
+            textColor: onSurface,
+            hintColor: muted,
+            labelColor: muted,
+            iconColor: muted,
           ),
           const SizedBox(height: 16),
           Expanded(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:mychatolic_app/core/log/app_logger.dart';
 
 class LiturgyModel {
   final DateTime date;
@@ -25,41 +26,45 @@ class LiturgyModel {
 }
 
 class LiturgicalPalette {
+  final Color base;
   final Color accent;
   final Color tint;
   final Color border;
   final Color onAccent;
   final Color chipBg;
   final Color chipText;
-  final Color? secondaryAccent;
+  final Color dot;
 
   const LiturgicalPalette({
+    required this.base,
     required this.accent,
     required this.tint,
     required this.border,
     required this.onAccent,
     required this.chipBg,
     required this.chipText,
-    this.secondaryAccent,
+    required this.dot,
   });
 
   LiturgicalPalette copyWith({
+    Color? base,
     Color? accent,
     Color? tint,
     Color? border,
     Color? onAccent,
     Color? chipBg,
     Color? chipText,
-    Color? secondaryAccent,
+    Color? dot,
   }) {
     return LiturgicalPalette(
+      base: base ?? this.base,
       accent: accent ?? this.accent,
       tint: tint ?? this.tint,
       border: border ?? this.border,
       onAccent: onAccent ?? this.onAccent,
       chipBg: chipBg ?? this.chipBg,
       chipText: chipText ?? this.chipText,
-      secondaryAccent: secondaryAccent ?? this.secondaryAccent,
+      dot: dot ?? this.dot,
     );
   }
 }
@@ -83,8 +88,8 @@ class LiturgyService {
       }
 
       return LiturgyModel.fromJson(response);
-    } catch (e) {
-      debugPrint('Error fetching liturgy: $e');
+    } catch (e, st) {
+      AppLogger.logError("Error fetching liturgy", error: e, stackTrace: st);
       return null;
     }
   }
@@ -138,48 +143,54 @@ class LiturgyService {
     required Brightness brightness,
   }) {
     final name = (liturgyColorName ?? '').trim().toLowerCase();
+    final base = _baseFor(name);
     final accent = _accentFor(name);
-    Color onAccent = _onAccentFor(accent);
-
     Color tint;
     Color border;
-    Color? secondaryAccent;
+    Color onAccent = _onAccentFor(accent);
     Color chipBg;
     Color chipText;
+    Color dot;
+
     if (name == 'white' || name == 'gold' || name == 'putih') {
-      tint = const Color(0xFFF7F7F7);
+      tint = const Color(0xFFFFFBF2);
       border = const Color(0xFFE6E6E6);
-      onAccent = const Color(0xFF1A1A1A);
-      secondaryAccent = const Color(0xFF0088CC);
+      onAccent = const Color(0xFF121212);
       chipBg = const Color(0xFFFFFFFF);
       chipText = const Color(0xFF121212);
+      dot = const Color(0xFFFFFFFF);
     } else if (name == 'black') {
       tint = const Color(0xFFF2F2F2);
-      border = const Color(0xFFBDBDBD);
-      chipBg = _chipBgFor(name, accent, tint);
-      chipText = _chipTextFor(name, accent);
+      border = const Color(0xFFE0E0E0);
+      onAccent = Colors.white;
+      chipBg = tint;
+      chipText = const Color(0xFF111111);
+      dot = const Color(0xFF2C2C2C);
     } else {
       tint = _softTintFromAccent(accent, brightness);
       border = accent.withOpacity(0.55);
-      chipBg = _chipBgFor(name, accent, tint);
-      chipText = _chipTextFor(name, accent);
+      chipBg = accent.withOpacity(0.12);
+      chipText = _chipTextFor(accent);
+      dot = accent;
     }
 
     return LiturgicalPalette(
+      base: base,
       accent: accent,
       tint: tint,
       border: border,
       onAccent: onAccent,
       chipBg: chipBg,
       chipText: chipText,
-      secondaryAccent: secondaryAccent,
+      dot: dot,
     );
   }
 
-  static Color _accentFor(String name) {
+  static Color _baseFor(String name) {
     switch (name) {
       case 'white':
       case 'gold':
+      case 'putih':
         return const Color(0xFFFFFFFF);
       case 'red':
         return const Color(0xFFC62828);
@@ -192,6 +203,28 @@ class LiturgyService {
         return const Color(0xFFD81B60);
       case 'black':
         return const Color(0xFF111111);
+      default:
+        return Colors.blue;
+    }
+  }
+
+  static Color _accentFor(String name) {
+    switch (name) {
+      case 'white':
+      case 'gold':
+      case 'putih':
+        return const Color(0xFFD4AF37);
+      case 'red':
+        return const Color(0xFFC62828);
+      case 'green':
+        return const Color(0xFF1B5E20);
+      case 'purple':
+        return const Color(0xFF5B2C83);
+      case 'rose':
+      case 'pink':
+        return const Color(0xFFD81B60);
+      case 'black':
+        return const Color(0xFF2C2C2C);
       default:
         return Colors.blue;
     }
@@ -213,21 +246,9 @@ class LiturgyService {
     return hsl.withLightness(lightness).withSaturation(saturation).toColor();
   }
 
-  static Color _chipBgFor(String name, Color accent, Color tint) {
-    if (name == 'black') return const Color(0xFFF0F0F0);
-    if (name == 'white' || name == 'gold') return const Color(0xFFFFF1D6);
+  static Color _chipTextFor(Color accent) {
     final lum = accent.computeLuminance();
-    if (lum > 0.75) return accent.withOpacity(0.2);
-    return accent.withOpacity(0.14);
-  }
-
-  static Color _chipTextFor(String name, Color accent) {
-    if (name == 'white' || name == 'gold' || name == 'putih') {
-      return const Color(0xFF3B2F13);
-    }
-    if (name == 'black') return const Color(0xFF111111);
-    final lum = accent.computeLuminance();
-    if (lum > 0.7) return const Color(0xFF1A1A1A);
+    if (lum > 0.7) return const Color(0xFF121212);
     return accent;
   }
 }

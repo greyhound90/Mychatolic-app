@@ -7,64 +7,72 @@ import 'package:mychatolic_app/core/widgets/app_card.dart';
 import 'package:mychatolic_app/core/widgets/app_text_field.dart';
 import 'package:mychatolic_app/core/ui/app_snackbar.dart';
 
-class ChangePasswordPage extends StatefulWidget {
-  const ChangePasswordPage({super.key});
+class ChangeEmailPage extends StatefulWidget {
+  final String currentEmail;
+
+  const ChangeEmailPage({super.key, required this.currentEmail});
 
   @override
-  State<ChangePasswordPage> createState() => _ChangePasswordPageState();
+  State<ChangeEmailPage> createState() => _ChangeEmailPageState();
 }
 
-class _ChangePasswordPageState extends State<ChangePasswordPage> {
+class _ChangeEmailPageState extends State<ChangeEmailPage> {
   final SupabaseClient _supabase = Supabase.instance.client;
-  final TextEditingController _currentController = TextEditingController();
-  final TextEditingController _newController = TextEditingController();
-  final TextEditingController _confirmController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
 
-  void _showSnack(String message) {
-    if (!mounted) return;
-    AppSnackBar.showSuccess(context, message);
+  @override
+  void initState() {
+    super.initState();
+    _emailController.text =
+        widget.currentEmail == "-" ? "" : widget.currentEmail;
   }
 
-  Future<void> _handleChangePassword() async {
+  void _showError(String message) {
+    setState(() => _errorMessage = message);
+  }
+
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email);
+  }
+
+  Future<void> _handleSubmit() async {
     setState(() => _errorMessage = null);
-    final currentPassword = _currentController.text.trim();
-    final newPassword = _newController.text.trim();
-    final confirmPassword = _confirmController.text.trim();
+    final newEmail = _emailController.text.trim();
+    final password = _passwordController.text.trim();
 
-    if (currentPassword.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty) {
-      setState(() => _errorMessage = "Semua field wajib diisi");
+    if (!_isValidEmail(newEmail)) {
+      _showError("Format email tidak valid.");
       return;
     }
-    if (newPassword.length < 8) {
-      setState(() => _errorMessage = "Password baru minimal 8 karakter");
-      return;
-    }
-    if (newPassword != confirmPassword) {
-      setState(() => _errorMessage = "Konfirmasi password tidak sama");
+    if (password.isEmpty) {
+      _showError("Masukkan password untuk konfirmasi.");
       return;
     }
 
-    final email = _supabase.auth.currentUser?.email;
-    if (email == null || email.isEmpty) {
-      setState(() => _errorMessage = "Email user tidak ditemukan");
+    final currentEmail = _supabase.auth.currentUser?.email;
+    if (currentEmail == null) {
+      _showError("Email pengguna tidak ditemukan.");
       return;
     }
 
     setState(() => _isLoading = true);
     try {
       await _supabase.auth.signInWithPassword(
-        email: email,
-        password: currentPassword,
+        email: currentEmail,
+        password: password,
       );
-      await _supabase.auth.updateUser(
-        UserAttributes(password: newPassword),
+      await _supabase.auth.updateUser(UserAttributes(email: newEmail));
+      if (!mounted) return;
+      AppSnackBar.showSuccess(
+        context,
+        "Email baru perlu verifikasi. Cek inbox Anda.",
       );
-      _showSnack("Password berhasil diubah");
-      if (mounted) Navigator.pop(context);
+      Navigator.pop(context);
     } catch (e) {
-      setState(() => _errorMessage = "Gagal ubah password: $e");
+      _showError("Gagal ganti email: $e");
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -72,9 +80,8 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
 
   @override
   void dispose() {
-    _currentController.dispose();
-    _newController.dispose();
-    _confirmController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -84,7 +91,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(
-          "Ubah Kata Sandi",
+          "Ganti Email",
           style: GoogleFonts.outfit(
             color: AppColors.text,
             fontWeight: FontWeight.bold,
@@ -106,7 +113,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Gunakan password yang kuat dan mudah diingat.",
+                    "Email baru akan membutuhkan verifikasi ulang.",
                     style: GoogleFonts.outfit(
                       fontSize: 12,
                       color: AppColors.textBody,
@@ -140,19 +147,30 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                     ),
                     const SizedBox(height: 12),
                   ],
-                  _buildInput(
+                  AppTextField(
+                    label: "Email Baru",
+                    hint: "nama@email.com",
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    fillColor: AppColors.surface,
+                    borderColor: AppColors.border,
+                    focusBorderColor: AppColors.primary,
+                    textColor: AppColors.text,
+                    hintColor: AppColors.textMuted,
+                    labelColor: AppColors.textMuted,
+                  ),
+                  const SizedBox(height: 16),
+                  AppTextField(
                     label: "Password Saat Ini",
-                    controller: _currentController,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildInput(
-                    label: "Password Baru",
-                    controller: _newController,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildInput(
-                    label: "Konfirmasi Password Baru",
-                    controller: _confirmController,
+                    hint: "Masukkan password",
+                    controller: _passwordController,
+                    isObscure: true,
+                    fillColor: AppColors.surface,
+                    borderColor: AppColors.border,
+                    focusBorderColor: AppColors.primary,
+                    textColor: AppColors.text,
+                    hintColor: AppColors.textMuted,
+                    labelColor: AppColors.textMuted,
                   ),
                   const SizedBox(height: 20),
                   SizedBox(
@@ -160,7 +178,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                     child: AppPrimaryButton(
                       label: _isLoading ? "Memproses..." : "Simpan",
                       isLoading: _isLoading,
-                      onPressed: _isLoading ? null : _handleChangePassword,
+                      onPressed: _isLoading ? null : _handleSubmit,
                     ),
                   ),
                 ],
@@ -169,24 +187,6 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildInput({
-    required String label,
-    required TextEditingController controller,
-  }) {
-    return AppTextField(
-      label: label,
-      hint: label,
-      controller: controller,
-      isObscure: true,
-      fillColor: AppColors.surface,
-      borderColor: AppColors.border,
-      focusBorderColor: AppColors.primary,
-      textColor: AppColors.text,
-      hintColor: AppColors.textMuted,
-      labelColor: AppColors.textMuted,
     );
   }
 }

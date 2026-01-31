@@ -218,7 +218,7 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
                           Text(
                             "Semoga harimu penuh berkah.",
                             style: GoogleFonts.outfit(
-                              color: Colors.white.withValues(alpha: 0.9),
+                              color: Colors.white.withOpacity(0.9),
                               fontSize: 14,
                             ),
                           ),
@@ -226,7 +226,7 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
                       ),
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: IconButton(
@@ -243,10 +243,10 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
+                      color: Colors.white.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.2),
+                        color: Colors.white.withOpacity(0.2),
                       ),
                     ),
                     child: Row(
@@ -292,7 +292,7 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF0088CC).withValues(alpha: 0.15),
+                  color: const Color(0xFF0088CC).withOpacity(0.15),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),

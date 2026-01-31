@@ -296,7 +296,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                       fontSize: 12,
                     ),
                   ),
-                  backgroundColor: kPrimary.withValues(alpha: 0.8),
+                  backgroundColor: kPrimary.withOpacity(0.8),
                   deleteIcon: const Icon(
                     Icons.close,
                     size: 14,

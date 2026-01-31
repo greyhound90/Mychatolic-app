@@ -61,7 +61,7 @@ class SafeNetworkImage extends StatelessWidget {
           height: 20,
           child: CircularProgressIndicator(
             strokeWidth: 2,
-            color: kPrimary.withValues(alpha: 0.5),
+            color: kPrimary.withOpacity(0.5),
           ),
         ),
       ),

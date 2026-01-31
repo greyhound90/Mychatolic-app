@@ -40,7 +40,7 @@ class RadarEventCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: Colors.black.withOpacity(0.04),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -114,10 +114,10 @@ class RadarEventCard extends StatelessWidget {
                         vertical: 12,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0088CC).withValues(alpha: 0.08),
+                        color: const Color(0xFF0088CC).withOpacity(0.08),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: const Color(0xFF0088CC).withValues(alpha: 0.2),
+                          color: const Color(0xFF0088CC).withOpacity(0.2),
                         ),
                       ),
                       child: Column(

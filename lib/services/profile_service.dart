@@ -60,6 +60,26 @@ class ProfileService {
     return getProfile(userId);
   }
 
+  // Search users by name (used by FriendSearchPage)
+  Future<List<Map<String, dynamic>>> searchUsers(String query) async {
+    try {
+      final data = await _supabase
+          .from('profiles')
+          .select(
+            'id, full_name, baptism_name, avatar_url, bio, role, verification_status, '
+            'country_id, diocese_id, church_id, updated_at',
+          )
+          .ilike('full_name', '%$query%')
+          .limit(50);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint("Search Users Error: $e");
+      }
+      return [];
+    }
+  }
+
   // 1b. Update Profile
   Future<void> updateProfile({
     required String userId,

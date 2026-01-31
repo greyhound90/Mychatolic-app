@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:mychatolic_app/core/ui/app_state.dart';
+import 'package:mychatolic_app/core/ui/app_state_view.dart';
 
 class AppStateScaffold extends StatelessWidget {
   final bool loading;
@@ -18,87 +20,28 @@ class AppStateScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final textTheme = theme.textTheme;
-
     if (loading) {
       return Scaffold(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator.adaptive(),
-              const SizedBox(height: 12),
-              Text(
-                "Memuat...",
-                style: textTheme.bodySmall?.copyWith(
-                  color: colors.onSurface.withOpacity(0.7),
-                ),
-              ),
-            ],
-          ),
-        ),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: const AppStateView(state: AppViewState.loading),
       );
     }
 
     if (error != null) {
       final message = error is String ? error as String : "Terjadi kesalahan.";
       return Scaffold(
-        backgroundColor: theme.scaffoldBackgroundColor,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: title != null
             ? AppBar(
                 title: Text(title!),
-                backgroundColor: theme.scaffoldBackgroundColor,
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                 elevation: 0,
               )
             : null,
-        body: Center(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 24),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: colors.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: theme.dividerColor.withOpacity(0.6),
-              ),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.error_outline, color: colors.error, size: 32),
-                const SizedBox(height: 8),
-                Text(
-                  message,
-                  textAlign: TextAlign.center,
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: colors.onSurface,
-                  ),
-                ),
-                if (onRetry != null) ...[
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: onRetry,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: colors.primary,
-                      ),
-                      child: Text(
-                        "Coba lagi",
-                        style: textTheme.labelLarge?.copyWith(
-                          color: colors.onPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
+        body: AppStateView(
+          state: AppViewState.error,
+          error: AppError(title: "Gagal memuat", message: message, raw: error),
+          onRetry: onRetry,
         ),
       );
     }

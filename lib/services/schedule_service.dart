@@ -1,6 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mychatolic_app/models/mass_schedule.dart';
-import 'package:flutter/foundation.dart';
+import 'package:mychatolic_app/core/log/app_logger.dart';
 
 class ScheduleService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -49,7 +49,7 @@ class ScheduleService {
       final List<dynamic> data = response as List<dynamic>;
       return data.map((json) => MassSchedule.fromJson(json)).toList();
     } catch (e, st) {
-      debugPrint("Schedule Fetch Error: $e\n$st");
+      AppLogger.logError("Schedule Fetch Error", error: e, stackTrace: st);
       rethrow;
     }
   }
@@ -72,8 +72,8 @@ class ScheduleService {
 
       final List<dynamic> data = response as List<dynamic>;
       return data.map((json) => MassSchedule.fromJson(json)).toList();
-    } catch (e) {
-      debugPrint("Error fetching upcoming schedules: $e");
+    } catch (e, st) {
+      AppLogger.logError("Error fetching upcoming schedules", error: e, stackTrace: st);
       return [];
     }
   }

@@ -1,9 +1,7 @@
 import 'dart:io';
-import 'dart:ui';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mychatolic_app/models/profile.dart';
@@ -25,6 +23,12 @@ import 'package:mychatolic_app/features/profile/pages/edit_profile_page.dart';
 import 'package:mychatolic_app/features/radar/pages/create_personal_radar_page.dart';
 import 'package:mychatolic_app/features/auth/pages/verification_page.dart';
 import 'package:mychatolic_app/shared/widgets/app_state_scaffold.dart';
+import 'package:mychatolic_app/core/widgets/app_card.dart';
+import 'package:mychatolic_app/core/widgets/app_button.dart';
+import 'package:mychatolic_app/core/ui/app_state.dart';
+import 'package:mychatolic_app/core/ui/app_state_view.dart';
+import 'package:mychatolic_app/core/ui/app_snackbar.dart';
+import 'package:mychatolic_app/core/log/app_logger.dart';
 import 'package:share_plus/share_plus.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -119,7 +123,7 @@ class _ProfilePageState extends State<ProfilePage>
     try {
       final targetUserId = widget.userId ?? _supabase.auth.currentUser?.id;
       if (targetUserId == null) {
-        setState(() {
+        safeSetState(() {
           _error = "User not found";
           _isLoading = false;
         });
@@ -134,53 +138,41 @@ class _ProfilePageState extends State<ProfilePage>
         _isFollowing = await _profileService.checkIsFollowing(targetUserId);
       }
 
-      if (mounted) {
-        setState(() {
-          _profile = profile;
-          _stats = {
-            'followers': followStats['followers'] ?? 0,
-            'following': followStats['following'] ?? 0,
-            'posts': _stats['posts'] ?? 0,
-          };
-          _userStories = stories;
-        });
-        await _loadInitialPosts(targetUserId);
-        
-        // Load saved posts only if it's me
-        if (_isMe) {
-          _loadSavedPosts();
-        }
+      safeSetState(() {
+        _profile = profile;
+        _stats = {
+          'followers': followStats['followers'] ?? 0,
+          'following': followStats['following'] ?? 0,
+          'posts': _stats['posts'] ?? 0,
+        };
+        _userStories = stories;
+      });
+      await _loadInitialPosts(targetUserId);
+
+      // Load saved posts only if it's me
+      if (_isMe) {
+        _loadSavedPosts();
       }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint("Error loading profile: $e");
-      }
-      if (mounted) {
-        setState(() {
-          _error = "Gagal memuat profil. Silakan coba lagi.";
-        });
-      }
+    } catch (e, st) {
+      AppLogger.logError("Error loading profile", error: e, stackTrace: st);
+      safeSetState(() {
+        _error = "Gagal memuat profil. Silakan coba lagi.";
+      });
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      safeSetState(() {
+        _isLoading = false;
+      });
     }
   }
 
   Future<void> _loadSavedPosts() async {
     try {
       final saved = await _postService.fetchSavedPosts();
-      if (mounted) {
-        setState(() {
-          _savedPosts = saved;
-        });
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint("Error loading saved posts: $e");
-      }
+      safeSetState(() {
+        _savedPosts = saved;
+      });
+    } catch (e, st) {
+      AppLogger.logError("Error loading saved posts", error: e, stackTrace: st);
     }
   }
 
@@ -208,26 +200,22 @@ class _ProfilePageState extends State<ProfilePage>
         limit: _limit,
       );
 
-      if (mounted) {
-        setState(() {
-          if (posts.isNotEmpty) {
-            _separatePosts(posts);
-          }
-          if (posts.length < _limit) {
-            _hasNextPage = false;
-          }
-        });
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint("Error loading posts: $e");
-      }
+      safeSetState(() {
+        if (posts.isNotEmpty) {
+          _separatePosts(posts);
+        }
+        if (posts.length < _limit) {
+          _hasNextPage = false;
+        }
+      });
+    } catch (e, st) {
+      AppLogger.logError("Error loading posts", error: e, stackTrace: st);
     }
   }
 
   Future<void> _loadMorePosts() async {
     if (_isLoadMoreRunning || !_hasNextPage || _profile == null) return;
-    setState(() => _isLoadMoreRunning = true);
+    safeSetState(() => _isLoadMoreRunning = true);
 
     try {
       final nextPage = _currentPage + 1;
@@ -237,26 +225,25 @@ class _ProfilePageState extends State<ProfilePage>
         limit: _limit,
       );
 
-      if (mounted) {
-        setState(() {
-          if (posts.isNotEmpty) {
-            for (var p in posts) {
-              if (p.type == 'photo' || p.imageUrls.isNotEmpty) {
-                _photoPosts.add(p);
-              } else {
-                _textPosts.add(p);
-              }
+      safeSetState(() {
+        if (posts.isNotEmpty) {
+          for (var p in posts) {
+            if (p.type == 'photo' || p.imageUrls.isNotEmpty) {
+              _photoPosts.add(p);
+            } else {
+              _textPosts.add(p);
             }
-            _currentPage = nextPage;
           }
-          if (posts.length < _limit) {
-            _hasNextPage = false;
-          }
-          _isLoadMoreRunning = false;
-        });
-      }
-    } catch (e) {
-      setState(() => _isLoadMoreRunning = false);
+          _currentPage = nextPage;
+        }
+        if (posts.length < _limit) {
+          _hasNextPage = false;
+        }
+        _isLoadMoreRunning = false;
+      });
+    } catch (e, st) {
+      AppLogger.logError("Error loading more posts", error: e, stackTrace: st);
+      safeSetState(() => _isLoadMoreRunning = false);
     }
   }
 
@@ -489,14 +476,10 @@ class _ProfilePageState extends State<ProfilePage>
         );
         await _loadProfileData(); // Refresh UI
       }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint("Upload Avatar Failed: $e");
-      }
+    } catch (e, st) {
+      AppLogger.logError("Upload Avatar Failed", error: e, stackTrace: st);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Gagal upload foto: $e")),
-        );
+        AppSnackBar.showError(context, "Gagal upload foto.");
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -542,14 +525,10 @@ class _ProfilePageState extends State<ProfilePage>
         );
         await _loadProfileData(); // Refresh UI
       }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint("Upload Banner Failed: $e");
-      }
+    } catch (e, st) {
+      AppLogger.logError("Upload Banner Failed", error: e, stackTrace: st);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Gagal upload banner: $e")),
-        );
+        AppSnackBar.showError(context, "Gagal upload banner.");
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -574,9 +553,8 @@ class _ProfilePageState extends State<ProfilePage>
   Widget build(BuildContext context) {
     // DEBUG: Check Status
     if (_profile != null) {
-      if (kDebugMode) {
-        debugPrint('Current Verification Status by ENUM: ${_profile!.verificationStatus}');
-      }
+      AppLogger.logInfo(
+          'Current Verification Status: ${_profile!.verificationStatus}');
     }
     final hasError = _error != null || _profile == null;
     final errorMessage = _error ?? "Data profil tidak ditemukan.";
@@ -588,7 +566,12 @@ class _ProfilePageState extends State<ProfilePage>
       title: "Profil",
       onRetry: hasError ? _loadProfileData : null,
       child: displayProfile == null
-          ? const SizedBox.shrink()
+          ? AppStateView(
+              state: AppViewState.empty,
+              emptyTitle: "Profil belum tersedia",
+              emptyMessage: "Silakan coba lagi.",
+              onRetry: _loadProfileData,
+            )
           : Scaffold(
               backgroundColor: _palette.background,
               body: RefreshIndicator(
@@ -660,19 +643,18 @@ class _ProfilePageState extends State<ProfilePage>
           : "Belum ada foto");
     }
     final basePadding = 16 + MediaQuery.of(context).padding.bottom;
-    final bottomPadding =
-        posts.length <= 3 ? basePadding : basePadding + kBottomNavigationBarHeight;
+    final bottomPadding = basePadding;
     return CustomScrollView(
       key: PageStorageKey<String>(isSavedView ? 'saved' : 'grid'),
       slivers: [
         SliverPadding(
-          padding: const EdgeInsets.all(2),
+          padding: const EdgeInsets.all(8),
           sliver: SliverGrid(
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3, // Instagram standard
               childAspectRatio: 4 / 5, // 4:5 portrait
-              crossAxisSpacing: 2,
-              mainAxisSpacing: 2,
+              crossAxisSpacing: 6,
+              mainAxisSpacing: 6,
             ),
             delegate: SliverChildBuilderDelegate((context, index) {
               final post = posts[index];
@@ -744,14 +726,10 @@ class _ProfilePageState extends State<ProfilePage>
       slivers: [
         SliverToBoxAdapter(
           child: Center(
-            child: Container(
+            child: AppCard(
               margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-              decoration: BoxDecoration(
-                color: palette.backgroundAlt,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: palette.text.withValues(alpha: 0.08)),
-              ),
+              color: palette.backgroundAlt,
+              borderColor: palette.text.withOpacity(0.08),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -851,16 +829,11 @@ class ProfileHeader extends StatelessWidget {
     final _palette = _ProfilePalette.of(context);
     // LAYOUT CONSTANTS
     const double coverHeight = 180;
-    const double avatarSize = 120;
-    const double cardTopMargin = 160; // Overlaps cover by 20px
-    final double cardTopPadding = (avatarSize / 2) + 20;
+    const double avatarSize = 104;
+    const double cardTopMargin = 150; // Overlaps cover slightly
+    final double cardTopPadding = (avatarSize / 2) + 16;
 
-    String displayName = profile.fullName ?? "User";
-    if (profile.baptismName != null && 
-        profile.baptismName!.trim().isNotEmpty && 
-        profile.baptismName != "null") {
-      displayName = "${profile.baptismName} ${profile.fullName}";
-    }
+    final displayName = profile.fullName ?? "User";
 
     final followButton = AnimatedSwitcher(
       duration: const Duration(milliseconds: 200),
@@ -874,39 +847,21 @@ class ProfileHeader extends StatelessWidget {
         );
       },
       child: isFollowing
-          ? ElevatedButton.icon(
+          ? AppPrimaryButton(
               key: const ValueKey('following'),
+              label: "Mengikuti",
+              icon: Icons.check,
               onPressed: onFollowToggle,
-              icon: Icon(Icons.check, size: 16, color: _palette.onPrimary),
-              label: Text(
-                "Mengikuti",
-                style: GoogleFonts.outfit(
-                  fontWeight: FontWeight.bold,
-                  color: _palette.onPrimary,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _palette.muted,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                elevation: 0,
-              ),
+              backgroundColor: _palette.muted,
+              foregroundColor: _palette.onPrimary,
             )
-          : ElevatedButton.icon(
+          : AppPrimaryButton(
               key: const ValueKey('follow'),
+              label: "Follow",
+              icon: Icons.person_add,
               onPressed: onFollowToggle,
-              icon: Icon(Icons.person_add, size: 16, color: _palette.onPrimary),
-              label: Text(
-                "Follow",
-                style: GoogleFonts.outfit(
-                  fontWeight: FontWeight.bold,
-                  color: _palette.onPrimary,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _palette.primary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                elevation: 0,
-              ),
+              backgroundColor: _palette.primary,
+              foregroundColor: _palette.onPrimary,
             ),
     );
 
@@ -928,34 +883,47 @@ class ProfileHeader extends StatelessWidget {
       );
     }
 
-    Widget glassIconButton({
+    Widget floatingIconButton({
       required VoidCallback? onTap,
-      required Widget icon,
-      EdgeInsets padding = const EdgeInsets.all(8),
+      required IconData icon,
     }) {
       return GestureDetector(
         onTap: onTap,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-              child: Container(
-                padding: padding,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.45),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.2),
-                  ),
-                ),
-                child: icon,
+        child: Container(
+          width: 44,
+          height: 44,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.88),
+            shape: BoxShape.circle,
+            border: Border.all(color: _palette.border.withOpacity(0.7)),
+            boxShadow: [
+              BoxShadow(
+                color: _palette.shadow.withOpacity(0.15),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
-            ),
+            ],
           ),
+          child: Icon(icon, color: _palette.primary, size: 20),
         ),
+      );
+    }
+
+    Widget sectionCard(Widget child, {EdgeInsetsGeometry? padding}) {
+      return AppCard(
+        margin: const EdgeInsets.symmetric(horizontal: 20),
+        padding: padding ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        color: _palette.backgroundAlt,
+        borderColor: _palette.text.withOpacity(0.08),
+        shadow: [
+          BoxShadow(
+            color: _palette.shadow.withOpacity(0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+        child: child,
       );
     }
 
@@ -991,8 +959,8 @@ class ProfileHeader extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    _palette.shadow.withValues(alpha: 0.0),
-                    _palette.shadow.withValues(alpha: 0.22),
+                    _palette.shadow.withOpacity(0.0),
+                    _palette.shadow.withOpacity(0.22),
                   ],
                 ),
               ),
@@ -1008,15 +976,16 @@ class ProfileHeader extends StatelessWidget {
             minimum: const EdgeInsets.only(top: 8, right: 4),
             child: Column(
               children: [
-                glassIconButton(
-                  onTap: onSettingsTap,
-                  icon: const Icon(Icons.settings, color: Colors.white, size: 22),
-                ),
+                if (isMe)
+                  floatingIconButton(
+                    onTap: onSettingsTap,
+                    icon: Icons.settings,
+                  ),
                 if (isMe) ...[
                   const SizedBox(height: 10),
-                  glassIconButton(
+                  floatingIconButton(
                     onTap: onBannerTap,
-                    icon: const Icon(Icons.photo_camera, size: 22, color: Colors.white),
+                    icon: Icons.photo_camera,
                   ),
                 ],
               ],
@@ -1027,9 +996,9 @@ class ProfileHeader extends StatelessWidget {
           Positioned(
             top: MediaQuery.of(context).padding.top + 8,
             left: 16,
-            child: glassIconButton(
+            child: floatingIconButton(
               onTap: () => Navigator.pop(context),
-              icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+              icon: Icons.arrow_back,
             ),
           ),
         // 2. WHITE CARD BODY
@@ -1039,10 +1008,10 @@ class ProfileHeader extends StatelessWidget {
           decoration: BoxDecoration(
             color: _palette.backgroundAlt,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
-            border: Border.all(color: _palette.text.withValues(alpha: 0.08)),
+            border: Border.all(color: _palette.text.withOpacity(0.08)),
             boxShadow: [
               BoxShadow(
-                color: _palette.shadow.withValues(alpha: 0.12),
+                color: _palette.shadow.withOpacity(0.12),
                 blurRadius: 18,
                 offset: const Offset(0, -6),
               ),
@@ -1053,17 +1022,8 @@ class ProfileHeader extends StatelessWidget {
             children: [
               // Section 1: Identity + badges
               animateSection(
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: _palette.backgroundAlt,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(
-                      color: _palette.text.withValues(alpha: 0.08),
-                    ),
-                  ),
-                  child: Column(
+                sectionCard(
+                  Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Row(
@@ -1072,10 +1032,10 @@ class ProfileHeader extends StatelessWidget {
                         children: [
                           Flexible(
                             child: Text(
-                              profile.fullName ?? "User",
+                              displayName,
                               textAlign: TextAlign.center,
                               style: GoogleFonts.outfit(
-                                fontSize: 22,
+                                fontSize: 21,
                                 fontWeight: FontWeight.bold,
                                 color: _palette.text,
                               ),
@@ -1085,7 +1045,7 @@ class ProfileHeader extends StatelessWidget {
                             Padding(
                               padding: const EdgeInsets.only(left: 6),
                               child: Icon(Icons.verified,
-                                  color: _palette.primary, size: 20),
+                                  color: _palette.primary, size: 18),
                             ),
                         ],
                       ),
@@ -1104,7 +1064,7 @@ class ProfileHeader extends StatelessWidget {
                               Text(
                                 "Nama Baptis: ${profile.baptismName}",
                                 style: GoogleFonts.outfit(
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   color: _palette.mutedText,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -1124,7 +1084,7 @@ class ProfileHeader extends StatelessWidget {
                               color: _palette.backgroundAlt,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                  color: _palette.text.withValues(alpha: 0.12)),
+                                  color: _palette.text.withOpacity(0.12)),
                             ),
                             child: Text(
                               "${profile.age} Tahun",
@@ -1145,22 +1105,8 @@ class ProfileHeader extends StatelessWidget {
 
               // Section 2: Bio + location
               animateSection(
-                Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: _palette.backgroundAlt,
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: _palette.text.withValues(alpha: 0.08)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _palette.shadow.withValues(alpha: 0.08),
-                      blurRadius: 12,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Column(
+                sectionCard(
+                  Column(
                     children: [
                       if (profile.bio != null && profile.bio!.isNotEmpty)
                         Padding(
@@ -1168,7 +1114,7 @@ class ProfileHeader extends StatelessWidget {
                           child: Text(
                             profile.bio!,
                             textAlign: TextAlign.center,
-                            maxLines: 2,
+                            maxLines: 3,
                             overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.outfit(
                               fontSize: 14,
@@ -1224,77 +1170,50 @@ class ProfileHeader extends StatelessWidget {
 
               // Section 3: Action buttons
               animateSection(
-                Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: _palette.backgroundAlt,
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: _palette.text.withValues(alpha: 0.08)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _palette.shadow.withValues(alpha: 0.08),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: LayoutBuilder(
+                sectionCard(
+                  LayoutBuilder(
                     builder: (context, constraints) {
                     final bool isNarrow = constraints.maxWidth < 360;
                     if (isMe) {
                       return Row(
                         children: [
                           Expanded(
-                            child: ElevatedButton.icon(
+                            child: AppPrimaryButton(
+                              label: "Edit Profil",
+                              icon: Icons.edit,
                               onPressed: onEditTap,
-                              icon: Icon(Icons.edit, size: 16, color: _palette.onPrimary),
-                              label: Text("Edit Profil", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: _palette.onPrimary)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _palette.primary,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-                                elevation: 0,
-                              ),
+                              backgroundColor: _palette.primary,
+                              foregroundColor: _palette.onPrimary,
                             ),
                           ),
                           const SizedBox(width: 12),
-                          OutlinedButton.icon(
-                            onPressed: onShareTap,
-                            icon: Icon(Icons.share_outlined, size: 16, color: _palette.text),
-                            label: Text("Share Profile", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: _palette.text)),
-                            style: OutlinedButton.styleFrom(
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-                              side: BorderSide(color: _palette.text.withValues(alpha: 0.2)),
+                          Expanded(
+                            child: AppSecondaryButton(
+                              label: "Share Profile",
+                              icon: Icons.share_outlined,
+                              onPressed: onShareTap,
+                              borderColor: _palette.text.withOpacity(0.2),
+                              foregroundColor: _palette.text,
                             ),
                           ),
                         ],
                       );
                     }
 
-                    final Widget chatButton = OutlinedButton.icon(
+                    final Widget chatButton = AppSecondaryButton(
+                      label: "Chat",
+                      icon: Icons.mark_chat_unread_outlined,
                       onPressed: onChatTap,
-                      icon: Icon(Icons.mark_chat_unread_outlined, size: 16, color: _palette.text),
-                      label: Text("Chat", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: _palette.text)),
-                      style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-                        side: BorderSide(color: _palette.text.withValues(alpha: 0.2)),
-                      ),
+                      borderColor: _palette.text.withOpacity(0.2),
+                      foregroundColor: _palette.text,
                     );
 
-                    final Widget inviteButton = ElevatedButton(
+                    final Widget inviteButton = AppSecondaryButton(
+                      label: "Ajak Misa",
                       onPressed: onInviteTap,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _palette.muted,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        "Ajak Misa",
-                        style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.bold,
-                          color: _palette.onPrimary,
-                        ),
-                      ),
+                      borderColor: _palette.text.withOpacity(0.2),
+                      foregroundColor: _palette.text,
+                      backgroundColor: _palette.primary.withOpacity(0.08),
                     );
 
                     if (isNarrow) {
@@ -1337,22 +1256,8 @@ class ProfileHeader extends StatelessWidget {
 
               // Section 4: Stats
               animateSection(
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: _palette.backgroundAlt,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: _palette.text.withValues(alpha: 0.08)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _palette.shadow.withValues(alpha: 0.08),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Row(
+                sectionCard(
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       _buildStatItem(context, "${stats['posts'] ?? 0}", "Post"),
@@ -1360,6 +1265,7 @@ class ProfileHeader extends StatelessWidget {
                       _buildStatItem(context, "${stats['following'] ?? 0}", "Mengikuti"),
                     ],
                   ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
               ),
               const SizedBox(height: 8),
@@ -1380,21 +1286,52 @@ class ProfileHeader extends StatelessWidget {
                 border: Border.all(color: _palette.backgroundAlt, width: 4),
                 boxShadow: [
                   BoxShadow(
-                    color: _palette.shadow.withValues(alpha: 0.2),
+                    color: _palette.shadow.withOpacity(0.2),
                     blurRadius: 10,
                     offset: const Offset(0, 5),
                   ),
                 ],
               ),
-              child: ClipOval(
-                child: SafeNetworkImage(
-                  imageUrl: profile.avatarUrl ?? "",
-                  width: avatarSize,
-                  height: avatarSize,
-                  fit: BoxFit.cover,
-                  fallbackIcon: Icons.person,
-                  fallbackColor: _palette.backgroundAlt,
-                ),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  ClipOval(
+                    child: SafeNetworkImage(
+                      imageUrl: profile.avatarUrl ?? "",
+                      width: avatarSize,
+                      height: avatarSize,
+                      fit: BoxFit.cover,
+                      fallbackIcon: Icons.person,
+                      fallbackColor: _palette.backgroundAlt,
+                    ),
+                  ),
+                  if (isMe)
+                    Positioned(
+                      right: 2,
+                      bottom: 2,
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: _palette.border),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _palette.shadow.withOpacity(0.18),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.camera_alt,
+                          size: 16,
+                          color: _palette.primary,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -1443,14 +1380,14 @@ class ProfileHeader extends StatelessWidget {
     Widget? actionButton;
 
     if (status == AccountStatus.pending) {
-      bgColor = palette.primary.withValues(alpha: 0.12);
+      bgColor = palette.primary.withOpacity(0.12);
       borderColor = Colors.transparent; 
       contentColor = palette.primaryDark;
       icon = Icons.hourglass_top;
       text = "Dokumen Anda sedang ditinjau oleh Admin.";
     } else {
       // unverified, rejected, unknown
-      bgColor = palette.danger.withValues(alpha: 0.12);
+      bgColor = palette.danger.withOpacity(0.12);
       borderColor = palette.danger;
       contentColor = palette.danger;
       icon = Icons.warning_amber_rounded;
@@ -1519,12 +1456,12 @@ class ProfileHeader extends StatelessWidget {
         profile.verificationStatus == AccountStatus.verified_pastoral) {
       if (profile.isClergy) {
         label = "${profile.roleLabel} Terverifikasi";
-        color = palette.primary.withValues(alpha: 0.12);
+        color = palette.primary.withOpacity(0.12);
         textColor = palette.primaryDark;
         icon = Icons.verified_user;
       } else {
         label = "100% Katolik";
-        color = palette.success.withValues(alpha: 0.12);
+        color = palette.success.withOpacity(0.12);
         textColor = palette.success;
         icon = Icons.star;
       }
@@ -1535,13 +1472,13 @@ class ProfileHeader extends StatelessWidget {
       icon = Icons.hourglass_empty;
     } else if (profile.role == UserRole.katekumen) {
       label = "Katekumen";
-      color = palette.muted.withValues(alpha: 0.12);
+      color = palette.muted.withOpacity(0.12);
       textColor = palette.primaryDark;
       icon = Icons.local_florist;
     } else {
       // Unverified Badge
       label = "Belum Verifikasi";
-      color = palette.danger.withValues(alpha: 0.12);
+      color = palette.danger.withOpacity(0.12);
       textColor = palette.danger;
       icon = Icons.error_outline;
     }

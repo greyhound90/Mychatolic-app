@@ -10,6 +10,11 @@ import 'package:mychatolic_app/widgets/safe_network_image.dart';
 import 'package:mychatolic_app/widgets/story_rail.dart';
 import 'package:mychatolic_app/features/social/search_user_page.dart';
 import 'package:mychatolic_app/features/social/create_group_page.dart';
+import 'package:mychatolic_app/core/design_tokens.dart';
+import 'package:mychatolic_app/core/ui/app_state.dart';
+import 'package:mychatolic_app/core/ui/app_state_view.dart';
+import 'package:mychatolic_app/core/ui/app_snackbar.dart';
+import 'package:mychatolic_app/core/log/app_logger.dart';
 
 class ChatPage extends StatefulWidget {
   final String? partnerId;
@@ -48,9 +53,12 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Future<void> _handleAutoRedirect(String partnerId) async {
-    setState(() => _isRedirecting = true);
+    safeSetState(() => _isRedirecting = true);
     final myId = _supabase.auth.currentUser?.id;
-    if (myId == null) return;
+    if (myId == null) {
+      safeSetState(() => _isRedirecting = false);
+      return;
+    }
 
     try {
       final response = await _supabase.from('social_chats')
@@ -76,10 +84,13 @@ class _ChatPageState extends State<ChatPage> {
           chatId: chatId, opponentProfile: profile, isGroup: false
         )));
       }
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Gagal membuka chat")));
+    } catch (e, st) {
+      AppLogger.logError("Gagal membuka chat", error: e, stackTrace: st);
+      if (mounted) {
+        AppSnackBar.showError(context, "Gagal membuka chat");
+      }
     } finally {
-      if (mounted) setState(() => _isRedirecting = false);
+      safeSetState(() => _isRedirecting = false);
     }
   }
 
@@ -97,28 +108,40 @@ class _ChatPageState extends State<ChatPage> {
           .select('id, full_name, avatar_url')
           .filter('id', 'in', idsToFetch);
 
-      if (mounted) {
-        setState(() {
-          for (var profile in response) {
-            _profileCache[profile['id']] = profile;
-          }
-          _fetchingIds.removeAll(idsToFetch);
-        });
-      }
-    } catch (e) {
-      debugPrint("Error batch fetching profiles: $e");
+      safeSetState(() {
+        for (var profile in response) {
+          _profileCache[profile['id']] = profile;
+        }
+        _fetchingIds.removeAll(idsToFetch);
+      });
+    } catch (e, st) {
+      AppLogger.logError("Error batch fetching profiles", error: e, stackTrace: st);
       _fetchingIds.removeAll(idsToFetch);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isRedirecting) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_isRedirecting) {
+      return const Scaffold(
+        body: AppStateView(state: AppViewState.loading),
+      );
+    }
     final myId = _supabase.auth.currentUser?.id;
-    if (myId == null) return const Scaffold(body: Center(child: Text("Silakan login.")));
+    if (myId == null) {
+      return const Scaffold(
+        body: AppStateView(
+          state: AppViewState.error,
+          error: AppError(
+            title: "Sesi berakhir",
+            message: "Silakan login ulang.",
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
-      backgroundColor: Colors.white, 
+      backgroundColor: AppColors.background, 
       appBar: AppBar(
         title: Text("Pesan", style: GoogleFonts.outfit(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 22)),
         centerTitle: false,
@@ -158,9 +181,9 @@ class _ChatPageState extends State<ChatPage> {
         children: [
           // 1. STORY SECTION
           Container(
-             color: Colors.white,
-             padding: const EdgeInsets.only(bottom: 8),
-             child: const StoryRail(),
+            color: AppColors.background,
+            padding: const EdgeInsets.only(bottom: 8),
+            child: const StoryRail(),
           ),
           
           // 2. CHAT LIST (EXPANDED) 
@@ -169,15 +192,26 @@ class _ChatPageState extends State<ChatPage> {
               stream: _supabase.from('social_chats').stream(primaryKey: ['id']).order('updated_at', ascending: false),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const AppStateView(state: AppViewState.loading);
+                }
+
+                if (snapshot.hasError) {
+                  return AppStateView(
+                    state: AppViewState.error,
+                    error: const AppError(
+                      title: "Gagal memuat chat",
+                      message: "Koneksi bermasalah. Coba lagi.",
+                    ),
+                    onRetry: () => setState(() {}),
+                  );
                 }
                 
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                     Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey[300]),
-                     const SizedBox(height: 16),
-                     Text("Belum ada pesan", style: GoogleFonts.outfit(color: Colors.grey, fontSize: 16)),
-                  ]));
+                  return const AppStateView(
+                    state: AppViewState.empty,
+                    emptyTitle: "Belum ada pesan",
+                    emptyMessage: "Mulai percakapan baru dari tombol +",
+                  );
                 }
                 
                 final allChats = snapshot.data!;
@@ -187,10 +221,11 @@ class _ChatPageState extends State<ChatPage> {
                 }).toList();
 
                 if (myChats.isEmpty) {
-                  return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                     Icon(Icons.chat_bubble_outline, size: 48, color: Colors.grey[400]),
-                     Text("Belum ada pesan", style: GoogleFonts.outfit(color: Colors.grey)),
-                  ]));
+                  return const AppStateView(
+                    state: AppViewState.empty,
+                    emptyTitle: "Belum ada pesan",
+                    emptyMessage: "Mulai percakapan baru dari tombol +",
+                  );
                 }
 
                 // --- BATCH FETCHING TRIGGER ---
@@ -288,9 +323,13 @@ class _ChatTile extends StatelessWidget {
               try {
                 // Delete logic
                 await supabase.from('social_chats').delete().eq('id', chatId);
-                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Chat berhasil dihapus")));
+                if (context.mounted) {
+                  AppSnackBar.showSuccess(context, "Chat berhasil dihapus");
+                }
               } catch (e) {
-                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal hapus: $e")));
+                if (context.mounted) {
+                  AppSnackBar.showError(context, "Gagal hapus chat.");
+                }
               }
             },
             child: Text("Hapus", style: GoogleFonts.outfit(color: Colors.red, fontWeight: FontWeight.bold)),
