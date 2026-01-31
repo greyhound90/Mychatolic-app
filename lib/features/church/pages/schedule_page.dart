@@ -1247,169 +1247,165 @@ class _SchedulePageState extends State<SchedulePage> {
           ),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Stack(
         children: [
-          Container(
-            width: 4,
-            decoration: BoxDecoration(
-              color: litColor,
-              borderRadius: const BorderRadius.horizontal(
-                left: Radius.circular(20),
+          Positioned(
+            left: 16,
+            top: 16,
+            bottom: 16,
+            child: Container(
+              width: 4,
+              decoration: BoxDecoration(
+                color: litColor,
+                borderRadius: BorderRadius.circular(6),
               ),
             ),
           ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  // JAM / STATUS CONTAINER
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: isActive
-                          ? colors.secondary.withOpacity(0.12)
-                          : colors.primary.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(12),
-                      border: isActive
-                          ? Border.all(color: colors.secondary, width: 1.4)
-                          : Border.all(
-                              color: colors.primary.withOpacity(0.4),
-                              width: 1,
-                            ),
-                    ),
-                    child: Column(
-                      children: [
-                        if (_isChurchSearchMode) ...[
-                          Text(
-                            dayName.substring(0, 3).toUpperCase(),
-                            style: GoogleFonts.outfit(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: isActive
-                                  ? colors.secondary
-                                  : colors.primary,
-                            ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(width: 4),
+                // JAM / STATUS CONTAINER
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isActive
+                        ? colors.secondary.withOpacity(0.12)
+                        : colors.primary.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: isActive
+                        ? Border.all(color: colors.secondary, width: 1.4)
+                        : Border.all(
+                            color: colors.primary.withOpacity(0.4),
+                            width: 1,
                           ),
-                          const SizedBox(height: 2),
-                        ],
-                        Text(
-                          item.timeStart.substring(0, 5), // HH:mm
-                          style: GoogleFonts.outfit(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: isActive
-                                ? colors.secondary
-                                : colors.primary,
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
-
-                  const SizedBox(width: 16),
-
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                item.churchName,
-                                style: GoogleFonts.outfit(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: textPrimary,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: _litChipBg(litColor),
-                                borderRadius: BorderRadius.circular(999),
-                                border:
-                                    Border.all(color: _litChipBorder(litColor)),
-                              ),
-                              child: Text(
-                                litLabel,
-                                style: GoogleFonts.outfit(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: _litChipText(litColor),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                  child: Column(
+                    children: [
+                      if (_isChurchSearchMode) ...[
                         Text(
-                          _isChurchSearchMode
-                              ? dayName
-                              : (item.churchParish ?? '-'),
+                          dayName.substring(0, 3).toUpperCase(),
                           style: GoogleFonts.outfit(
-                            fontSize: 13,
-                            color: textSecondary,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(Icons.language,
-                                size: 12, color: textSecondary),
-                            const SizedBox(width: 4),
-                            Text(
-                              item.language ?? "Umum",
-                              style: GoogleFonts.outfit(
-                                fontSize: 12,
-                                color: textSecondary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // CHECK-IN BUTTON (If Active)
-                  if (isActive)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8.0),
-                      child: ElevatedButton(
-                        onPressed: () => _handleCheckIn(item.churchId, item.id),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: colors.secondary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        child: Text(
-                          "Check-in",
-                          style: GoogleFonts.outfit(
-                            fontSize: 12,
+                            fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            color: colors.onPrimary,
+                            color:
+                                isActive ? colors.secondary : colors.primary,
                           ),
+                        ),
+                        const SizedBox(height: 2),
+                      ],
+                      Text(
+                        item.timeStart.substring(0, 5), // HH:mm
+                        style: GoogleFonts.outfit(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isActive ? colors.secondary : colors.primary,
                         ),
                       ),
-                    )
-                ],
-              ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 16),
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.churchName,
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: textPrimary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: _litChipBg(litColor),
+                              borderRadius: BorderRadius.circular(999),
+                              border:
+                                  Border.all(color: _litChipBorder(litColor)),
+                            ),
+                            child: Text(
+                              litLabel,
+                              style: GoogleFonts.outfit(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: _litChipText(litColor),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        _isChurchSearchMode ? dayName : (item.churchParish ?? '-'),
+                        style: GoogleFonts.outfit(
+                          fontSize: 13,
+                          color: textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.language, size: 12, color: textSecondary),
+                          const SizedBox(width: 4),
+                          Text(
+                            item.language ?? "Umum",
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              color: textSecondary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // CHECK-IN BUTTON (If Active)
+                if (isActive)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8.0),
+                    child: ElevatedButton(
+                      onPressed: () => _handleCheckIn(item.churchId, item.id),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: colors.secondary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      child: Text(
+                        "Check-in",
+                        style: GoogleFonts.outfit(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: colors.onPrimary,
+                        ),
+                      ),
+                    ),
+                  )
+              ],
             ),
           ),
         ],
