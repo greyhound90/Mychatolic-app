@@ -1,5 +1,7 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:mychatolic_app/core/theme.dart';
+import 'package:shimmer/shimmer.dart';
 
 class SafeNetworkImage extends StatelessWidget {
   final String? imageUrl;
@@ -25,44 +27,46 @@ class SafeNetworkImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (imageUrl == null || imageUrl!.isEmpty) {
+    final url = imageUrl?.trim();
+    if (url == null || url.isEmpty) {
       return _buildFallback();
     }
 
+    final dpr = MediaQuery.of(context).devicePixelRatio;
+    final int? memCacheWidth = (width != null && width!.isFinite && width! > 0)
+        ? (width! * dpr).round()
+        : null;
+    final int? memCacheHeight = (height != null && height!.isFinite && height! > 0)
+        ? (height! * dpr).round()
+        : null;
+
     return ClipRRect(
       borderRadius: borderRadius ?? BorderRadius.zero,
-      child: Image.network(
-        imageUrl!,
+      child: CachedNetworkImage(
+        imageUrl: url,
         width: width,
         height: height,
         fit: fit,
-        errorBuilder: (context, error, stackTrace) {
-          return _buildFallback();
-        },
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return _buildLoading();
-        },
+        memCacheWidth: memCacheWidth,
+        memCacheHeight: memCacheHeight,
+        fadeInDuration: const Duration(milliseconds: 180),
+        placeholder: (context, _) => _buildLoading(),
+        errorWidget: (context, url, error) => _buildFallback(),
       ),
     );
   }
 
   Widget _buildLoading() {
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: fallbackColor ?? kSurface,
-        borderRadius: borderRadius,
-      ),
-      child: Center(
-        child: SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: kPrimary.withOpacity(0.5),
-          ),
+    final base = fallbackColor ?? kSurface;
+    return Shimmer.fromColors(
+      baseColor: base.withOpacity(0.9),
+      highlightColor: Colors.white.withOpacity(0.9),
+      child: Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: base,
+          borderRadius: borderRadius,
         ),
       ),
     );

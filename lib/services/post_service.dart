@@ -67,15 +67,18 @@ class PostService {
      }
   }
 
-  // 1. Fetch Photo Posts (Global Feed)
-  Future<List<UserPost>> fetchPhotoPosts() async {
+  // 1. Fetch Photo Posts (Global Feed) - Paginated
+  Future<List<UserPost>> fetchPhotoPostsPaged({required int page, int limit = 10}) async {
     try {
       final userId = _supabase.auth.currentUser?.id;
+      final int from = page * limit;
+      final int to = from + limit - 1;
       final response = await _supabase
           .from('posts')
           .select('*, profiles(*)')
           .filter('image_url', 'not.is', null) 
-          .order('created_at', ascending: false);
+          .order('created_at', ascending: false)
+          .range(from, to);
 
       final posts = (response as List).map((e) => UserPost.fromJson(e)).toList();
       
@@ -88,15 +91,23 @@ class PostService {
     }
   }
 
-  // 2. Fetch Text Posts (Global Feed)
-  Future<List<UserPost>> fetchTextPosts() async {
+  // Backward-compatible (Default small page)
+  Future<List<UserPost>> fetchPhotoPosts() async {
+    return fetchPhotoPostsPaged(page: 0, limit: 10);
+  }
+
+  // 2. Fetch Text Posts (Global Feed) - Paginated
+  Future<List<UserPost>> fetchTextPostsPaged({required int page, int limit = 10}) async {
     try {
       final userId = _supabase.auth.currentUser?.id;
+      final int from = page * limit;
+      final int to = from + limit - 1;
       final response = await _supabase
           .from('posts')
           .select('*, profiles(*)')
           .filter('image_url', 'is', null) 
-          .order('created_at', ascending: false);
+          .order('created_at', ascending: false)
+          .range(from, to);
 
       final posts = (response as List).map((e) => UserPost.fromJson(e)).toList();
 
@@ -108,18 +119,26 @@ class PostService {
       throw Exception('Gagal memuat tulisan: $e');
     }
   }
+
+  // Backward-compatible (Default small page)
+  Future<List<UserPost>> fetchTextPosts() async {
+    return fetchTextPostsPaged(page: 0, limit: 10);
+  }
   
-  // 3. Fetch User Photo Posts (For Profile - Gallery)
+  // 3. Fetch User Photo Posts (For Profile - Gallery) - Paginated
   // Logic: has image_url (not null)
-  Future<List<UserPost>> fetchUserPhotoPosts(String userId) async {
+  Future<List<UserPost>> fetchUserPhotoPostsPaged(String userId, {required int page, int limit = 12}) async {
     try {
       final currentUserId = _supabase.auth.currentUser?.id;
+      final int from = page * limit;
+      final int to = from + limit - 1;
       final response = await _supabase
           .from('posts')
           .select('*, profiles(*)')
           .eq('user_id', userId)
           .filter('image_url', 'not.is', null) 
-          .order('created_at', ascending: false);
+          .order('created_at', ascending: false)
+          .range(from, to);
 
       final posts = (response as List).map((e) => UserPost.fromJson(e)).toList();
 
@@ -138,17 +157,25 @@ class PostService {
     }
   }
 
-  // 4. Fetch User Text Posts (For Profile - Status)
+  // Backward-compatible (Default small page)
+  Future<List<UserPost>> fetchUserPhotoPosts(String userId) async {
+    return fetchUserPhotoPostsPaged(userId, page: 0, limit: 12);
+  }
+
+  // 4. Fetch User Text Posts (For Profile - Status) - Paginated
   // Logic: image_url is null
-  Future<List<UserPost>> fetchUserTextPosts(String userId) async {
+  Future<List<UserPost>> fetchUserTextPostsPaged(String userId, {required int page, int limit = 12}) async {
     try {
       final currentUserId = _supabase.auth.currentUser?.id;
+      final int from = page * limit;
+      final int to = from + limit - 1;
       final response = await _supabase
           .from('posts')
           .select('*, profiles(*)')
           .eq('user_id', userId)
           .filter('image_url', 'is', null)
-          .order('created_at', ascending: false);
+          .order('created_at', ascending: false)
+          .range(from, to);
 
       final posts = (response as List).map((e) => UserPost.fromJson(e)).toList();
 
@@ -166,17 +193,25 @@ class PostService {
     }
   }
 
-  // 5. Fetch Saved Posts (Only for Current User)
-  Future<List<UserPost>> fetchSavedPosts() async {
+  // Backward-compatible (Default small page)
+  Future<List<UserPost>> fetchUserTextPosts(String userId) async {
+    return fetchUserTextPostsPaged(userId, page: 0, limit: 12);
+  }
+
+  // 5. Fetch Saved Posts (Only for Current User) - Paginated
+  Future<List<UserPost>> fetchSavedPostsPaged({required int page, int limit = 10}) async {
     try {
       final userId = _supabase.auth.currentUser?.id;
       if (userId == null) return [];
+      final int from = page * limit;
+      final int to = from + limit - 1;
 
       final response = await _supabase
           .from('saved_posts')
           .select('*, posts:post_id(*, profiles(*))')
           .eq('user_id', userId)
-          .order('created_at', ascending: false);
+          .order('created_at', ascending: false)
+          .range(from, to);
 
       List<UserPost> posts = [];
       for (var item in (response as List)) {
@@ -192,6 +227,11 @@ class PostService {
       debugPrint("Error Fetching Saved: $e");
       return [];
     }
+  }
+
+  // Backward-compatible (Default small page)
+  Future<List<UserPost>> fetchSavedPosts() async {
+    return fetchSavedPostsPaged(page: 0, limit: 10);
   }
 
   // Helper

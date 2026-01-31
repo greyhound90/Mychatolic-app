@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:easy_date_timeline/easy_date_timeline.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mychatolic_app/models/mass_schedule.dart';
 import 'package:mychatolic_app/models/country.dart';
 import 'package:mychatolic_app/models/diocese.dart';
@@ -53,6 +55,7 @@ class _SchedulePageState extends State<SchedulePage> {
   String? _selectedCountryId;
   String? _selectedDioceseId;
   String? _selectedChurchId;
+  String? _userChurchId;
 
   // State: Results
   List<MassSchedule> _schedules = [];
@@ -67,6 +70,7 @@ class _SchedulePageState extends State<SchedulePage> {
   @override
   void initState() {
     super.initState();
+    _loadUserChurchId();
     _fetchLiturgy();
     _fetchCountries();
     _loadDailySchedules(); // Initial Load (Global/Nearby logic or just by day)
@@ -84,24 +88,47 @@ class _SchedulePageState extends State<SchedulePage> {
     }
   }
 
+  Future<void> _loadUserChurchId() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return;
+    try {
+      final profile = await _profileService.fetchUserProfile(user.id);
+      _userChurchId = profile.churchId;
+    } catch (_) {}
+  }
+
   // --- LITURGY LOGIC ---
   Future<void> _fetchLiturgy() async {
     safeSetState(() {
       _loadingLiturgy = true;
       _liturgyError = null;
     });
+    final cacheKey = _scheduleCacheKey(churchId: _selectedChurchId);
+    final cached = await _readScheduleCache(cacheKey);
+    if (cached?.liturgy != null) {
+      safeSetState(() {
+        _currentLiturgy = cached!.liturgy;
+        _loadingLiturgy = false;
+      });
+    }
     try {
       final liturgy = await _liturgyService.getLiturgyByDate(_selectedDate);
       safeSetState(() {
-        _currentLiturgy = liturgy;
+        _currentLiturgy = liturgy ?? _currentLiturgy;
         _loadingLiturgy = false;
       });
+      if (liturgy != null) {
+        await _writeScheduleCache(cacheKey, liturgy: liturgy);
+      }
     } catch (e, st) {
       AppLogger.logError("Fetch Liturgy Error", error: e, stackTrace: st);
       safeSetState(() {
         _loadingLiturgy = false;
         _liturgyError = mapErrorMessage(e);
       });
+      if (cached?.liturgy != null && mounted) {
+        AppSnackBar.showInfo(context, "Menampilkan liturgi tersimpan.");
+      }
     }
   }
 
@@ -153,6 +180,101 @@ class _SchedulePageState extends State<SchedulePage> {
     if (val != null) _fetchChurches(val);
   }
 
+  String _scheduleCacheKey({String? churchId}) {
+    final localeTag =
+        WidgetsBinding.instance.platformDispatcher.locale.toLanguageTag();
+    final dateKey = DateFormat('yyyy-MM-dd').format(_selectedDate);
+    final cacheChurchId = churchId ?? _userChurchId ?? 'global';
+    return 'schedule:$cacheChurchId:$dateKey:$localeTag';
+  }
+
+  Map<String, dynamic> _scheduleToCache(MassSchedule schedule) {
+    return {
+      'id': schedule.id,
+      'church_id': schedule.churchId,
+      'day_number': schedule.dayOfWeek,
+      'start_time': schedule.timeStart,
+      'language': schedule.language,
+      'churches': {
+        'name': schedule.churchName,
+        'parish': schedule.churchParish,
+      },
+    };
+  }
+
+  Map<String, dynamic> _liturgyToCache(LiturgyModel liturgy) {
+    return {
+      'date': liturgy.date.toIso8601String().split('T')[0],
+      'color': liturgy.color,
+      'feast_name': liturgy.feastName,
+      'readings': liturgy.readings,
+    };
+  }
+
+  Future<_ScheduleCache?> _readScheduleCache(String key) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(key);
+      if (raw == null || raw.isEmpty) return null;
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return null;
+
+      final schedulesRaw = decoded['schedules'];
+      final List<MassSchedule> schedules = [];
+      if (schedulesRaw is List) {
+        for (final item in schedulesRaw) {
+          if (item is Map<String, dynamic>) {
+            schedules.add(MassSchedule.fromJson(item));
+          } else if (item is Map) {
+            schedules.add(MassSchedule.fromJson(Map<String, dynamic>.from(item)));
+          }
+        }
+      }
+
+      LiturgyModel? liturgy;
+      final liturgyRaw = decoded['liturgy'];
+      if (liturgyRaw is Map<String, dynamic>) {
+        liturgy = LiturgyModel.fromJson(liturgyRaw);
+      } else if (liturgyRaw is Map) {
+        liturgy = LiturgyModel.fromJson(Map<String, dynamic>.from(liturgyRaw));
+      }
+
+      return _ScheduleCache(schedules: schedules, liturgy: liturgy);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _writeScheduleCache(
+    String key, {
+    List<MassSchedule>? schedules,
+    LiturgyModel? liturgy,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      Map<String, dynamic> payload = {};
+      final existingRaw = prefs.getString(key);
+      if (existingRaw != null && existingRaw.isNotEmpty) {
+        final decoded = jsonDecode(existingRaw);
+        if (decoded is Map<String, dynamic>) {
+          payload = decoded;
+        } else if (decoded is Map) {
+          payload = Map<String, dynamic>.from(decoded);
+        }
+      }
+
+      if (schedules != null) {
+        payload['schedules'] = schedules.map(_scheduleToCache).toList();
+      }
+      if (liturgy != null) {
+        payload['liturgy'] = _liturgyToCache(liturgy);
+      }
+      payload['updated_at'] = DateTime.now().toIso8601String();
+
+      await prefs.setString(key, jsonEncode(payload));
+    } catch (_) {}
+  }
+
   // --- SCHEDULE LOGIC ---
 
   // 1. Load by Date (Default View)
@@ -162,6 +284,17 @@ class _SchedulePageState extends State<SchedulePage> {
       _isChurchSearchMode = false;
       _scheduleError = null;
     });
+
+    final cacheKey = _scheduleCacheKey();
+    final cached = await _readScheduleCache(cacheKey);
+    final hasCache = cached != null;
+    if (cached != null) {
+      safeSetState(() {
+        _schedules = cached.schedules;
+        if (cached.liturgy != null) _currentLiturgy = cached.liturgy;
+        _isLoadingSchedules = false;
+      });
+    }
 
     try {
       // Fetch general schedules for this weekday
@@ -173,12 +306,25 @@ class _SchedulePageState extends State<SchedulePage> {
         _schedules = data;
         _isLoadingSchedules = false;
       });
+      await _writeScheduleCache(
+        cacheKey,
+        schedules: data,
+        liturgy: _currentLiturgy,
+      );
     } catch (e, st) {
       AppLogger.logError("Load Daily Schedules Error", error: e, stackTrace: st);
       safeSetState(() {
         _isLoadingSchedules = false;
-        _scheduleError = mapErrorMessage(e);
+        if (!hasCache) {
+          _scheduleError = mapErrorMessage(e);
+        }
       });
+      if (hasCache && mounted) {
+        AppSnackBar.showInfo(
+          context,
+          "Koneksi bermasalah, menampilkan jadwal tersimpan.",
+        );
+      }
     }
   }
 
@@ -195,6 +341,17 @@ class _SchedulePageState extends State<SchedulePage> {
       _scheduleError = null;
     });
 
+    final cacheKey = _scheduleCacheKey(churchId: _selectedChurchId);
+    final cached = await _readScheduleCache(cacheKey);
+    final hasCache = cached != null;
+    if (cached != null) {
+      safeSetState(() {
+        _schedules = cached.schedules;
+        if (cached.liturgy != null) _currentLiturgy = cached.liturgy;
+        _isLoadingSchedules = false;
+      });
+    }
+
     try {
       // Use the service which now returns strictly typed List<MassSchedule>
       final data = await _scheduleService.fetchSchedules(
@@ -205,12 +362,25 @@ class _SchedulePageState extends State<SchedulePage> {
         _schedules = data;
         _isLoadingSchedules = false;
       });
+      await _writeScheduleCache(
+        cacheKey,
+        schedules: data,
+        liturgy: _currentLiturgy,
+      );
     } catch (e, st) {
       AppLogger.logError("Search Error", error: e, stackTrace: st);
       safeSetState(() {
         _isLoadingSchedules = false;
-        _scheduleError = mapErrorMessage(e);
+        if (!hasCache) {
+          _scheduleError = mapErrorMessage(e);
+        }
       });
+      if (hasCache && mounted) {
+        AppSnackBar.showInfo(
+          context,
+          "Koneksi bermasalah, menampilkan jadwal tersimpan.",
+        );
+      }
     }
   }
   
@@ -1366,21 +1536,22 @@ class _SchedulePageState extends State<SchedulePage> {
     final litColor = palette.accent;
     final litLabel = _liturgyLabel(_currentLiturgy?.color);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colors.onSurface.withOpacity(0.08)),
-        boxShadow: [
-          BoxShadow(
-            color: theme.shadowColor.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
+    return RepaintBoundary(
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: colors.onSurface.withOpacity(0.08)),
+          boxShadow: [
+            BoxShadow(
+              color: theme.shadowColor.withOpacity(0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
           Positioned(
             left: 16,
             top: 16,
@@ -1570,7 +1741,8 @@ class _SchedulePageState extends State<SchedulePage> {
               ],
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1936,4 +2108,14 @@ class _SchedulePageState extends State<SchedulePage> {
       ),
     );
   }
+}
+
+class _ScheduleCache {
+  final List<MassSchedule> schedules;
+  final LiturgyModel? liturgy;
+
+  const _ScheduleCache({
+    required this.schedules,
+    this.liturgy,
+  });
 }

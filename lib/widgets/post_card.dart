@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:mychatolic_app/models/user_post.dart';
 import 'package:mychatolic_app/services/post_service.dart';
 import 'package:mychatolic_app/widgets/safe_network_image.dart';
+import 'package:mychatolic_app/core/ui/image_prefetch.dart';
 import 'package:mychatolic_app/features/profile/pages/profile_page.dart';
 import 'package:mychatolic_app/features/feed/pages/comments_page.dart';
 import 'package:mychatolic_app/features/feed/pages/full_screen_image_page.dart';
@@ -232,12 +233,16 @@ class _PostCardState extends State<PostCard> {
     // Assuming 'imageUrls' is the source of truth.
     final String? imageUrl = hasImage ? widget.post.imageUrls.first : null;
 
-    return Container(
-      color: Colors.white,
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    ImagePrefetch.prefetch(context, widget.post.userAvatar);
+    ImagePrefetch.prefetch(context, imageUrl);
+
+    return RepaintBoundary(
+      child: Container(
+        color: Colors.white,
+        margin: const EdgeInsets.only(bottom: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           // 1. HEADER (Avatar, Name, Time)
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -351,8 +356,9 @@ class _PostCardState extends State<PostCard> {
             ),
           ),
           
-          const Divider(height: 1, color: Color(0xFFEEEEEE)),
-        ],
+            const Divider(height: 1, color: Color(0xFFEEEEEE)),
+          ],
+        ),
       ),
     );
   }

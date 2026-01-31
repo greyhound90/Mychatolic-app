@@ -10,7 +10,6 @@ import 'package:mychatolic_app/models/story_model.dart';
 import 'package:mychatolic_app/services/profile_service.dart';
 import 'package:mychatolic_app/services/story_service.dart';
 import 'package:mychatolic_app/services/chat_service.dart';
-import 'package:mychatolic_app/services/social_service.dart';
 import 'package:mychatolic_app/services/post_service.dart';
 import 'package:mychatolic_app/widgets/safe_network_image.dart';
 import 'package:mychatolic_app/widgets/post_card.dart';
@@ -29,6 +28,7 @@ import 'package:mychatolic_app/core/ui/app_state.dart';
 import 'package:mychatolic_app/core/ui/app_state_view.dart';
 import 'package:mychatolic_app/core/ui/app_snackbar.dart';
 import 'package:mychatolic_app/core/log/app_logger.dart';
+import 'package:mychatolic_app/core/ui/image_prefetch.dart';
 import 'package:share_plus/share_plus.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -46,7 +46,6 @@ class _ProfilePageState extends State<ProfilePage>
   final ProfileService _profileService = ProfileService();
   final StoryService _storyService = StoryService();
   final ChatService _chatService = ChatService();
-  final SocialService _socialService = SocialService();
   final PostService _postService = PostService();
   final _supabase = Supabase.instance.client;
 
@@ -69,11 +68,29 @@ class _ProfilePageState extends State<ProfilePage>
   List<UserPost> _textPosts = [];
   List<UserPost> _savedPosts = [];
 
-  bool _isFirstLoadRunning = false;
-  bool _isLoadMoreRunning = false;
-  bool _hasNextPage = true;
-  int _currentPage = 0;
-  final int _limit = 12;
+  static const int _photoLimit = 12;
+  static const int _textLimit = 10;
+  static const int _savedLimit = 12;
+
+  int _photoPage = 0;
+  int _textPage = 0;
+  int _savedPage = 0;
+
+  bool _photoHasMore = true;
+  bool _textHasMore = true;
+  bool _savedHasMore = true;
+
+  bool _photoLoading = false;
+  bool _textLoading = false;
+  bool _savedLoading = false;
+
+  bool _photoLoadingMore = false;
+  bool _textLoadingMore = false;
+  bool _savedLoadingMore = false;
+
+  late final ScrollController _photoScrollController;
+  late final ScrollController _textScrollController;
+  late final ScrollController _savedScrollController;
 
   // Stories
   List<Story> _userStories = [];
@@ -83,25 +100,19 @@ class _ProfilePageState extends State<ProfilePage>
     super.initState();
     _checkIsMe();
     _tabController = TabController(length: _isMe ? 3 : 2, vsync: this);
+    _photoScrollController = ScrollController()..addListener(_onPhotoScroll);
+    _textScrollController = ScrollController()..addListener(_onTextScroll);
+    _savedScrollController = ScrollController()..addListener(_onSavedScroll);
     _loadProfileData();
-
-    _scrollController.addListener(() {
-      final bool isSavedTab = _isMe && _tabController.index == 2;
-      if (!isSavedTab && // Don't paginate saved posts for now
-          _scrollController.position.pixels >=
-              _scrollController.position.maxScrollExtent - 200 &&
-          !_isFirstLoadRunning &&
-          !_isLoadMoreRunning &&
-          _hasNextPage) {
-        _loadMorePosts();
-      }
-    });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     _scrollController.dispose();
+    _photoScrollController.dispose();
+    _textScrollController.dispose();
+    _savedScrollController.dispose();
     super.dispose();
   }
 
@@ -147,11 +158,11 @@ class _ProfilePageState extends State<ProfilePage>
         };
         _userStories = stories;
       });
-      await _loadInitialPosts(targetUserId);
+      await _refreshPhotoPosts(targetUserId);
+      await _refreshTextPosts(targetUserId);
 
-      // Load saved posts only if it's me
       if (_isMe) {
-        _loadSavedPosts();
+        await _refreshSavedPosts();
       }
     } catch (e, st) {
       AppLogger.logError("Error loading profile", error: e, stackTrace: st);
@@ -165,85 +176,192 @@ class _ProfilePageState extends State<ProfilePage>
     }
   }
 
-  Future<void> _loadSavedPosts() async {
+  void _updatePostCount() {
+    _stats['posts'] = _photoPosts.length + _textPosts.length;
+  }
+
+  Future<void> _refreshPhotoPosts(String userId) async {
+    safeSetState(() {
+      _photoLoading = true;
+      _photoPage = 0;
+      _photoHasMore = true;
+      _photoPosts = [];
+    });
+
     try {
-      final saved = await _postService.fetchSavedPosts();
+      final posts = await _postService.fetchUserPhotoPostsPaged(
+        userId,
+        page: 0,
+        limit: _photoLimit,
+      );
+      safeSetState(() {
+        _photoPosts = posts;
+        _photoLoading = false;
+        _photoHasMore = posts.length == _photoLimit;
+        _updatePostCount();
+      });
+    } catch (e, st) {
+      AppLogger.logError("Error loading photo posts", error: e, stackTrace: st);
+      safeSetState(() => _photoLoading = false);
+    }
+  }
+
+  Future<void> _refreshTextPosts(String userId) async {
+    safeSetState(() {
+      _textLoading = true;
+      _textPage = 0;
+      _textHasMore = true;
+      _textPosts = [];
+    });
+
+    try {
+      final posts = await _postService.fetchUserTextPostsPaged(
+        userId,
+        page: 0,
+        limit: _textLimit,
+      );
+      safeSetState(() {
+        _textPosts = posts;
+        _textLoading = false;
+        _textHasMore = posts.length == _textLimit;
+        _updatePostCount();
+      });
+    } catch (e, st) {
+      AppLogger.logError("Error loading text posts", error: e, stackTrace: st);
+      safeSetState(() => _textLoading = false);
+    }
+  }
+
+  Future<void> _refreshSavedPosts() async {
+    safeSetState(() {
+      _savedLoading = true;
+      _savedPage = 0;
+      _savedHasMore = true;
+      _savedPosts = [];
+    });
+
+    try {
+      final saved = await _postService.fetchSavedPostsPaged(
+        page: 0,
+        limit: _savedLimit,
+      );
       safeSetState(() {
         _savedPosts = saved;
+        _savedLoading = false;
+        _savedHasMore = saved.length == _savedLimit;
       });
     } catch (e, st) {
       AppLogger.logError("Error loading saved posts", error: e, stackTrace: st);
+      safeSetState(() => _savedLoading = false);
     }
   }
 
-  void _separatePosts(List<UserPost> posts) {
-    List<UserPost> photos = [];
-    List<UserPost> texts = [];
-    for (var p in posts) {
-      bool isPhoto = p.type == 'photo' || p.imageUrls.isNotEmpty;
-      if (isPhoto) {
-        photos.add(p);
-      } else {
-        texts.add(p);
-      }
-    }
-    _photoPosts = photos;
-    _textPosts = texts;
-    _stats['posts'] = posts.length;
-  }
-
-  Future<void> _loadInitialPosts(String userId) async {
-    try {
-      final posts = await _socialService.fetchPosts(
-        userId: userId,
-        page: 0,
-        limit: _limit,
-      );
-
-      safeSetState(() {
-        if (posts.isNotEmpty) {
-          _separatePosts(posts);
-        }
-        if (posts.length < _limit) {
-          _hasNextPage = false;
-        }
-      });
-    } catch (e, st) {
-      AppLogger.logError("Error loading posts", error: e, stackTrace: st);
-    }
-  }
-
-  Future<void> _loadMorePosts() async {
-    if (_isLoadMoreRunning || !_hasNextPage || _profile == null) return;
-    safeSetState(() => _isLoadMoreRunning = true);
+  Future<void> _loadMorePhotoPosts() async {
+    if (_photoLoadingMore || !_photoHasMore || _profile == null) return;
+    safeSetState(() => _photoLoadingMore = true);
 
     try {
-      final nextPage = _currentPage + 1;
-      final posts = await _socialService.fetchPosts(
-        userId: _profile!.id,
+      final nextPage = _photoPage + 1;
+      final posts = await _postService.fetchUserPhotoPostsPaged(
+        _profile!.id,
         page: nextPage,
-        limit: _limit,
+        limit: _photoLimit,
       );
 
       safeSetState(() {
         if (posts.isNotEmpty) {
-          for (var p in posts) {
-            if (p.type == 'photo' || p.imageUrls.isNotEmpty) {
-              _photoPosts.add(p);
-            } else {
-              _textPosts.add(p);
-            }
-          }
-          _currentPage = nextPage;
+          _photoPosts.addAll(posts);
+          _photoPage = nextPage;
+          _updatePostCount();
         }
-        if (posts.length < _limit) {
-          _hasNextPage = false;
+        if (posts.length < _photoLimit) {
+          _photoHasMore = false;
         }
-        _isLoadMoreRunning = false;
+        _photoLoadingMore = false;
       });
     } catch (e, st) {
-      AppLogger.logError("Error loading more posts", error: e, stackTrace: st);
-      safeSetState(() => _isLoadMoreRunning = false);
+      AppLogger.logError("Error loading more photo posts", error: e, stackTrace: st);
+      safeSetState(() => _photoLoadingMore = false);
+    }
+  }
+
+  Future<void> _loadMoreTextPosts() async {
+    if (_textLoadingMore || !_textHasMore || _profile == null) return;
+    safeSetState(() => _textLoadingMore = true);
+
+    try {
+      final nextPage = _textPage + 1;
+      final posts = await _postService.fetchUserTextPostsPaged(
+        _profile!.id,
+        page: nextPage,
+        limit: _textLimit,
+      );
+
+      safeSetState(() {
+        if (posts.isNotEmpty) {
+          _textPosts.addAll(posts);
+          _textPage = nextPage;
+          _updatePostCount();
+        }
+        if (posts.length < _textLimit) {
+          _textHasMore = false;
+        }
+        _textLoadingMore = false;
+      });
+    } catch (e, st) {
+      AppLogger.logError("Error loading more text posts", error: e, stackTrace: st);
+      safeSetState(() => _textLoadingMore = false);
+    }
+  }
+
+  Future<void> _loadMoreSavedPosts() async {
+    if (_savedLoadingMore || !_savedHasMore) return;
+    safeSetState(() => _savedLoadingMore = true);
+
+    try {
+      final nextPage = _savedPage + 1;
+      final saved = await _postService.fetchSavedPostsPaged(
+        page: nextPage,
+        limit: _savedLimit,
+      );
+
+      safeSetState(() {
+        if (saved.isNotEmpty) {
+          _savedPosts.addAll(saved);
+          _savedPage = nextPage;
+        }
+        if (saved.length < _savedLimit) {
+          _savedHasMore = false;
+        }
+        _savedLoadingMore = false;
+      });
+    } catch (e, st) {
+      AppLogger.logError("Error loading more saved posts", error: e, stackTrace: st);
+      safeSetState(() => _savedLoadingMore = false);
+    }
+  }
+
+  void _onPhotoScroll() {
+    if (!_photoScrollController.hasClients) return;
+    if (_photoScrollController.position.pixels >=
+        _photoScrollController.position.maxScrollExtent - 200) {
+      _loadMorePhotoPosts();
+    }
+  }
+
+  void _onTextScroll() {
+    if (!_textScrollController.hasClients) return;
+    if (_textScrollController.position.pixels >=
+        _textScrollController.position.maxScrollExtent - 200) {
+      _loadMoreTextPosts();
+    }
+  }
+
+  void _onSavedScroll() {
+    if (!_savedScrollController.hasClients) return;
+    if (_savedScrollController.position.pixels >=
+        _savedScrollController.position.maxScrollExtent - 200) {
+      _loadMoreSavedPosts();
     }
   }
 
@@ -625,9 +743,29 @@ class _ProfilePageState extends State<ProfilePage>
                   body: TabBarView(
                     controller: _tabController,
                     children: [
-                      _buildGridPosts(_photoPosts),
-                      _buildListPosts(_textPosts),
-                      if (_isMe) _buildGridPosts(_savedPosts, isSavedView: true),
+                      _buildGridPosts(
+                        _photoPosts,
+                        controller: _photoScrollController,
+                        isLoading: _photoLoading,
+                        isLoadingMore: _photoLoadingMore,
+                        emptyMessage: "Belum ada postingan",
+                      ),
+                      _buildListPosts(
+                        _textPosts,
+                        controller: _textScrollController,
+                        isLoading: _textLoading,
+                        isLoadingMore: _textLoadingMore,
+                        emptyMessage: "Belum ada postingan",
+                      ),
+                      if (_isMe)
+                        _buildGridPosts(
+                          _savedPosts,
+                          controller: _savedScrollController,
+                          isLoading: _savedLoading,
+                          isLoadingMore: _savedLoadingMore,
+                          emptyMessage: "Belum ada postingan disimpan",
+                          isSavedView: true,
+                        ),
                     ],
                   ),
                 ),
@@ -636,28 +774,39 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  Widget _buildGridPosts(List<UserPost> posts, {bool isSavedView = false}) {
-    if (posts.isEmpty) {
-      return _buildEmptyState(isSavedView 
-          ? "Belum ada postingan disimpan" 
-          : "Belum ada foto");
+  Widget _buildGridPosts(
+    List<UserPost> posts, {
+    required ScrollController controller,
+    required bool isLoading,
+    required bool isLoadingMore,
+    required String emptyMessage,
+    bool isSavedView = false,
+  }) {
+    if (isLoading && posts.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
     }
-    final basePadding = 16 + MediaQuery.of(context).padding.bottom;
-    final bottomPadding = basePadding;
+    if (posts.isEmpty) {
+      return _buildEmptyState(emptyMessage);
+    }
+    final bottomPadding = 24 + MediaQuery.of(context).padding.bottom;
     return CustomScrollView(
       key: PageStorageKey<String>(isSavedView ? 'saved' : 'grid'),
+      controller: controller,
+      primary: false,
+      physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
         SliverPadding(
           padding: const EdgeInsets.all(8),
           sliver: SliverGrid(
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3, // Instagram standard
-              childAspectRatio: 4 / 5, // 4:5 portrait
+              crossAxisCount: 3,
+              childAspectRatio: 4 / 5,
               crossAxisSpacing: 6,
               mainAxisSpacing: 6,
             ),
             delegate: SliverChildBuilderDelegate((context, index) {
               final post = posts[index];
+              ImagePrefetch.prefetch(context, post.imageUrl);
               return GestureDetector(
                 onTap: () {
                   Navigator.push(
@@ -678,7 +827,7 @@ class _ProfilePageState extends State<ProfilePage>
             }, childCount: posts.length),
           ),
         ),
-        if (_isLoadMoreRunning && !isSavedView)
+        if (isLoadingMore)
           const SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.all(10),
@@ -692,20 +841,34 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  Widget _buildListPosts(List<UserPost> posts) {
-    if (posts.isEmpty) {
-      return _buildEmptyState("Belum ada status");
+  Widget _buildListPosts(
+    List<UserPost> posts, {
+    required ScrollController controller,
+    required bool isLoading,
+    required bool isLoadingMore,
+    required String emptyMessage,
+  }) {
+    if (isLoading && posts.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
     }
+    if (posts.isEmpty) {
+      return _buildEmptyState(emptyMessage);
+    }
+    final bottomPadding = 24 + MediaQuery.of(context).padding.bottom;
     return ListView.separated(
       key: const PageStorageKey<String>('list'),
-      padding: EdgeInsets.zero,
-      itemCount: posts.length + (_isLoadMoreRunning ? 1 : 0),
+      controller: controller,
+      primary: false,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.only(bottom: bottomPadding),
+      itemCount: posts.length + (isLoadingMore ? 1 : 0),
       separatorBuilder: (c, i) => Divider(height: 1, color: _palette.border),
       itemBuilder: (context, index) {
         if (index == posts.length) {
           return const Padding(
-              padding: EdgeInsets.all(20),
-              child: Center(child: CircularProgressIndicator()));
+            padding: EdgeInsets.all(20),
+            child: Center(child: CircularProgressIndicator()),
+          );
         }
         final post = posts[index];
         return PostCard(

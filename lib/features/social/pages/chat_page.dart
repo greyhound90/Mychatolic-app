@@ -15,6 +15,7 @@ import 'package:mychatolic_app/core/ui/app_state.dart';
 import 'package:mychatolic_app/core/ui/app_state_view.dart';
 import 'package:mychatolic_app/core/ui/app_snackbar.dart';
 import 'package:mychatolic_app/core/log/app_logger.dart';
+import 'package:mychatolic_app/core/ui/image_prefetch.dart';
 
 class ChatPage extends StatefulWidget {
   final String? partnerId;
@@ -189,7 +190,11 @@ class _ChatPageState extends State<ChatPage> {
           // 2. CHAT LIST (EXPANDED) 
           Expanded(
             child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: _supabase.from('social_chats').stream(primaryKey: ['id']).order('updated_at', ascending: false),
+              stream: _supabase
+                  .from('social_chats')
+                  .stream(primaryKey: ['id'])
+                  .contains('participants', [myId])
+                  .order('updated_at', ascending: false),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                   return const AppStateView(state: AppViewState.loading);
@@ -371,6 +376,8 @@ class _ChatTile extends StatelessWidget {
              // Default Avatar will handle null URL
           }
       }
+
+      ImagePrefetch.prefetch(context, avatarUrl);
 
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // More spacing

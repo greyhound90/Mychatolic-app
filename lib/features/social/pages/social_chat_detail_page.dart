@@ -78,10 +78,23 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
   Timer? _typingTimer;
 
   bool _initialScrollDone = false;
+  static const int _pageSize = 40;
+  final List<Map<String, dynamic>> _messages = [];
+  final Set<String> _messageIds = {};
+  bool _isInitialLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMoreMessages = true;
+  bool _isNearBottom = true;
+  String? _messageError;
+  DateTime? _oldestCreatedAt;
+
+  RealtimeChannel? _messageChannel;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_handleScroll);
+    _loadInitialMessages();
     _subscribeToMessages();
     _subscribeToPresence();
     _chatService.markMessagesAsRead(widget.chatId);
@@ -107,6 +120,9 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
   @override
   void dispose() {
     _supabase.removeChannel(_roomChannel);
+    if (_messageChannel != null) {
+      _supabase.removeChannel(_messageChannel!);
+    }
     // Be careful with listener removal if storing subscription object
     _uiAudioPlayer.dispose();
     _textController.dispose();
@@ -140,31 +156,51 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
 
   void _subscribeToMessages() {
     final myId = _supabase.auth.currentUser?.id;
-    // We only listen for side-effects here (Sound, Haptics). 
-    // Data update is handled by StreamBuilder.
-    _supabase.channel('public:social_messages:chat_id=${widget.chatId}')
+    _messageChannel =
+        _supabase.channel('public:social_messages:chat_id=${widget.chatId}');
+    _messageChannel!
         .onPostgresChanges(
-          event: PostgresChangeEvent.insert, 
-          schema: 'public', 
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
           table: 'social_messages',
-          filter: PostgresChangeFilter(type: PostgresChangeFilterType.eq, column: 'chat_id', value: widget.chatId),
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'chat_id',
+            value: widget.chatId,
+          ),
           callback: (payload) {
             if (!mounted) return;
-            final newMsg = payload.newRecord;
-            
+            final newMsg = Map<String, dynamic>.from(payload.newRecord);
+            final msgId = newMsg['id']?.toString();
+            if (msgId == null || _messageIds.contains(msgId)) return;
+
+            safeSetState(() {
+              _messageIds.add(msgId);
+              _messages.add(newMsg);
+              if (_messages.length == 1) {
+                _oldestCreatedAt =
+                    DateTime.tryParse(newMsg['created_at'].toString());
+              }
+            });
+
             // Side Effects
             if (newMsg['type'] == 'beeb' && newMsg['sender_id'] != myId) {
-                 _playUiSound();
-                 HapticFeedback.heavyImpact(); 
+              _playUiSound();
+              HapticFeedback.heavyImpact();
             }
             if (newMsg['sender_id'] != myId) {
-                 // Mark read
-                 _supabase.from('social_messages').update({'is_read': true}).match({'id': newMsg['id']}).then((_) {});
+              _supabase
+                  .from('social_messages')
+                  .update({'is_read': true})
+                  .match({'id': newMsg['id']}).then((_) {});
             }
-             
-            // Note: No safeSetState() needed here because StreamBuilder handles the UI update automatically.
+
+            if (_isNearBottom) {
+              _scrollToBottom();
+            }
           },
-        ).subscribe();
+        )
+        .subscribe();
   }
 
   void _subscribeToPresence() {
@@ -198,6 +234,125 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
            await _roomChannel.track({'user_id': myId, 'online_at': DateTime.now().toIso8601String()});
          }
       });
+  }
+
+  void _handleScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    _isNearBottom = position.pixels >= position.maxScrollExtent - 120;
+    if (position.pixels <= 200) {
+      _loadOlderMessages();
+    }
+  }
+
+  Future<void> _loadInitialMessages() async {
+    safeSetState(() {
+      _isInitialLoading = true;
+      _messageError = null;
+      _messages.clear();
+      _messageIds.clear();
+      _hasMoreMessages = true;
+      _oldestCreatedAt = null;
+      _initialScrollDone = false;
+    });
+
+    try {
+      final response = await _supabase
+          .from('social_messages')
+          .select()
+          .eq('chat_id', widget.chatId)
+          .order('created_at', ascending: false)
+          .limit(_pageSize);
+
+      final List<Map<String, dynamic>> fetched =
+          List<Map<String, dynamic>>.from(response as List<dynamic>);
+      final ordered = fetched.reversed.toList();
+
+      safeSetState(() {
+        _messages.addAll(ordered);
+        for (final msg in ordered) {
+          final id = msg['id']?.toString();
+          if (id != null) _messageIds.add(id);
+        }
+        if (_messages.isNotEmpty) {
+          _oldestCreatedAt =
+              DateTime.tryParse(_messages.first['created_at'].toString());
+        }
+        _hasMoreMessages = fetched.length == _pageSize;
+        _isInitialLoading = false;
+      });
+
+      if (_messages.isNotEmpty && !_initialScrollDone) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients) {
+            _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+            _initialScrollDone = true;
+          }
+        });
+      }
+    } catch (e, st) {
+      AppLogger.logError("Error loading messages", error: e, stackTrace: st);
+      safeSetState(() {
+        _isInitialLoading = false;
+        _messageError = "Gagal memuat pesan";
+      });
+    }
+  }
+
+  Future<void> _loadOlderMessages() async {
+    if (_isLoadingMore || !_hasMoreMessages || _oldestCreatedAt == null) return;
+    if (!_scrollController.hasClients) return;
+    safeSetState(() => _isLoadingMore = true);
+
+    final prevOffset = _scrollController.position.pixels;
+    final prevMaxExtent = _scrollController.position.maxScrollExtent;
+
+    try {
+      final response = await _supabase
+          .from('social_messages')
+          .select()
+          .eq('chat_id', widget.chatId)
+          .lt('created_at', _oldestCreatedAt!.toIso8601String())
+          .order('created_at', ascending: false)
+          .limit(_pageSize);
+
+      final List<Map<String, dynamic>> fetched =
+          List<Map<String, dynamic>>.from(response as List<dynamic>);
+      final ordered = fetched.reversed.toList();
+
+      final List<Map<String, dynamic>> newItems = [];
+      for (final msg in ordered) {
+        final id = msg['id']?.toString();
+        if (id != null && _messageIds.add(id)) {
+          newItems.add(msg);
+        }
+      }
+
+      safeSetState(() {
+        if (newItems.isNotEmpty) {
+          _messages.insertAll(0, newItems);
+          _oldestCreatedAt =
+              DateTime.tryParse(_messages.first['created_at'].toString());
+        }
+        if (fetched.length < _pageSize) {
+          _hasMoreMessages = false;
+        }
+        _isLoadingMore = false;
+      });
+
+      if (newItems.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients) {
+            final newMaxExtent = _scrollController.position.maxScrollExtent;
+            final delta = newMaxExtent - prevMaxExtent;
+            _scrollController.jumpTo(prevOffset + delta);
+          }
+        });
+      }
+    } catch (e, st) {
+      AppLogger.logError("Error loading older messages", error: e, stackTrace: st);
+      safeSetState(() => _isLoadingMore = false);
+    }
   }
 
   void _onTypingChanged(String value) {
@@ -614,90 +769,90 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
 
   Widget _buildMessageList() {
     final myId = _supabase.auth.currentUser?.id;
-    return StreamBuilder<List<Map<String, dynamic>>>(
-      // UPDATED TO ASCENDING as requested
-      stream: _supabase.from('social_messages')
-          .stream(primaryKey: ['id'])
-          .eq('chat_id', widget.chatId)
-          .order('created_at', ascending: true), 
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-          return const AppStateView(state: AppViewState.loading);
-        }
+    if (_isInitialLoading) {
+      return const AppStateView(state: AppViewState.loading);
+    }
 
-        if (snapshot.hasError) {
-          return AppStateView(
-            state: AppViewState.error,
-            error: const AppError(
-              title: "Gagal memuat pesan",
-              message: "Koneksi bermasalah. Coba lagi.",
+    if (_messageError != null) {
+      return AppStateView(
+        state: AppViewState.error,
+        error: AppError(
+          title: "Gagal memuat pesan",
+          message: _messageError ?? "Koneksi bermasalah. Coba lagi.",
+        ),
+        onRetry: _loadInitialMessages,
+      );
+    }
+
+    if (_messages.isEmpty) {
+      return const AppStateView(
+        state: AppViewState.empty,
+        emptyTitle: "Belum ada pesan",
+        emptyMessage: "Mulai percakapan sekarang.",
+      );
+    }
+
+    final bool showTopLoader = _isLoadingMore;
+    return ListView.builder(
+      reverse: false,
+      controller: _scrollController,
+      padding: const EdgeInsets.fromLTRB(16, 120, 16, 20),
+      itemCount: _messages.length + (showTopLoader ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (showTopLoader && index == 0) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
             ),
-            onRetry: () => safeSetState(() {}),
           );
         }
 
-        if (!snapshot.hasData) {
-          return const AppStateView(
-            state: AppViewState.empty,
-            emptyTitle: "Belum ada pesan",
-            emptyMessage: "Mulai percakapan sekarang.",
-          );
-        }
-        final msgs = snapshot.data!;
-        
-        if (msgs.isEmpty) {
-          return const AppStateView(
-            state: AppViewState.empty,
-            emptyTitle: "Belum ada pesan",
-            emptyMessage: "Mulai percakapan sekarang.",
-          );
-        }
-        
-        // Auto scroll on initial load or new message
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (_scrollController.hasClients) {
-                _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-            }
-        });
+        final msgIndex = index - (showTopLoader ? 1 : 0);
+        final msg = _messages[msgIndex];
+        final isMe = msg['sender_id'] == myId;
+        bool showDate = false;
 
-        return ListView.builder(
-          reverse: false, // Standard top-to-bottom
-          controller: _scrollController, 
-          padding: const EdgeInsets.fromLTRB(16, 120, 16, 20),
-          itemCount: msgs.length,
-          itemBuilder: (context, index) {
-            final msg = msgs[index];
-            final isMe = msg['sender_id'] == myId;
-            bool showDate = false;
-            
-            if (index == 0) {
-               showDate = true;
-            } else {
-               final curr = DateTime.parse(msg['created_at']).toLocal();
-               final prev = DateTime.parse(msgs[index - 1]['created_at']).toLocal(); 
-               if (curr.day != prev.day) showDate = true;
-            }
+        if (msgIndex == 0) {
+          showDate = true;
+        } else {
+          final curr = DateTime.parse(msg['created_at']).toLocal();
+          final prev =
+              DateTime.parse(_messages[msgIndex - 1]['created_at']).toLocal();
+          if (curr.day != prev.day) showDate = true;
+        }
 
-            return Column(children: [
+        return RepaintBoundary(
+          child: Column(
+            children: [
               if (showDate) _buildDateHeader(msg['created_at']),
               GestureDetector(
-                onLongPress: () => _showOptions(msg, isMe), 
+                onLongPress: () => _showOptions(msg, isMe),
                 child: Dismissible(
                   key: Key(msg['id']),
                   direction: DismissDirection.startToEnd,
-                  dismissThresholds: const {DismissDirection.startToEnd: 0.15},
+                  dismissThresholds: const {
+                    DismissDirection.startToEnd: 0.15
+                  },
                   background: Container(
                     alignment: Alignment.centerLeft,
                     padding: const EdgeInsets.only(left: 20),
                     color: Colors.transparent,
                     child: Icon(Icons.reply, color: Colors.grey[600], size: 30),
                   ),
-                  confirmDismiss: (dir) async { _onSwipeToReply(msg); return false; },
+                  confirmDismiss: (dir) async {
+                    _onSwipeToReply(msg);
+                    return false;
+                  },
                   child: _buildAnimatedBubble(msg, isMe),
                 ),
-              )
-            ]);
-          },
+              ),
+            ],
+          ),
         );
       },
     );
