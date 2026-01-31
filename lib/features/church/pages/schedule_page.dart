@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:easy_date_timeline/easy_date_timeline.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -51,6 +52,8 @@ class _SchedulePageState extends State<SchedulePage> {
   // State: Results
   List<MassSchedule> _schedules = [];
   bool _isLoadingSchedules = false;
+  String? _scheduleError;
+  String? _liturgyError;
 
   // Grouping for "Church Search" mode
   bool _isChurchSearchMode = false;
@@ -65,30 +68,63 @@ class _SchedulePageState extends State<SchedulePage> {
 
   // --- LITURGY LOGIC ---
   Future<void> _fetchLiturgy() async {
-    setState(() => _loadingLiturgy = true);
-    final liturgy = await _liturgyService.getLiturgyByDate(_selectedDate);
-    if (mounted) {
-      setState(() {
-        _currentLiturgy = liturgy;
-        _loadingLiturgy = false;
-      });
+    setState(() {
+      _loadingLiturgy = true;
+      _liturgyError = null;
+    });
+    try {
+      final liturgy = await _liturgyService.getLiturgyByDate(_selectedDate);
+      if (mounted) {
+        setState(() {
+          _currentLiturgy = liturgy;
+          _loadingLiturgy = false;
+        });
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint("Fetch Liturgy Error: $e");
+      }
+      if (mounted) {
+        setState(() {
+          _loadingLiturgy = false;
+          _liturgyError = "Gagal memuat liturgi.";
+        });
+      }
     }
   }
 
   // --- MASTER DATA LOGIC ---
   Future<void> _fetchCountries() async {
-    final data = await _masterService.fetchCountries();
-    if (mounted) setState(() => _countries = data);
+    try {
+      final data = await _masterService.fetchCountries();
+      if (mounted) setState(() => _countries = data);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint("Fetch Countries Error: $e");
+      }
+    }
   }
 
   Future<void> _fetchDioceses(String countryId) async {
-    final data = await _masterService.fetchDioceses(countryId);
-    if (mounted) setState(() => _dioceses = data);
+    try {
+      final data = await _masterService.fetchDioceses(countryId);
+      if (mounted) setState(() => _dioceses = data);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint("Fetch Dioceses Error: $e");
+      }
+    }
   }
 
   Future<void> _fetchChurches(String dioceseId) async {
-    final data = await _masterService.fetchChurches(dioceseId);
-    if (mounted) setState(() => _churches = data);
+    try {
+      final data = await _masterService.fetchChurches(dioceseId);
+      if (mounted) setState(() => _churches = data);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint("Fetch Churches Error: $e");
+      }
+    }
   }
 
   void _onCountryChanged(String? val) {
@@ -118,6 +154,7 @@ class _SchedulePageState extends State<SchedulePage> {
     setState(() {
       _isLoadingSchedules = true;
       _isChurchSearchMode = false;
+      _scheduleError = null;
     });
 
     try {
@@ -133,7 +170,15 @@ class _SchedulePageState extends State<SchedulePage> {
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoadingSchedules = false);
+      if (kDebugMode) {
+        debugPrint("Load Daily Schedules Error: $e");
+      }
+      if (mounted) {
+        setState(() {
+          _isLoadingSchedules = false;
+          _scheduleError = "Gagal memuat jadwal.";
+        });
+      }
     }
   }
 
@@ -149,6 +194,7 @@ class _SchedulePageState extends State<SchedulePage> {
     setState(() {
       _isLoadingSchedules = true;
       _isChurchSearchMode = true;
+      _scheduleError = null;
     });
 
     try {
@@ -164,8 +210,15 @@ class _SchedulePageState extends State<SchedulePage> {
         });
       }
     } catch (e) {
-      debugPrint("Search Error: $e");
-      if (mounted) setState(() => _isLoadingSchedules = false);
+      if (kDebugMode) {
+        debugPrint("Search Error: $e");
+      }
+      if (mounted) {
+        setState(() {
+          _isLoadingSchedules = false;
+          _scheduleError = "Gagal memuat jadwal.";
+        });
+      }
     }
   }
   
@@ -225,6 +278,76 @@ class _SchedulePageState extends State<SchedulePage> {
     final liturgicalColor = _currentLiturgy != null
         ? LiturgyService.getLiturgicalColor(_currentLiturgy!.color)
         : colors.primary; // Default fallback
+
+    final isInitialLoading = _isLoadingSchedules && _schedules.isEmpty;
+    final showErrorState = _scheduleError != null && _schedules.isEmpty;
+
+    if (isInitialLoading) {
+      return Scaffold(
+        backgroundColor: bgColor,
+        appBar: const MyCatholicAppBar(title: "Kalender & Misa"),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator.adaptive(),
+              const SizedBox(height: 12),
+              Text(
+                "Memuat jadwal...",
+                style: GoogleFonts.outfit(color: textSecondary),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (showErrorState) {
+      return Scaffold(
+        backgroundColor: bgColor,
+        appBar: const MyCatholicAppBar(title: "Kalender & Misa"),
+        body: Center(
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: textPrimary.withOpacity(0.08)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.error_outline, color: colors.error, size: 32),
+                const SizedBox(height: 8),
+                Text(
+                  _scheduleError ?? "Terjadi kesalahan.",
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(color: textPrimary),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _retryAll,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colors.primary,
+                    ),
+                    child: Text(
+                      "Coba lagi",
+                      style: GoogleFonts.outfit(
+                        color: colors.onPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -495,12 +618,86 @@ class _SchedulePageState extends State<SchedulePage> {
     );
   }
 
+  void _retryAll() {
+    _fetchLiturgy();
+    if (_isChurchSearchMode) {
+      _searchByChurch();
+    } else {
+      _loadDailySchedules();
+    }
+  }
+
+  String _formatSelectedDate(BuildContext context) {
+    const pattern = 'EEEE, d MMMM yyyy';
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
+    try {
+      return DateFormat(pattern, localeTag).format(_selectedDate);
+    } catch (_) {
+      try {
+        return DateFormat(pattern, 'id').format(_selectedDate);
+      } catch (_) {
+        return DateFormat(pattern).format(_selectedDate);
+      }
+    }
+  }
+
   // --- UI COMPONENTS ---
   Widget _buildLiturgyHeader() {
     if (_loadingLiturgy) {
       return const Padding(
         padding: EdgeInsets.all(20),
         child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_liturgyError != null && _currentLiturgy == null) {
+      final theme = Theme.of(context);
+      final colors = theme.colorScheme;
+      return Container(
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colors.onSurface.withOpacity(0.08)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.error_outline, color: colors.error),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _liturgyError ?? "Gagal memuat liturgi.",
+                    style: GoogleFonts.outfit(
+                      color: colors.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: _fetchLiturgy,
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: colors.primary),
+                ),
+                child: Text(
+                  "Coba lagi",
+                  style: GoogleFonts.outfit(
+                    color: colors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       );
     }
 
@@ -559,10 +756,7 @@ class _SchedulePageState extends State<SchedulePage> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        DateFormat(
-                          'EEEE, d MMMM yyyy',
-                          'id',
-                        ).format(_selectedDate),
+                        _formatSelectedDate(context),
                         style: GoogleFonts.outfit(
                           color: _litText(bgColor),
                           fontWeight: FontWeight.bold,

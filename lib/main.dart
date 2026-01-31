@@ -28,6 +28,7 @@ void main() async {
   );
 
   // Initialize Date Formatting Locale
+  await initializeDateFormatting('id', null);
   await initializeDateFormatting('id_ID', null);
 
   runApp(
