@@ -52,7 +52,7 @@ class MyCatholicTheme {
         displayColor: kTextTitle,
       ),
 
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: kSurface,
         elevation: 1,
         shadowColor: Colors.black.withOpacity(0.06),
