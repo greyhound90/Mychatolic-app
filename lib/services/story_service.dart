@@ -3,9 +3,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mychatolic_app/models/story_model.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter/foundation.dart';
+import 'package:mychatolic_app/features/social/data/chat_repository.dart';
 
 class StoryService {
   final _supabase = Supabase.instance.client;
+  final ChatRepository _chatRepository = ChatRepository();
 
   /// Uploads a new story (Image or Video)
   Future<void> uploadStory({
@@ -166,7 +168,7 @@ class StoryService {
       // Only if not own story
       if (user.id != ownerId) {
         // Find or Create Chat
-        final chatId = await _getOrCreateChatId(user.id, ownerId);
+        final chatId = await _getOrCreateChatId(ownerId);
 
         // Send "Story Like" Message
         // Special type: story_like. Content: mediaUrl (thumbnail)
@@ -222,7 +224,7 @@ class StoryService {
 
     try {
       // 1. Find or Create Chat
-      final chatId = await _getOrCreateChatId(user.id, ownerId);
+      final chatId = await _getOrCreateChatId(ownerId);
 
       // 2. Prepare content: mediaUrl|||message
       // Using '|||' as separator as observed in SocialChatDetailPage
@@ -251,37 +253,8 @@ class StoryService {
   }
 
   /// Helper: Get existing chat or create new one
-  Future<String> _getOrCreateChatId(String myId, String targetId) async {
-    // 1. Check existing chats where I am a participant
-    // Using a simpler client-side check for robustness without complex RPC
-    try {
-      final myChats = await _supabase.from('social_chats').select().contains(
-        'participants',
-        [myId],
-      );
-
-      for (var chat in myChats) {
-        final participants = List<dynamic>.from(chat['participants']);
-        if (participants.contains(targetId)) {
-          return chat['id'];
-        }
-      }
-
-      // 2. Create new chat if not found
-      final res = await _supabase
-          .from('social_chats')
-          .insert({
-            'participants': [myId, targetId],
-            'last_message': 'Started a conversation',
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .select()
-          .single();
-
-      return res['id'];
-    } catch (e) {
-      throw Exception("Failed to get or create chat: $e");
-    }
+  Future<String> _getOrCreateChatId(String targetId) async {
+    return _chatRepository.getOrCreatePrivateChat(targetId);
   }
 
   /// Delete a story

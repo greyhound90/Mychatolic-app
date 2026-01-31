@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mychatolic_app/widgets/safe_network_image.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:mychatolic_app/features/social/data/chat_repository.dart';
 
 class StoryViewPage extends StatefulWidget {
   final List<Map<String, dynamic>> stories;
@@ -23,6 +24,7 @@ class StoryViewPage extends StatefulWidget {
 class _StoryViewPageState extends State<StoryViewPage>
     with TickerProviderStateMixin {
   final _supabase = Supabase.instance.client;
+  final ChatRepository _chatRepository = ChatRepository();
   late PageController _pageController;
   late AnimationController _animController;
   late AnimationController
@@ -162,37 +164,8 @@ class _StoryViewPageState extends State<StoryViewPage>
   // Separate method for background chat trigger to keep toggleLike clean
   Future<void> _sendLikeNotification(String myId, String targetUserId) async {
     try {
-      // 1. Check/Create Chat
-      String? chatId;
-
-      // Try to find existing chat with exact participants
-      // Using contains for both is tricky with single query without RPC or exact match logic
-      // Simplest robust approach: Get my chats, filter client side (for MVP scale)
-      final myChats = await _supabase.from('social_chats').select().contains(
-        'participants',
-        [myId],
-      );
-
-      for (var chat in myChats) {
-        final participants = List<dynamic>.from(chat['participants'] ?? []);
-        if (participants.contains(targetUserId)) {
-          chatId = chat['id'];
-          break;
-        }
-      }
-
-      if (chatId == null) {
-        final newChat = await _supabase
-            .from('social_chats')
-            .insert({
-              'participants': [myId, targetUserId],
-              'updated_at': DateTime.now().toIso8601String(),
-              'last_message': 'Reacted to story',
-            })
-            .select()
-            .single();
-        chatId = newChat['id'];
-      }
+      // 1. Check/Create Chat via repository
+      final chatId = await _chatRepository.getOrCreatePrivateChat(targetUserId);
 
       // 2. Send Message
       await _supabase.from('social_messages').insert({
@@ -210,7 +183,7 @@ class _StoryViewPageState extends State<StoryViewPage>
             'last_message':
                 '🔥 Menyukai story Anda', // Keep text for inbox preview
           })
-          .eq('id', chatId!);
+          .eq('id', chatId);
     } catch (e) {
       // Silently fail for notifications, don't revert the actual Like
       debugPrint("Failed to send like notification: $e");
@@ -289,34 +262,8 @@ class _StoryViewPageState extends State<StoryViewPage>
     _replyController.clear(); // Clear input
 
     try {
-      // 1. Check or Create Chat Room (Same logic as Like)
-      String? chatId;
-
-      final myChats = await _supabase.from('social_chats').select().contains(
-        'participants',
-        [myId],
-      );
-
-      for (var chat in myChats) {
-        final participants = List<dynamic>.from(chat['participants'] ?? []);
-        if (participants.contains(targetUserId)) {
-          chatId = chat['id'];
-          break;
-        }
-      }
-
-      if (chatId == null) {
-        final newChat = await _supabase
-            .from('social_chats')
-            .insert({
-              'participants': [myId, targetUserId],
-              'updated_at': DateTime.now().toIso8601String(),
-              'last_message': 'Replied to story',
-            })
-            .select()
-            .single();
-        chatId = newChat['id'];
-      }
+      // 1. Check or Create Chat Room (via repository)
+      final chatId = await _chatRepository.getOrCreatePrivateChat(targetUserId);
 
       // 2. Format Message Content: URL ||| Text
       final currentStoryUrl = widget.stories[_currentIndex]['media_url'];
@@ -337,7 +284,7 @@ class _StoryViewPageState extends State<StoryViewPage>
             'updated_at': DateTime.now().toIso8601String(),
             'last_message': '💬 Membalas story Anda',
           })
-          .eq('id', chatId!);
+          .eq('id', chatId);
 
       if (mounted) {
         ScaffoldMessenger.of(

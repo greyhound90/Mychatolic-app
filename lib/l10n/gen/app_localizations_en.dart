@@ -736,4 +736,76 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsLanguageEnglish => 'English';
+
+  @override
+  String get commonInfo => 'Info';
+
+  @override
+  String get chatEmptyCta => 'Start a chat';
+
+  @override
+  String get chatActionNewChat => 'New chat';
+
+  @override
+  String get chatActionNewChatSubtitle =>
+      'Find friends and start a conversation';
+
+  @override
+  String get chatActionCreateGroup => 'Create group';
+
+  @override
+  String get chatActionCreateGroupSubtitle =>
+      'Start a group with mutual friends';
+
+  @override
+  String get chatActionJoinLink => 'Join via link';
+
+  @override
+  String get chatActionJoinLinkSubtitle => 'Paste invite link or code';
+
+  @override
+  String get chatJoinLinkTitle => 'Join group';
+
+  @override
+  String get chatJoinLinkHint => 'Paste group link or code';
+
+  @override
+  String get chatJoinLinkAction => 'Join';
+
+  @override
+  String get chatJoinLinkSuccess => 'You\'re in the group';
+
+  @override
+  String get chatJoinLinkAlreadyMember => 'You\'re already in this group';
+
+  @override
+  String get chatJoinLinkPending => 'Request sent. Waiting for approval.';
+
+  @override
+  String get chatJoinLinkInvalid => 'Invalid link or code';
+
+  @override
+  String get chatJoinLinkFailed => 'Failed to join group';
+
+  @override
+  String get chatMutualRequiredTitle => 'Mutual follow required';
+
+  @override
+  String get chatMutualRequiredMessage =>
+      'To create a group, you and your friends must follow each other.';
+
+  @override
+  String get chatLeaveGroupTitle => 'Leave group?';
+
+  @override
+  String get chatLeaveGroupMessage => 'You will leave this group chat.';
+
+  @override
+  String get chatLeaveGroupConfirm => 'Leave';
+
+  @override
+  String get chatLeaveGroup => 'Leave';
+
+  @override
+  String get chatLeaveUnavailable => 'Leave group is not available yet.';
 }

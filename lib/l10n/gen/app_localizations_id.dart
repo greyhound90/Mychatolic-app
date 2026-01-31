@@ -735,4 +735,75 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get settingsLanguageEnglish => 'English';
+
+  @override
+  String get commonInfo => 'Info';
+
+  @override
+  String get chatEmptyCta => 'Mulai Chat';
+
+  @override
+  String get chatActionNewChat => 'Chat baru';
+
+  @override
+  String get chatActionNewChatSubtitle => 'Cari teman dan mulai percakapan';
+
+  @override
+  String get chatActionCreateGroup => 'Buat Grup';
+
+  @override
+  String get chatActionCreateGroupSubtitle => 'Mulai grup dengan teman mutual';
+
+  @override
+  String get chatActionJoinLink => 'Gabung via tautan';
+
+  @override
+  String get chatActionJoinLinkSubtitle => 'Tempel tautan atau kode undangan';
+
+  @override
+  String get chatJoinLinkTitle => 'Gabung grup';
+
+  @override
+  String get chatJoinLinkHint => 'Tempel tautan/kode grup';
+
+  @override
+  String get chatJoinLinkAction => 'Gabung';
+
+  @override
+  String get chatJoinLinkSuccess => 'Berhasil bergabung ke grup';
+
+  @override
+  String get chatJoinLinkAlreadyMember => 'Kamu sudah ada di grup ini';
+
+  @override
+  String get chatJoinLinkPending =>
+      'Permintaan terkirim. Menunggu persetujuan.';
+
+  @override
+  String get chatJoinLinkInvalid => 'Tautan atau kode tidak valid';
+
+  @override
+  String get chatJoinLinkFailed => 'Gagal bergabung ke grup';
+
+  @override
+  String get chatMutualRequiredTitle => 'Butuh saling follow';
+
+  @override
+  String get chatMutualRequiredMessage =>
+      'Untuk membuat grup, kamu dan teman harus saling follow.';
+
+  @override
+  String get chatLeaveGroupTitle => 'Keluar dari grup?';
+
+  @override
+  String get chatLeaveGroupMessage => 'Kamu akan keluar dari grup ini.';
+
+  @override
+  String get chatLeaveGroupConfirm => 'Keluar';
+
+  @override
+  String get chatLeaveGroup => 'Keluar';
+
+  @override
+  String get chatLeaveUnavailable => 'Keluar grup belum tersedia.';
 }

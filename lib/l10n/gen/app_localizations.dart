@@ -1477,6 +1477,144 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'English'**
   String get settingsLanguageEnglish;
+
+  /// No description provided for @commonInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Info'**
+  String get commonInfo;
+
+  /// No description provided for @chatEmptyCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a chat'**
+  String get chatEmptyCta;
+
+  /// No description provided for @chatActionNewChat.
+  ///
+  /// In en, this message translates to:
+  /// **'New chat'**
+  String get chatActionNewChat;
+
+  /// No description provided for @chatActionNewChatSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Find friends and start a conversation'**
+  String get chatActionNewChatSubtitle;
+
+  /// No description provided for @chatActionCreateGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Create group'**
+  String get chatActionCreateGroup;
+
+  /// No description provided for @chatActionCreateGroupSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a group with mutual friends'**
+  String get chatActionCreateGroupSubtitle;
+
+  /// No description provided for @chatActionJoinLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Join via link'**
+  String get chatActionJoinLink;
+
+  /// No description provided for @chatActionJoinLinkSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste invite link or code'**
+  String get chatActionJoinLinkSubtitle;
+
+  /// No description provided for @chatJoinLinkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Join group'**
+  String get chatJoinLinkTitle;
+
+  /// No description provided for @chatJoinLinkHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste group link or code'**
+  String get chatJoinLinkHint;
+
+  /// No description provided for @chatJoinLinkAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Join'**
+  String get chatJoinLinkAction;
+
+  /// No description provided for @chatJoinLinkSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re in the group'**
+  String get chatJoinLinkSuccess;
+
+  /// No description provided for @chatJoinLinkAlreadyMember.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re already in this group'**
+  String get chatJoinLinkAlreadyMember;
+
+  /// No description provided for @chatJoinLinkPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Request sent. Waiting for approval.'**
+  String get chatJoinLinkPending;
+
+  /// No description provided for @chatJoinLinkInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid link or code'**
+  String get chatJoinLinkInvalid;
+
+  /// No description provided for @chatJoinLinkFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to join group'**
+  String get chatJoinLinkFailed;
+
+  /// No description provided for @chatMutualRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mutual follow required'**
+  String get chatMutualRequiredTitle;
+
+  /// No description provided for @chatMutualRequiredMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'To create a group, you and your friends must follow each other.'**
+  String get chatMutualRequiredMessage;
+
+  /// No description provided for @chatLeaveGroupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave group?'**
+  String get chatLeaveGroupTitle;
+
+  /// No description provided for @chatLeaveGroupMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You will leave this group chat.'**
+  String get chatLeaveGroupMessage;
+
+  /// No description provided for @chatLeaveGroupConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave'**
+  String get chatLeaveGroupConfirm;
+
+  /// No description provided for @chatLeaveGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave'**
+  String get chatLeaveGroup;
+
+  /// No description provided for @chatLeaveUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave group is not available yet.'**
+  String get chatLeaveUnavailable;
 }
 
 class _AppLocalizationsDelegate

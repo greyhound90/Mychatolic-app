@@ -292,5 +292,30 @@
   "settingsUserNotFound": "User tidak ditemukan",
   "settingsLanguageSystem": "Ikuti perangkat",
   "settingsLanguageIndonesian": "Bahasa Indonesia",
-  "settingsLanguageEnglish": "English"
+  "settingsLanguageEnglish": "English",
+
+  "commonInfo": "Info",
+
+  "chatEmptyCta": "Mulai Chat",
+  "chatActionNewChat": "Chat baru",
+  "chatActionNewChatSubtitle": "Cari teman dan mulai percakapan",
+  "chatActionCreateGroup": "Buat Grup",
+  "chatActionCreateGroupSubtitle": "Mulai grup dengan teman mutual",
+  "chatActionJoinLink": "Gabung via tautan",
+  "chatActionJoinLinkSubtitle": "Tempel tautan atau kode undangan",
+  "chatJoinLinkTitle": "Gabung grup",
+  "chatJoinLinkHint": "Tempel tautan/kode grup",
+  "chatJoinLinkAction": "Gabung",
+  "chatJoinLinkSuccess": "Berhasil bergabung ke grup",
+  "chatJoinLinkAlreadyMember": "Kamu sudah ada di grup ini",
+  "chatJoinLinkPending": "Permintaan terkirim. Menunggu persetujuan.",
+  "chatJoinLinkInvalid": "Tautan atau kode tidak valid",
+  "chatJoinLinkFailed": "Gagal bergabung ke grup",
+  "chatMutualRequiredTitle": "Butuh saling follow",
+  "chatMutualRequiredMessage": "Untuk membuat grup, kamu dan teman harus saling follow.",
+  "chatLeaveGroupTitle": "Keluar dari grup?",
+  "chatLeaveGroupMessage": "Kamu akan keluar dari grup ini.",
+  "chatLeaveGroupConfirm": "Keluar",
+  "chatLeaveGroup": "Keluar",
+  "chatLeaveUnavailable": "Keluar grup belum tersedia."
 }

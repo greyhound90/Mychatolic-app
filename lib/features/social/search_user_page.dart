@@ -5,6 +5,7 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:mychatolic_app/features/social/pages/social_chat_detail_page.dart';
 import 'package:mychatolic_app/features/profile/pages/profile_page.dart';
 import 'package:mychatolic_app/widgets/safe_network_image.dart';
+import 'package:mychatolic_app/features/social/data/chat_repository.dart';
 
 class SearchUserPage extends StatefulWidget {
   const SearchUserPage({super.key});
@@ -15,6 +16,7 @@ class SearchUserPage extends StatefulWidget {
 
 class _SearchUserPageState extends State<SearchUserPage> {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final ChatRepository _chatRepository = ChatRepository();
 
   // --- STATES ---
   List<Map<String, dynamic>> _countries = [];
@@ -96,17 +98,10 @@ class _SearchUserPageState extends State<SearchUserPage> {
   }
 
   Future<void> _startChat(Map<String, dynamic> userProfile) async {
-    final myId = _supabase.auth.currentUser?.id;
     final partnerId = userProfile['id'];
-    if (myId == null || partnerId == null) return;
+    if (partnerId == null) return;
     try {
-      String chatId;
-      final existing = await _supabase.from('social_chats').select().contains('participants', [myId, partnerId]).maybeSingle();
-      if (existing != null) chatId = existing['id'];
-      else {
-        final newChat = await _supabase.from('social_chats').insert({'participants': [myId, partnerId], 'updated_at': DateTime.now().toIso8601String(), 'last_message': "Memulai percakapan"}).select().single();
-        chatId = newChat['id'];
-      }
+      final chatId = await _chatRepository.getOrCreatePrivateChat(partnerId);
       if (!mounted) return;
       Navigator.push(context, MaterialPageRoute(builder: (_) => SocialChatDetailPage(chatId: chatId, opponentProfile: userProfile)));
     } catch (e) { 

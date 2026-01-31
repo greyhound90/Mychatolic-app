@@ -292,5 +292,30 @@
   "settingsUserNotFound": "User not found",
   "settingsLanguageSystem": "Follow device",
   "settingsLanguageIndonesian": "Bahasa Indonesia",
-  "settingsLanguageEnglish": "English"
+  "settingsLanguageEnglish": "English",
+
+  "commonInfo": "Info",
+
+  "chatEmptyCta": "Start a chat",
+  "chatActionNewChat": "New chat",
+  "chatActionNewChatSubtitle": "Find friends and start a conversation",
+  "chatActionCreateGroup": "Create group",
+  "chatActionCreateGroupSubtitle": "Start a group with mutual friends",
+  "chatActionJoinLink": "Join via link",
+  "chatActionJoinLinkSubtitle": "Paste invite link or code",
+  "chatJoinLinkTitle": "Join group",
+  "chatJoinLinkHint": "Paste group link or code",
+  "chatJoinLinkAction": "Join",
+  "chatJoinLinkSuccess": "You're in the group",
+  "chatJoinLinkAlreadyMember": "You're already in this group",
+  "chatJoinLinkPending": "Request sent. Waiting for approval.",
+  "chatJoinLinkInvalid": "Invalid link or code",
+  "chatJoinLinkFailed": "Failed to join group",
+  "chatMutualRequiredTitle": "Mutual follow required",
+  "chatMutualRequiredMessage": "To create a group, you and your friends must follow each other.",
+  "chatLeaveGroupTitle": "Leave group?",
+  "chatLeaveGroupMessage": "You will leave this group chat.",
+  "chatLeaveGroupConfirm": "Leave",
+  "chatLeaveGroup": "Leave",
+  "chatLeaveUnavailable": "Leave group is not available yet."
 }

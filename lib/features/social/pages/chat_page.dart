@@ -2,12 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:timeago/timeago.dart' as timeago;
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:mychatolic_app/l10n/gen/app_localizations.dart';
 
 import 'package:mychatolic_app/features/social/pages/social_chat_detail_page.dart';
-import 'package:mychatolic_app/widgets/safe_network_image.dart';
 import 'package:mychatolic_app/widgets/story_rail.dart';
 import 'package:mychatolic_app/features/social/search_user_page.dart';
 import 'package:mychatolic_app/features/social/create_group_page.dart';
@@ -18,6 +16,11 @@ import 'package:mychatolic_app/core/ui/app_snackbar.dart';
 import 'package:mychatolic_app/core/log/app_logger.dart';
 import 'package:mychatolic_app/core/ui/image_prefetch.dart';
 import 'package:mychatolic_app/services/chat_service.dart';
+import 'package:mychatolic_app/features/social/services/chat_inbox_service.dart';
+import 'package:mychatolic_app/features/social/services/group_invite_service.dart';
+import 'package:mychatolic_app/features/social/widgets/chat_inbox_tile.dart';
+import 'package:mychatolic_app/features/social/widgets/chat_inbox_skeleton.dart';
+import 'package:mychatolic_app/features/social/widgets/chat_actions_sheet.dart';
 
 class ChatPage extends StatefulWidget {
   final String? partnerId;
@@ -30,6 +33,8 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final SupabaseClient _supabase = Supabase.instance.client;
   final ChatService _chatService = ChatService();
+  final ChatInboxService _inboxService = ChatInboxService();
+  final GroupInviteService _groupInviteService = GroupInviteService();
   bool _isRedirecting = false;
 
   List<String> _myChatIds = [];
@@ -51,15 +56,12 @@ class _ChatPageState extends State<ChatPage> {
   String _lastUnreadSignature = '';
   List<String> _pendingUnreadChatIds = [];
   DateTime _lastUnreadRefresh = DateTime.fromMillisecondsSinceEpoch(0);
-
-  // Pastel Color Palette
-  final List<Color> _pastelColors = [
-    const Color(0xFFE3F2FD), // Blue Light
-    const Color(0xFFF3E5F5), // Purple Light
-    const Color(0xFFE0F2F1), // Teal Light
-    const Color(0xFFFFF3E0), // Orange Light
-    const Color(0xFFFFEBEE), // Pink Light
-  ];
+  final Map<String, Map<String, dynamic>> _lastMessageCache = {};
+  Timer? _previewRefreshTimer;
+  bool _previewRefreshInFlight = false;
+  String _lastPreviewSignature = '';
+  List<String> _pendingPreviewChatIds = [];
+  DateTime _lastPreviewRefresh = DateTime.fromMillisecondsSinceEpoch(0);
 
   List<dynamic> _safeParticipants(dynamic raw) {
     return raw is List ? raw : const <dynamic>[];
@@ -68,6 +70,7 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void dispose() {
     _unreadRefreshTimer?.cancel();
+    _previewRefreshTimer?.cancel();
     super.dispose();
   }
 
@@ -89,12 +92,13 @@ class _ChatPageState extends State<ChatPage> {
     if (chatIds.isEmpty) return;
     final uniqueIds = chatIds.toSet().toList();
     final signature = _chatIdsSignature(uniqueIds);
-    final recentlyRefreshed = DateTime.now().difference(_lastUnreadRefresh) < const Duration(seconds: 2);
+    final recentlyRefreshed =
+        DateTime.now().difference(_lastUnreadRefresh) < const Duration(milliseconds: 800);
     if (signature == _lastUnreadSignature && recentlyRefreshed) return;
     _lastUnreadSignature = signature;
     _pendingUnreadChatIds = uniqueIds;
     _unreadRefreshTimer?.cancel();
-    _unreadRefreshTimer = Timer(const Duration(seconds: 2), () {
+    _unreadRefreshTimer = Timer(const Duration(milliseconds: 700), () {
       _refreshUnreadCounts(_pendingUnreadChatIds);
     });
   }
@@ -106,31 +110,52 @@ class _ChatPageState extends State<ChatPage> {
 
     _unreadRefreshInFlight = true;
     try {
-      final uniqueIds = chatIds.toSet().toList();
-      final futures = uniqueIds.map((chatId) async {
-        try {
-          final count = await _supabase
-              .from('social_messages')
-              .count(CountOption.exact)
-              .eq('chat_id', chatId)
-              .eq('is_read', false)
-              .neq('sender_id', myId);
-          return MapEntry(chatId, count);
-        } catch (_) {
-          return MapEntry(chatId, _unreadCounts[chatId] ?? 0);
-        }
-      }).toList();
-
-      final entries = await Future.wait(futures);
+      final counts = await _inboxService.fetchUnreadCounts(
+        myId: myId,
+        chatIds: chatIds,
+      );
       if (!mounted) return;
       safeSetState(() {
-        for (final entry in entries) {
-          _unreadCounts[entry.key] = entry.value;
-        }
+        _unreadCounts
+          ..clear()
+          ..addAll(counts);
         _lastUnreadRefresh = DateTime.now();
       });
     } finally {
       _unreadRefreshInFlight = false;
+    }
+  }
+
+  void _schedulePreviewRefresh(List<String> chatIds) {
+    if (chatIds.isEmpty) return;
+    final uniqueIds = chatIds.toSet().toList();
+    final signature = _chatIdsSignature(uniqueIds);
+    final recentlyRefreshed =
+        DateTime.now().difference(_lastPreviewRefresh) < const Duration(milliseconds: 800);
+    if (signature == _lastPreviewSignature && recentlyRefreshed) return;
+    _lastPreviewSignature = signature;
+    _pendingPreviewChatIds = uniqueIds;
+    _previewRefreshTimer?.cancel();
+    _previewRefreshTimer = Timer(const Duration(milliseconds: 700), () {
+      _refreshPreviewCache(_pendingPreviewChatIds);
+    });
+  }
+
+  Future<void> _refreshPreviewCache(List<String> chatIds) async {
+    if (_previewRefreshInFlight) return;
+    if (chatIds.isEmpty) return;
+    _previewRefreshInFlight = true;
+    try {
+      final latest = await _inboxService.fetchLatestMessagesForChats(
+        chatIds: chatIds,
+      );
+      if (!mounted) return;
+      safeSetState(() {
+        _lastMessageCache.addAll(latest);
+        _lastPreviewRefresh = DateTime.now();
+      });
+    } finally {
+      _previewRefreshInFlight = false;
     }
   }
 
@@ -171,14 +196,14 @@ class _ChatPageState extends State<ChatPage> {
     _fetchingIds.addAll(idsToFetch);
 
     try {
-      final List<dynamic> response = await _supabase
-          .from('profiles')
-          .select('id, full_name, avatar_url')
-          .inFilter('id', idsToFetch);
+      final response = await _fetchProfilesByIds(idsToFetch);
 
       safeSetState(() {
         for (var profile in response) {
-          _profileCache[profile['id']] = profile;
+          final id = profile['id']?.toString();
+          if (id != null && id.isNotEmpty) {
+            _profileCache[id] = Map<String, dynamic>.from(profile);
+          }
         }
         _fetchingIds.removeAll(idsToFetch);
       });
@@ -186,6 +211,24 @@ class _ChatPageState extends State<ChatPage> {
       AppLogger.logError("Error batch fetching profiles", error: e, stackTrace: st);
       _fetchingIds.removeAll(idsToFetch);
     }
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchProfilesByIds(List<String> ids) async {
+    final uniqueIds = ids
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+    if (uniqueIds.isEmpty) return [];
+
+    final List<dynamic> response = await _supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url')
+        .inFilter('id', uniqueIds);
+
+    return response
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
   }
 
   Future<void> _loadMyChatIds() async {
@@ -257,6 +300,7 @@ class _ChatPageState extends State<ChatPage> {
       });
       if (ids.isNotEmpty) {
         _scheduleUnreadRefresh(ids);
+        _schedulePreviewRefresh(ids);
       }
     } catch (e, st) {
       AppLogger.logError("Error loading chat ids", error: e, stackTrace: st);
@@ -291,476 +335,496 @@ class _ChatPageState extends State<ChatPage> {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.background, 
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text(t.chatTitle, style: GoogleFonts.outfit(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 22)),
-        centerTitle: false,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF0088CC), Color(0xFF0055AA)], // Premium Blue Gradient
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+        title: Text(
+          t.chatTitle,
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.w600,
+            color: AppColors.text,
+            fontSize: 20,
           ),
         ),
-        elevation: 0, 
+        centerTitle: false,
+        backgroundColor: AppColors.surface,
+        elevation: 0,
         automaticallyImplyLeading: false,
         actions: [
           Semantics(
             button: true,
             label: t.a11yChatSearch,
             child: IconButton(
-              icon: const Icon(Icons.search, color: Colors.white),
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SearchUserPage()),
-              ).then((_) => _loadMyChatIds()),
+              icon: const Icon(Icons.search, color: AppColors.text),
+              onPressed: _openSearchUser,
             ),
           ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      floatingActionButton: Container(
-         decoration: const BoxDecoration(
-           shape: BoxShape.circle,
-           gradient: LinearGradient(colors: [Color(0xFF00C6FF), Color(0xFF0072FF)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-           boxShadow: [BoxShadow(color: Color(0x660072FF), blurRadius: 10, offset: Offset(0, 4))]
-         ),
-         child: Semantics(
-           button: true,
-           label: t.a11yChatCreate,
-           child: FloatingActionButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CreateGroupPage()),
-            ).then((_) => _loadMyChatIds()),
-            backgroundColor: Colors.transparent, 
-            elevation: 0,
-            child: const Icon(Icons.add, color: Colors.white, size: 28),
+          Semantics(
+            button: true,
+            label: t.a11yChatCreate,
+            child: IconButton(
+              icon: const Icon(Icons.add_circle_outline, color: AppColors.text),
+              onPressed: _openActionsSheet,
+            ),
           ),
-         ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: Column(
         children: [
-          // 1. STORY SECTION
-          Container(
-            color: AppColors.background,
-            padding: const EdgeInsets.only(bottom: 8),
-            child: const StoryRail(),
-          ),
-          
-          // 2. CHAT LIST (EXPANDED) 
-          Expanded(
-            child: _loadingChatIds
-                ? const AppStateView(state: AppViewState.loading)
-                : _chatIdsError != null
-                    ? AppStateView(
-                        state: AppViewState.error,
-                        error: AppError(
-                          title: t.chatLoadErrorTitle,
-                          message: t.chatLoadErrorMessage,
-                        ),
-                        onRetry: _loadMyChatIds,
-                      )
-                    : _myChatIds.isEmpty || _chatStream == null
-                        ? AppStateView(
-                            state: AppViewState.empty,
-                            emptyTitle: t.chatEmptyTitle,
-                            emptyMessage: t.chatEmptyMessage,
-                          )
-                        : StreamBuilder<List<Map<String, dynamic>>>(
-                            stream: _chatStream,
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState ==
-                                      ConnectionState.waiting &&
-                                  !snapshot.hasData) {
-                                return const AppStateView(
-                                  state: AppViewState.loading,
-                                );
-                              }
-
-                              if (snapshot.hasError) {
-                                return AppStateView(
-                                  state: AppViewState.error,
-                                  error: AppError(
-                                    title: t.chatLoadErrorTitle,
-                                    message: t.chatLoadErrorMessage,
-                                  ),
-                                  onRetry: _loadMyChatIds,
-                                );
-                              }
-
-                              final rawChats =
-                                  snapshot.data ?? <Map<String, dynamic>>[];
-                              final chats = rawChats.where((chat) {
-                                final id = chat['id']?.toString();
-                                if (id != null && _myChatIds.contains(id)) {
-                                  return true;
-                                }
-                                final participants =
-                                    _safeParticipants(chat['participants']);
-                                return participants
-                                    .map((p) => p?.toString())
-                                    .contains(myId);
-                              }).toList();
-
-                              if (chats.isEmpty) {
-                                return AppStateView(
-                                  state: AppViewState.empty,
-                                  emptyTitle: t.chatEmptyTitle,
-                                  emptyMessage: t.chatEmptyMessage,
-                                );
-                              }
-
-                              final chatIds = chats
-                                  .map((chat) => chat['id']?.toString())
-                                  .whereType<String>()
-                                  .toList();
-                              if (chatIds.isNotEmpty) {
-                                Future.microtask(() => _scheduleUnreadRefresh(chatIds));
-                              }
-
-                              // --- BATCH FETCHING TRIGGER ---
-                              final missingIds = <String>[];
-                              for (var chat in chats) {
-                                if (chat['is_group'] != true) {
-                                  final participants = _safeParticipants(
-                                      chat['participants']);
-                                  final partnerId = participants.firstWhere(
-                                    (id) => id != myId,
-                                    orElse: () => null,
-                                  );
-                                  if (partnerId != null &&
-                                      !_profileCache.containsKey(partnerId)) {
-                                    missingIds.add(partnerId);
-                                  }
-                                }
-                              }
-
-                              if (missingIds.isNotEmpty) {
-                                Future.microtask(
-                                    () => _fetchMissingProfiles(missingIds));
-                              }
-                              // ------------------------------
-
-                              return RefreshIndicator(
-                                onRefresh: _loadMyChatIds,
-                                child: AnimationLimiter(
-                                  child: ListView.builder(
-                                    padding: const EdgeInsets.only(
-                                      bottom: 80,
-                                      top: 12,
-                                    ),
-                                    itemCount: chats.length,
-                                    itemBuilder: (context, index) {
-                                      final chat = chats[index];
-                                      Map<String, dynamic>? partnerProfile;
-                                      String myIdVerified = myId;
-                                      final chatId = chat['id']?.toString();
-                                      final unreadCount = chatId != null ? (_unreadCounts[chatId] ?? 0) : 0;
-
-                                      if (chat['is_group'] != true) {
-                                        final participants =
-                                            _safeParticipants(
-                                                chat['participants']);
-                                        final partnerId = participants
-                                            .firstWhere((id) => id != myId,
-                                                orElse: () => null);
-                                        if (partnerId != null) {
-                                          partnerProfile =
-                                              _profileCache[partnerId];
-                                        }
-                                      }
-
-                                      return AnimationConfiguration
-                                          .staggeredList(
-                                        position: index,
-                                        duration:
-                                            const Duration(milliseconds: 375),
-                                        child: SlideAnimation(
-                                          verticalOffset: 50.0,
-                                          child: FadeInAnimation(
-                                            child: _ChatTile(
-                                              chatData: chat,
-                                              myId: myIdVerified,
-                                              partnerProfile: partnerProfile,
-                                              unreadCount: unreadCount,
-                                              onChatOpened: chatId == null
-                                                  ? null
-                                                  : () => _scheduleUnreadRefresh([chatId]),
-                                              backgroundColor: _pastelColors[
-                                                  index %
-                                                      _pastelColors.length],
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// Optimized Stateless Widget
-class _ChatTile extends StatelessWidget {
-  final Map<String, dynamic> chatData;
-  final String myId;
-  final Map<String, dynamic>? partnerProfile;
-  final int unreadCount;
-  final VoidCallback? onChatOpened;
-  final Color backgroundColor;
-
-  const _ChatTile({
-    required this.chatData, 
-    required this.myId, 
-    this.partnerProfile,
-    required this.unreadCount,
-    this.onChatOpened,
-    required this.backgroundColor,
-  });
-
-  Future<void> _deleteChat(BuildContext context) async {
-    final t = AppLocalizations.of(context)!;
-    final chatId = chatData['id'];
-    final supabase = Supabase.instance.client;
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(t.chatDeleteTitle, style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-        content: Text(t.chatDeleteMessage, style: GoogleFonts.outfit()),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(t.chatDeleteCancel, style: GoogleFonts.outfit(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context); // Close dialog
-              try {
-                // Delete logic
-                await supabase.from('social_chats').delete().eq('id', chatId);
-                if (context.mounted) {
-                  AppSnackBar.showSuccess(context, t.chatDeleteSuccess);
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  AppSnackBar.showError(context, t.chatDeleteFailed);
-                }
-              }
-            },
-            child: Text(t.chatDeleteConfirm, style: GoogleFonts.outfit(color: Colors.red, fontWeight: FontWeight.bold)),
-          ),
+          if (_loadingChatIds) const ChatStorySkeleton() else const StoryRail(),
+          Expanded(child: _buildChatList(myId, t)),
         ],
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-      final isGroup = chatData['is_group'] == true;
-      final time = chatData['updated_at'] != null 
-          ? timeago.format(DateTime.parse(chatData['updated_at']), locale: 'id') 
-          : '';
-      final isUnread = unreadCount > 0;
-      final lastMessage = chatData['last_message'];
-      final lastMessageType = chatData['last_message_type'];
-      
-      String name = '...';
-      String? avatarUrl;
-      Map<String, dynamic> profileForNav = {};
+  Widget _buildChatList(String myId, AppLocalizations t) {
+    if (_loadingChatIds) {
+      return const ChatInboxSkeleton();
+    }
+    if (_chatIdsError != null) {
+      return _buildErrorState(t, onRetry: _refreshInbox);
+    }
+    if (_myChatIds.isEmpty || _chatStream == null) {
+      return _buildEmptyState(t);
+    }
 
-      if (isGroup) {
-          name = chatData['group_name'] ?? 'Grup';
-          avatarUrl = chatData['group_avatar_url'];
-          profileForNav = {
-             'id': chatData['id'],
-             'full_name': name,
-             'avatar_url': avatarUrl,
-             'group_name': name,
-             'group_avatar_url': avatarUrl
-          };
-      } else {
-          // Personal Chat
-          if (partnerProfile != null) {
-             name = partnerProfile!['full_name'] ?? 'User';
-             avatarUrl = partnerProfile!['avatar_url'];
-             profileForNav = partnerProfile!;
-          } else {
-             name = 'Memuat...';
-             // Default Avatar will handle null URL
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: _chatStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return const ChatInboxSkeleton();
+        }
+
+        if (snapshot.hasError) {
+          return _buildErrorState(t, onRetry: _refreshInbox);
+        }
+
+        final rawChats = snapshot.data ?? <Map<String, dynamic>>[];
+        final chats = rawChats.where((chat) {
+          final id = chat['id']?.toString();
+          if (id != null && _myChatIds.contains(id)) {
+            return true;
           }
-      }
+          final participants = _safeParticipants(chat['participants']);
+          return participants.map((p) => p?.toString()).contains(myId);
+        }).toList();
 
-      ImagePrefetch.prefetch(context, avatarUrl);
+        if (chats.isEmpty) {
+          return _buildEmptyState(t);
+        }
 
-      return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // More spacing
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isUnread ? AppColors.primary.withOpacity(0.25) : AppColors.border),
-          boxShadow: AppShadows.level1,
-        ),
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(20),
-            onTap: () {
-              // Guard clause if data is not ready
-              if (!isGroup && partnerProfile == null) return; 
-          
-              Navigator.push(context, MaterialPageRoute(builder: (_) => SocialChatDetailPage(
-                chatId: chatData['id'],
-                isGroup: isGroup,
-                opponentProfile: profileForNav,
-                source: 'chat_list',
-              ))).then((_) => onChatOpened?.call());
-            },
-            onLongPress: () => _deleteChat(context),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-              child: Row(
-                 children: [
-                   Container(
-                     width: 4,
-                     height: 46,
-                     decoration: BoxDecoration(
-                       color: backgroundColor.withOpacity(0.9),
-                       borderRadius: BorderRadius.circular(4),
-                     ),
-                   ),
-                   const SizedBox(width: 12),
-                   // Avatar with Thick White Border (Pop-up effect)
-                   Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: backgroundColor.withOpacity(0.35),
-                        border: Border.all(color: Colors.white, width: 2.5),
-                        boxShadow: [
-                           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6, offset: const Offset(0, 2))
-                        ]
+        final chatIds = chats
+            .map((chat) => chat['id']?.toString())
+            .whereType<String>()
+            .toList();
+
+        if (chatIds.isNotEmpty) {
+          Future.microtask(() {
+            _scheduleUnreadRefresh(chatIds);
+          });
+        }
+
+        final missingPreviewIds = <String>[];
+        final missingProfileIds = <String>[];
+
+        for (final chat in chats) {
+          final chatId = chat['id']?.toString();
+          if (chatId == null) continue;
+          final lastMessage = (chat['last_message'] ?? '').toString().trim();
+          if (lastMessage.isEmpty && !_lastMessageCache.containsKey(chatId)) {
+            missingPreviewIds.add(chatId);
+          }
+          if (chat['is_group'] != true) {
+            final participants = _safeParticipants(chat['participants']);
+            final partnerId = participants.firstWhere(
+              (id) => id != myId,
+              orElse: () => null,
+            );
+            if (partnerId != null && !_profileCache.containsKey(partnerId)) {
+              missingProfileIds.add(partnerId);
+            }
+          }
+        }
+
+        if (missingPreviewIds.isNotEmpty) {
+          Future.microtask(() => _schedulePreviewRefresh(missingPreviewIds));
+        }
+        if (missingProfileIds.isNotEmpty) {
+          Future.microtask(() => _fetchMissingProfiles(missingProfileIds));
+        }
+
+        return RefreshIndicator(
+          onRefresh: _refreshInbox,
+          child: AnimationLimiter(
+            child: ListView.builder(
+              padding: const EdgeInsets.only(bottom: 80, top: 8),
+              itemCount: chats.length,
+              itemBuilder: (context, index) {
+                final chat = chats[index];
+                final chatId = chat['id']?.toString();
+                if (chatId == null || chatId.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+                final unreadCount =
+                    _unreadCounts[chatId] ?? 0;
+                Map<String, dynamic>? partnerProfile;
+                Map<String, dynamic> profileForNav = {};
+                String? avatarUrl;
+                final isGroup = chat['is_group'] == true;
+
+                if (isGroup) {
+                  final name = chat['group_name'] ?? 'Grup';
+                  avatarUrl = chat['group_avatar_url'];
+                  profileForNav = {
+                    'id': chatId,
+                    'full_name': name,
+                    'avatar_url': avatarUrl,
+                    'group_name': name,
+                    'group_avatar_url': avatarUrl,
+                  };
+                } else {
+                  final participants = _safeParticipants(chat['participants']);
+                  final partnerId = participants.firstWhere(
+                    (id) => id != myId,
+                    orElse: () => null,
+                  );
+                  if (partnerId != null) {
+                    partnerProfile = _profileCache[partnerId];
+                    profileForNav = partnerProfile ?? {};
+                    avatarUrl = partnerProfile?['avatar_url'];
+                  }
+                }
+
+                ImagePrefetch.prefetch(context, avatarUrl);
+
+                final preview = _inboxService.buildPreview(
+                  chatRow: chat,
+                  lastMessage: _lastMessageCache[chatId],
+                );
+
+                final isOnline = chat['is_online'] == true ||
+                    (partnerProfile?['is_online'] == true);
+
+                return AnimationConfiguration.staggeredList(
+                  position: index,
+                  duration: const Duration(milliseconds: 300),
+                  child: SlideAnimation(
+                    verticalOffset: 24,
+                    child: FadeInAnimation(
+                      child: ChatInboxTile(
+                        chatData: chat,
+                        partnerProfile: partnerProfile,
+                        previewText: preview,
+                        unreadCount: unreadCount,
+                        isOnline: isOnline,
+                        onTap: () {
+                          if (!isGroup && partnerProfile == null) return;
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SocialChatDetailPage(
+                                chatId: chatId,
+                                isGroup: isGroup,
+                                opponentProfile: profileForNav,
+                                source: 'chat_list',
+                              ),
+                            ),
+                          ).then((_) {
+                            if (chatId != null && chatId.isNotEmpty) {
+                              _scheduleUnreadRefresh([chatId]);
+                            }
+                          });
+                        },
+                        onDelete: () {
+                          if (chatId == null) return;
+                          _deleteChat(chatId);
+                        },
+                        onLeaveGroup: isGroup ? _leaveGroupUnavailable : null,
                       ),
-                      child: ClipOval(
-                         child: SafeNetworkImage(
-                             imageUrl: avatarUrl, 
-                             width: 50, // Slightly larger
-                             height: 50, 
-                             fit: BoxFit.cover, 
-                             fallbackIcon: isGroup ? Icons.groups : Icons.person
-                         ),
-                      ),
-                   ),
-                   const SizedBox(width: 14),
-                   
-                   // Info
-                   Expanded(
-                     child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                             name, 
-                             style: GoogleFonts.outfit(
-                               fontWeight: FontWeight.w700,
-                               fontSize: 16,
-                               color: const Color(0xFF1E293B),
-                             ),
-                             maxLines: 1
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                             _buildPreviewText(lastMessage, lastMessageType),
-                             maxLines: 1, 
-                             overflow: TextOverflow.ellipsis, 
-                             style: GoogleFonts.outfit(
-                               fontSize: 13,
-                               color: isUnread ? const Color(0xFF334155) : const Color(0xFF64748B),
-                               fontWeight: isUnread ? FontWeight.w600 : FontWeight.normal,
-                             )
-                          ),
-                        ],
-                     ),
-                   ),
-                   
-                   const SizedBox(width: 8),
-                   
-                   // Time + Unread
-                   Column(
-                     crossAxisAlignment: CrossAxisAlignment.end,
-                     children: [
-                       Text(
-                         time,
-                         style: GoogleFonts.outfit(
-                           fontSize: 11,
-                           color: const Color(0xFF94A3B8),
-                           fontWeight: FontWeight.w600,
-                         ),
-                       ),
-                       const SizedBox(height: 8),
-                       if (isUnread) _UnreadBadge(count: unreadCount),
-                     ],
-                   ),
-                 ],
-              ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
+        );
+      },
+    );
+  }
+
+  Future<void> _refreshInbox() async {
+    await _loadMyChatIds();
+    final ids = List<String>.from(_myChatIds);
+    if (ids.isEmpty) return;
+    await _refreshUnreadCounts(ids);
+    await _refreshPreviewCache(ids);
+  }
+
+  void _openActionsSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ChatActionsSheet(
+        onNewChat: _openSearchUser,
+        onCreateGroup: _openCreateGroup,
+        onJoinLink: _showJoinLinkDialog,
+      ),
+    );
+  }
+
+  Future<void> _openSearchUser() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SearchUserPage()),
+    );
+    _loadMyChatIds();
+  }
+
+  Future<void> _openCreateGroup() async {
+    final t = AppLocalizations.of(context)!;
+    final myId = _supabase.auth.currentUser?.id;
+    if (myId == null) return;
+    try {
+      final mutualIds = await _inboxService.fetchMutualFollowIds(myId);
+      if (mutualIds.isEmpty) {
+        await showDialog<void>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(t.chatMutualRequiredTitle, style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+            content: Text(t.chatMutualRequiredMessage, style: GoogleFonts.outfit()),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(t.commonOk, style: GoogleFonts.outfit()),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CreateGroupPage(allowedUserIds: mutualIds),
         ),
       );
+      _loadMyChatIds();
+    } catch (e) {
+      AppSnackBar.showError(context, t.chatLoadErrorMessage);
+    }
   }
 
-  String _buildPreviewText(dynamic lastMessage, dynamic lastMessageType) {
-    final type = lastMessageType?.toString() ?? '';
-    if (type == 'image') return '📷 Foto';
-    if (type == 'audio') return '🎤 Pesan Suara';
-    if (type == 'location') return '📍 Lokasi';
-    if (type == 'beeb') return '👋 BEEB!';
+  Future<void> _showJoinLinkDialog() async {
+    final t = AppLocalizations.of(context)!;
+    final controller = TextEditingController();
+    bool isJoining = false;
 
-    final text = (lastMessage ?? '').toString();
-    if (text.isEmpty) return '';
-    final lower = text.toLowerCase();
-    if (lower.contains('beeb') || text.contains('👋')) return '👋 BEEB!';
-    if (lower.contains('foto') || lower.contains('gambar') || text.contains('📷')) return '📷 Foto';
-    if (lower.contains('lokasi') || text.contains('📍')) return '📍 Lokasi';
-    if (lower.contains('pesan suara') || lower.contains('voice') || text.contains('🎤')) return '🎤 Pesan Suara';
-    return text;
-  }
-}
-
-class _UnreadBadge extends StatelessWidget {
-  final int count;
-  const _UnreadBadge({required this.count});
-
-  @override
-  Widget build(BuildContext context) {
-    final display = count > 99 ? '99+' : count.toString();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: Text(t.chatJoinLinkTitle, style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+            content: TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                hintText: t.chatJoinLinkHint,
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isJoining ? null : () => Navigator.pop(context),
+                child: Text(t.commonCancel, style: GoogleFonts.outfit()),
+              ),
+              TextButton(
+                onPressed: isJoining
+                    ? null
+                    : () async {
+                        final input = controller.text.trim();
+                        if (input.isEmpty) {
+                          AppSnackBar.showError(context, t.chatJoinLinkInvalid);
+                          return;
+                        }
+                        setState(() => isJoining = true);
+                        final result = await _groupInviteService.joinByLink(input);
+                        if (!mounted) return;
+                        Navigator.pop(context);
+                        _handleJoinResult(result);
+                      },
+                child: isJoining
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(t.chatJoinLinkAction, style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+              ),
+            ],
           ),
-        ],
+        );
+      },
+    );
+  }
+
+  Future<void> _handleJoinResult(GroupJoinResult result) async {
+    final t = AppLocalizations.of(context)!;
+    switch (result.status) {
+      case GroupJoinStatus.joined:
+        AppSnackBar.showSuccess(context, t.chatJoinLinkSuccess);
+        if (result.chatId != null) {
+          await _openGroupChat(result.chatId!);
+        }
+        break;
+      case GroupJoinStatus.alreadyMember:
+        AppSnackBar.showInfo(context, t.chatJoinLinkAlreadyMember);
+        if (result.chatId != null) {
+          await _openGroupChat(result.chatId!);
+        }
+        break;
+      case GroupJoinStatus.pending:
+        AppSnackBar.showInfo(context, t.chatJoinLinkPending);
+        break;
+      case GroupJoinStatus.invalid:
+        AppSnackBar.showError(context, t.chatJoinLinkInvalid);
+        break;
+      case GroupJoinStatus.failed:
+        AppSnackBar.showError(context, t.chatJoinLinkFailed);
+        break;
+    }
+  }
+
+  Future<void> _openGroupChat(String chatId) async {
+    final group = await _supabase
+        .from('social_chats')
+        .select('id, group_name, group_avatar_url')
+        .eq('id', chatId)
+        .maybeSingle();
+    if (group == null) return;
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SocialChatDetailPage(
+          chatId: chatId,
+          isGroup: true,
+          opponentProfile: {
+            'id': chatId,
+            'full_name': group['group_name'] ?? 'Grup',
+            'avatar_url': group['group_avatar_url'],
+            'group_name': group['group_name'],
+            'group_avatar_url': group['group_avatar_url'],
+          },
+          source: 'chat_list',
+        ),
       ),
-      child: Text(
-        display,
-        style: GoogleFonts.outfit(
-          fontSize: 11,
-          color: Colors.white,
-          fontWeight: FontWeight.w700,
+    );
+    _loadMyChatIds();
+  }
+
+  void _leaveGroupUnavailable() {
+    final t = AppLocalizations.of(context)!;
+    AppSnackBar.showInfo(context, t.chatLeaveUnavailable);
+  }
+
+  Future<void> _deleteChat(String chatId) async {
+    final t = AppLocalizations.of(context)!;
+    try {
+      await _supabase.from('social_chats').delete().eq('id', chatId);
+      if (mounted) AppSnackBar.showSuccess(context, t.chatDeleteSuccess);
+    } catch (e) {
+      if (mounted) AppSnackBar.showError(context, t.chatDeleteFailed);
+    }
+  }
+
+  Widget _buildEmptyState(AppLocalizations t) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: AppShadows.level1,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.chat_bubble_outline, size: 48, color: AppColors.primary),
+              const SizedBox(height: 12),
+              Text(
+                t.chatEmptyTitle,
+                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                t.chatEmptyMessage,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(color: AppColors.textBody),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _openSearchUser,
+                icon: const Icon(Icons.search),
+                label: Text(t.chatEmptyCta),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(AppLocalizations t, {required VoidCallback onRetry}) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: AppShadows.level1,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.wifi_off, size: 44, color: AppColors.danger),
+              const SizedBox(height: 12),
+              Text(
+                t.chatLoadErrorTitle,
+                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                t.chatLoadErrorMessage,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(color: AppColors.textBody),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: onRetry,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: Text(t.commonRetry),
+              ),
+            ],
+          ),
         ),
       ),
     );

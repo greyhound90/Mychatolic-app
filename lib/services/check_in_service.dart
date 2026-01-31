@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:mychatolic_app/features/social/data/chat_repository.dart';
 
 class CheckInService {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final ChatRepository _chatRepository = ChatRepository();
 
   // --- CHECK IN ---
   Future<Map<String, dynamic>?> checkIn({
@@ -155,51 +157,28 @@ class CheckInService {
     if (myId == null) throw Exception("User not logged in");
 
     try {
-      // 1. Check for existing Private Chat
-      // We look for a chat where 'participants' contains both IDs.
-      // This is efficient if 'participants' is a column with array type or using a junction table query.
-      // Assuming 'social_chats' table uses an array column 'participants' (based on previous files viewed).
-      
-      String? chatRoomId;
-      
-      final existingChat = await _supabase.from('social_chats')
-          .select('id')
-          .contains('participants', [myId, targetUserId])
-          .maybeSingle();
-
-      if (existingChat != null) {
-         chatRoomId = existingChat['id'];
-      } else {
-         // Create New Chat
-         final newChat = await _supabase.from('social_chats').insert({
-           'participants': [myId, targetUserId],
-           'type': 'private',
-           'last_message': 'New conversation'
-         }).select().single();
-         chatRoomId = newChat['id'];
-      }
+      // 1. Check for existing Private Chat (via repository)
+      final chatRoomId =
+          await _chatRepository.getOrCreatePrivateChat(targetUserId);
       
       // 2. Send Greeting Message
-      if (chatRoomId != null) {
-        final content = "Hai $targetUserName, salam damai! Tadi kita sama-sama misa di $churchName. 🙏";
-        
-        await _supabase.from('social_messages').insert({
-          'chat_id': chatRoomId,
-          'sender_id': myId,
-          'content': content,
-          'type': 'text'
-        });
-
-        // Update last message in chat room
-        await _supabase.from('social_chats').update({
-          'last_message': "👋 Salam Damai",
-          'updated_at': DateTime.now().toIso8601String()
-        }).eq('id', chatRoomId);
-        
-        return chatRoomId;
-      }
+      final content =
+          "Hai $targetUserName, salam damai! Tadi kita sama-sama misa di $churchName. 🙏";
       
-      throw Exception("Failed to create chat room");
+      await _supabase.from('social_messages').insert({
+        'chat_id': chatRoomId,
+        'sender_id': myId,
+        'content': content,
+        'type': 'text'
+      });
+
+      // Update last message in chat room
+      await _supabase.from('social_chats').update({
+        'last_message': "👋 Salam Damai",
+        'updated_at': DateTime.now().toIso8601String()
+      }).eq('id', chatRoomId);
+      
+      return chatRoomId;
 
     } catch (e) {
       debugPrint("CheckInService: initiateGreeting error: $e");

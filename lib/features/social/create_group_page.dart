@@ -8,7 +8,8 @@ import 'package:mychatolic_app/widgets/safe_network_image.dart'; // Pastikan imp
 import 'package:mychatolic_app/core/ui/permission_prompt.dart';
 
 class CreateGroupPage extends StatefulWidget {
-  const CreateGroupPage({super.key});
+  final List<String>? allowedUserIds;
+  const CreateGroupPage({super.key, this.allowedUserIds});
 
   @override
   State<CreateGroupPage> createState() => _CreateGroupPageState();
@@ -39,11 +40,35 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
     setState(() => _isLoading = true);
     final myId = _supabase.auth.currentUser?.id;
     try {
-      final data = await _supabase
+      final allowedIds = widget.allowedUserIds
+          ?.where((id) => id.isNotEmpty && id != myId)
+          .toList();
+
+      if (allowedIds != null) {
+        if (allowedIds.isEmpty) {
+          if (mounted) {
+            setState(() {
+              _allUsers = [];
+              _filteredUsers = [];
+              _isLoading = false;
+            });
+          }
+          return;
+        }
+      }
+
+      var query = _supabase
           .from('profiles')
           .select('id, full_name, avatar_url')
-          .neq('id', myId ?? '')
-          .limit(50);
+          .neq('id', myId ?? '');
+
+      if (allowedIds != null) {
+        query = query.inFilter('id', allowedIds);
+      } else {
+        query = query.limit(50);
+      }
+
+      final data = await query;
 
       if (mounted) {
         setState(() {

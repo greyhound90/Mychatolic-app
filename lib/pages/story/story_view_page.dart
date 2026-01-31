@@ -8,6 +8,7 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'package:mychatolic_app/models/story_model.dart';
 import 'package:mychatolic_app/widgets/safe_network_image.dart';
 import 'package:mychatolic_app/services/story_service.dart';
+import 'package:mychatolic_app/features/social/data/chat_repository.dart';
 
 class StoryViewPage extends StatefulWidget {
   final List<Story> stories;
@@ -27,6 +28,7 @@ class StoryViewPage extends StatefulWidget {
 
 class _StoryViewPageState extends State<StoryViewPage> with SingleTickerProviderStateMixin {
   final _supabase = Supabase.instance.client;
+  final ChatRepository _chatRepository = ChatRepository();
   final StoryService _storyService = StoryService();
   final TextEditingController _messageController = TextEditingController();
 
@@ -183,22 +185,7 @@ class _StoryViewPageState extends State<StoryViewPage> with SingleTickerProvider
     if (myId == null) return;
 
     try {
-      var chatId = '';
-      final res = await _supabase.from('social_chats')
-          .select('id')
-          .contains('participants', [myId, ownerId])
-          .maybeSingle();
-
-      if (res != null) {
-        chatId = res['id'];
-      } else {
-        final newChat = await _supabase.from('social_chats').insert({
-          'participants': [myId, ownerId],
-          'last_message': 'New conversation',
-          'type': 'private' 
-        }).select().single();
-        chatId = newChat['id'];
-      }
+      final chatId = await _chatRepository.getOrCreatePrivateChat(ownerId);
 
       final content = "$text\n\n[Balasan untuk Story]";
       

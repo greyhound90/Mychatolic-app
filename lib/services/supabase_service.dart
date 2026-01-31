@@ -1,8 +1,10 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
+import 'package:mychatolic_app/features/social/data/chat_repository.dart';
 
 class SupabaseService {
   final _supabase = Supabase.instance.client;
+  final ChatRepository _chatRepository = ChatRepository();
 
   // --- AUTH ---
   User? get currentUser => _supabase.auth.currentUser;
@@ -26,35 +28,8 @@ class SupabaseService {
 
   // 13. Start Chat
   Future<String> startChat(String otherUserId) async {
-    final myId = _supabase.auth.currentUser?.id;
-    if (myId == null) throw Exception("Not logged in");
-
     try {
-      final response = await _supabase
-          .from('social_chats')
-          .select('id')
-          .contains('participants', [myId, otherUserId])
-          .maybeSingle();
-
-      if (response != null) {
-        return response['id'] as String;
-      }
-    } catch (e) {
-      debugPrint("Start chat lookup failed: $e");
-    }
-
-    try {
-      final newChat = await _supabase
-          .from('social_chats')
-          .insert({
-            'participants': [myId, otherUserId],
-            'last_message': "Memulai percakapan",
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .select()
-          .single();
-
-      return newChat['id'] as String;
+      return await _chatRepository.getOrCreatePrivateChat(otherUserId);
     } catch (e) {
       throw Exception("Failed to start chat: $e");
     }

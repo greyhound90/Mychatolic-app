@@ -6,6 +6,7 @@ import 'package:mychatolic_app/services/story_service.dart';
 import 'package:mychatolic_app/widgets/safe_network_image.dart';
 import 'package:mychatolic_app/pages/story/create_story_page.dart';
 import 'package:mychatolic_app/pages/story/story_view_page.dart';
+import 'package:mychatolic_app/features/social/widgets/chat_inbox_skeleton.dart';
 
 class StoryRail extends StatefulWidget {
   const StoryRail({super.key});
@@ -65,6 +66,10 @@ class _StoryRailState extends State<StoryRail> {
       child: FutureBuilder<List<UserStoryGroup>>(
         future: _storiesFuture,
         builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData) {
+            return const ChatStorySkeleton();
+          }
           final groups = snapshot.data ?? [];
           final user = _supabase.auth.currentUser;
 

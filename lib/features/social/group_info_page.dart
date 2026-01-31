@@ -8,6 +8,7 @@ import 'package:mychatolic_app/widgets/safe_network_image.dart';
 import 'package:mychatolic_app/features/social/pages/social_chat_detail_page.dart';
 import 'package:mychatolic_app/features/profile/pages/profile_page.dart';
 import 'package:mychatolic_app/core/ui/permission_prompt.dart';
+import 'package:mychatolic_app/features/social/data/chat_repository.dart';
 
 class GroupInfoPage extends StatefulWidget {
   final String chatId;
@@ -20,6 +21,7 @@ class GroupInfoPage extends StatefulWidget {
 
 class _GroupInfoPageState extends State<GroupInfoPage> {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final ChatRepository _chatRepository = ChatRepository();
   
   bool _isLoading = true;
   Map<String, dynamic>? _groupData;
@@ -275,24 +277,7 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
   Future<void> _startPrivateChat(Map<String, dynamic> user) async {
     final targetId = user['user_id'];
     try {
-      final response = await _supabase.from('social_chats')
-          .select()
-          .contains('participants', [_currentUserId, targetId])
-          .eq('is_group', false)
-          .maybeSingle();
-
-      String chatId;
-      if (response != null) {
-        chatId = response['id'];
-      } else {
-        final newChat = await _supabase.from('social_chats').insert({
-          'participants': [_currentUserId, targetId],
-          'is_group': false,
-          'updated_at': DateTime.now().toIso8601String(),
-          'last_message': 'Memulai percakapan',
-        }).select().single();
-        chatId = newChat['id'];
-      }
+      final chatId = await _chatRepository.getOrCreatePrivateChat(targetId);
 
       final profile = {
         'id': targetId,
