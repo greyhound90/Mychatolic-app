@@ -57,6 +57,7 @@ class _SchedulePageState extends State<SchedulePage> {
 
   // Grouping for "Church Search" mode
   bool _isChurchSearchMode = false;
+  final GlobalKey _searchSectionKey = GlobalKey();
 
   @override
   void initState() {
@@ -304,7 +305,10 @@ class _SchedulePageState extends State<SchedulePage> {
     final textPrimary = colors.onSurface;
     final textSecondary = colors.onSurface.withOpacity(0.7);
     final textMuted = colors.onSurface.withOpacity(0.5);
-    final litPalette = _resolveLiturgicalPalette(colors);
+    final palette = _resolvePalette(colors);
+    final isWhite = _isWhiteLiturgy();
+    final whiteAccent =
+        palette.secondaryAccent ?? const Color(0xFF0088CC);
 
     final showLoading = _isLoadingSchedules && _schedules.isEmpty;
     final showError = _scheduleError != null && _schedules.isEmpty;
@@ -314,96 +318,139 @@ class _SchedulePageState extends State<SchedulePage> {
       slivers: [
         // 1. Calendar
         SliverToBoxAdapter(
-          child: Container(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
             margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: colors.surface,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(color: border.withOpacity(0.6)),
               boxShadow: [
                 BoxShadow(
                   color: theme.shadowColor.withValues(alpha: 0.12),
-                  blurRadius: 12,
+                  blurRadius: 14,
                   offset: const Offset(0, 6),
                 ),
               ],
             ),
-            child: EasyDateTimeLine(
-              initialDate: _selectedDate,
-              onDateChange: (d) {
-                setState(() {
-                  _selectedDate = d;
-                });
-                _loadLiturgy();
-                if (!_isChurchSearchMode) _loadDailySchedules();
-              },
-              headerProps: const EasyHeaderProps(
-                monthPickerType: MonthPickerType.switcher,
-                dateFormatter: DateFormatter.fullDateDMY(),
-              ),
-              dayProps: EasyDayProps(
-                dayStructure: DayStructure.dayStrDayNum,
-                activeDayStyle: DayStyle(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: litPalette.accentColor,
-                    border: Border.all(
-                      color: litPalette.borderColor,
-                      width: 1.4,
+            child: Stack(
+              children: [
+                Positioned(
+                  left: 6,
+                  top: 2,
+                  child: Text(
+                    "Kalender",
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: textSecondary,
+                      letterSpacing: 0.2,
                     ),
                   ),
-                  dayNumStyle: GoogleFonts.outfit(
-                    color: litPalette.textOnAccent,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  dayStrStyle: GoogleFonts.outfit(
-                    color: litPalette.textOnAccent.withOpacity(0.9),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
                 ),
-                todayStyle: DayStyle(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: litPalette.accentColor.withValues(alpha: 0.9),
-                      width: 1.4,
+                Positioned(
+                  right: 6,
+                  top: 0,
+                  child: _buildLiturgyChip(palette),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 26),
+                  child: EasyDateTimeLine(
+                    initialDate: _selectedDate,
+                    onDateChange: (d) {
+                      setState(() {
+                        _selectedDate = d;
+                      });
+                      _loadLiturgy();
+                      if (!_isChurchSearchMode) _loadDailySchedules();
+                    },
+                    headerProps: const EasyHeaderProps(
+                      monthPickerType: MonthPickerType.switcher,
+                      dateFormatter: DateFormatter.fullDateDMY(),
                     ),
-                    color: litPalette.tintBackground,
-                  ),
-                  dayNumStyle: GoogleFonts.outfit(
-                    color: textPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  dayStrStyle: GoogleFonts.outfit(
-                    color: textSecondary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                    dayProps: EasyDayProps(
+                      dayStructure: DayStructure.dayStrDayNum,
+                      activeDayStyle: DayStyle(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: palette.accent,
+                          border: Border.all(
+                            color: isWhite
+                                ? whiteAccent.withOpacity(0.6)
+                                : palette.border,
+                            width: 1.4,
+                          ),
+                          boxShadow: isWhite
+                              ? [
+                                  BoxShadow(
+                                    color: whiteAccent.withOpacity(0.12),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        dayNumStyle: GoogleFonts.outfit(
+                          color: palette.onAccent,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        dayStrStyle: GoogleFonts.outfit(
+                          color: palette.onAccent.withOpacity(0.9),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      todayStyle: DayStyle(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: palette.accent.withValues(alpha: 0.9),
+                            width: 1.4,
+                          ),
+                          color: palette.tint,
+                        ),
+                        dayNumStyle: GoogleFonts.outfit(
+                          color: textPrimary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        dayStrStyle: GoogleFonts.outfit(
+                          color: textSecondary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      inactiveDayStyle: DayStyle(
+                        dayNumStyle: GoogleFonts.outfit(
+                          color: textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        dayStrStyle: GoogleFonts.outfit(
+                          color: textSecondary,
+                          fontSize: 11,
+                        ),
+                      ),
+                      disabledDayStyle: DayStyle(
+                        dayNumStyle: GoogleFonts.outfit(
+                          color: textMuted,
+                        ),
+                        dayStrStyle: GoogleFonts.outfit(
+                          color: textMuted,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-                inactiveDayStyle: DayStyle(
-                  dayNumStyle: GoogleFonts.outfit(
-                    color: textPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  dayStrStyle: GoogleFonts.outfit(
-                    color: textSecondary,
-                    fontSize: 11,
-                  ),
-                ),
-                disabledDayStyle: DayStyle(
-                  dayNumStyle: GoogleFonts.outfit(
-                    color: textMuted,
-                  ),
-                  dayStrStyle: GoogleFonts.outfit(
-                    color: textMuted,
-                    fontSize: 11,
-                  ),
-                ),
-              ),
+              ],
             ),
           ),
+        ),
+
+        // 1.5 Liturgy Legend
+        SliverToBoxAdapter(
+          child: _buildLiturgyLegend(colors),
         ),
 
         // 2. Liturgy Card
@@ -415,6 +462,7 @@ class _SchedulePageState extends State<SchedulePage> {
         // 3. Advanced Search Toggle
         SliverToBoxAdapter(
           child: Padding(
+            key: _searchSectionKey,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Card(
               elevation: 0,
@@ -552,6 +600,7 @@ class _SchedulePageState extends State<SchedulePage> {
         else if (showEmpty)
           SliverToBoxAdapter(
             child: _buildScheduleEmptyState(
+              colors: colors,
               textSecondary: textSecondary,
               textMuted: textMuted,
             ),
@@ -728,12 +777,15 @@ class _SchedulePageState extends State<SchedulePage> {
   }
 
   Widget _buildScheduleEmptyState({
+    required ColorScheme colors,
     required Color textSecondary,
     required Color textMuted,
   }) {
+    final title =
+        _isChurchSearchMode ? "Jadwal Tidak Ditemukan" : "Belum Ada Jadwal";
     final message = _isChurchSearchMode
-        ? "Jadwal belum tersedia untuk paroki ini"
-        : "Belum ada jadwal untuk tanggal ini";
+        ? "Coba ganti paroki atau reset ke tampilan harian."
+        : "Tidak ada jadwal untuk tanggal ini. Gunakan pencarian gereja di bawah.";
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 28),
       child: Center(
@@ -743,12 +795,167 @@ class _SchedulePageState extends State<SchedulePage> {
             Icon(Icons.event_busy, size: 60, color: textMuted),
             const SizedBox(height: 10),
             Text(
-              message,
+              title,
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(color: textSecondary),
+              style: GoogleFonts.outfit(
+                color: colors.onSurface,
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+              ),
             ),
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                message,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(color: textSecondary),
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (_isChurchSearchMode)
+              ElevatedButton(
+                onPressed: _loadDailySchedules,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colors.primary,
+                  foregroundColor: colors.onPrimary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  "Reset Tampilan Harian",
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.w600,
+                    color: colors.onPrimary,
+                  ),
+                ),
+              )
+            else
+              OutlinedButton(
+                onPressed: _scrollToSearchSection,
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: colors.primary),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  "Cari Gereja",
+                  style: GoogleFonts.outfit(
+                    color: colors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildLiturgyChip(LiturgicalPalette palette) {
+    final label = (_currentLiturgy?.color ?? "Liturgi").toUpperCase();
+    final isWhite = _isWhiteLiturgy();
+    final secondaryAccent =
+        palette.secondaryAccent ?? const Color(0xFF0088CC);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: palette.accent,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: palette.border,
+          width: isWhite ? 1.2 : 1,
+        ),
+        boxShadow: [
+          if (isWhite)
+            BoxShadow(
+              color: Colors.black.withOpacity(0.10),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            )
+          else
+            BoxShadow(
+              color: palette.accent.withOpacity(0.18),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isWhite) ...[
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: secondaryAccent.withOpacity(0.6),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
+          ],
+          Text(
+            label,
+            style: GoogleFonts.outfit(
+              color: palette.onAccent,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLiturgyLegend(ColorScheme colors) {
+    final items = [
+      {"label": "Putih", "code": "white"},
+      {"label": "Merah", "code": "red"},
+      {"label": "Hijau", "code": "green"},
+      {"label": "Ungu", "code": "purple"},
+      {"label": "Rose", "code": "rose"},
+      {"label": "Hitam", "code": "black"},
+    ];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 6,
+        children: items.map((item) {
+          final palette = LiturgyService.paletteFor(
+            item["code"] ?? '',
+            brightness: Theme.of(context).brightness,
+          );
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: palette.accent.withOpacity(0.9),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: palette.border),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                item["label"] ?? '',
+                style: GoogleFonts.outfit(
+                  fontSize: 11,
+                  color: colors.onSurface.withOpacity(0.65),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          );
+        }).toList(),
       ),
     );
   }
@@ -756,6 +963,17 @@ class _SchedulePageState extends State<SchedulePage> {
   void _retryAll() {
     _loadLiturgy();
     _loadSchedules();
+  }
+
+  void _scrollToSearchSection() {
+    final ctx = _searchSectionKey.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   String _formatSelectedDate(BuildContext context) {
@@ -781,14 +999,17 @@ class _SchedulePageState extends State<SchedulePage> {
     final colors = Theme.of(context).colorScheme;
     final textPrimary = colors.onSurface;
     final textSecondary = colors.onSurface.withOpacity(0.7);
-    final litPalette = _resolveLiturgicalPalette(colors);
-    final accent = litPalette.accentColor;
+    final palette = _resolvePalette(colors);
+    final accent = palette.accent;
+    final isWhite = _isWhiteLiturgy();
+    final whiteAccent =
+        palette.secondaryAccent ?? const Color(0xFF0088CC);
     final readingColor =
         accent.computeLuminance() > 0.82 ? textPrimary : accent;
 
     if (_loadingLiturgy) {
       return _buildLiturgyCard(
-        palette: litPalette,
+        palette: palette,
         child: Row(
           children: [
             SizedBox(
@@ -816,7 +1037,7 @@ class _SchedulePageState extends State<SchedulePage> {
 
     if (_currentLiturgy == null) {
       return _buildLiturgyCard(
-        palette: litPalette,
+        palette: palette,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -865,7 +1086,7 @@ class _SchedulePageState extends State<SchedulePage> {
     }
 
     return _buildLiturgyCard(
-      palette: litPalette,
+      palette: palette,
       child: Stack(
         children: [
           Positioned(
@@ -890,14 +1111,22 @@ class _SchedulePageState extends State<SchedulePage> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: accent,
-                        border: Border.all(color: litPalette.borderColor),
+                        color: isWhite
+                            ? const Color(0xFFF5F5F5)
+                            : accent,
+                        border: Border.all(
+                          color: isWhite
+                              ? const Color(0xFFE6E6E6)
+                              : palette.border,
+                        ),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         _formatSelectedDate(context),
                         style: GoogleFonts.outfit(
-                          color: litPalette.textOnAccent,
+                          color: isWhite
+                              ? const Color(0xFF121212)
+                              : palette.onAccent,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -905,7 +1134,9 @@ class _SchedulePageState extends State<SchedulePage> {
                     const Spacer(),
                     Icon(
                       Icons.auto_awesome,
-                      color: accent.withValues(alpha: 0.8),
+                      color: isWhite
+                          ? whiteAccent.withOpacity(0.7)
+                          : accent.withValues(alpha: 0.8),
                       size: 20,
                     ),
                   ],
@@ -928,7 +1159,7 @@ class _SchedulePageState extends State<SchedulePage> {
                       decoration: BoxDecoration(
                         color: accent,
                         shape: BoxShape.circle,
-                        border: Border.all(color: litPalette.borderColor),
+                        border: Border.all(color: palette.border),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -978,17 +1209,21 @@ class _SchedulePageState extends State<SchedulePage> {
   }
 
   Widget _buildLiturgyCard({
-    required _LiturgicalPalette palette,
+    required LiturgicalPalette palette,
     required Widget child,
   }) {
     final theme = Theme.of(context);
+    final isWhite = _isWhiteLiturgy();
+    final secondaryAccent =
+        palette.secondaryAccent ?? const Color(0xFF0088CC);
     return Container(
       margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: palette.tintBackground,
+        color: isWhite ? const Color(0xFFFFFFFF) : palette.tint,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: palette.borderColor),
+        border: Border.all(
+          color: isWhite ? const Color(0xFFE6E6E6) : palette.border,
+        ),
         boxShadow: [
           BoxShadow(
             color: theme.shadowColor.withValues(alpha: 0.12),
@@ -997,7 +1232,27 @@ class _SchedulePageState extends State<SchedulePage> {
           ),
         ],
       ),
-      child: child,
+      child: Stack(
+        children: [
+          if (isWhite)
+            Positioned(
+              left: 0,
+              top: 10,
+              bottom: 10,
+              child: Container(
+                width: 4,
+                decoration: BoxDecoration(
+                  color: secondaryAccent.withOpacity(0.25),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(isWhite ? 18 : 16, 16, 16, 16),
+            child: child,
+          ),
+        ],
+      ),
     );
   }
 
@@ -1162,64 +1417,30 @@ class _SchedulePageState extends State<SchedulePage> {
     );
   }
 
-  _LiturgicalPalette _resolveLiturgicalPalette(ColorScheme colors) {
-    final code = _currentLiturgy?.color;
-    final accent = _currentLiturgy != null
-        ? LiturgyService.getLiturgicalColor(code)
-        : colors.primary;
-    return _LiturgicalPalette(
-      accentColor: accent,
-      tintBackground: accent.withOpacity(0.12),
-      textOnAccent: _litTextOnAccent(accent, code),
-      borderColor: _litBorder(accent),
+  LiturgicalPalette _resolvePalette(ColorScheme colors) {
+    final theme = Theme.of(context);
+    final palette = LiturgyService.paletteFor(
+      _currentLiturgy?.color ?? '',
+      brightness: theme.brightness,
     );
-  }
-
-  Color _litBg(Color c) => c.withOpacity(0.12);
-
-  Color _litBorder(Color c) {
-    final lum = c.computeLuminance();
-    if (lum > 0.85) return const Color(0xFFBDBDBD);
-    if (lum < 0.08) return const Color(0xFF444444);
-    return c.withOpacity(0.55);
-  }
-
-  Color _litTextOnAccent(Color c, String? code) {
-    switch (code?.toLowerCase()) {
-      case 'white':
-      case 'gold':
-        return const Color(0xFF1A1A1A);
-      case 'rose':
-      case 'pink':
-        return const Color(0xFF1A1A1A);
-      case 'red':
-      case 'green':
-      case 'purple':
-      case 'black':
-        return Colors.white;
-      default:
-        return c.computeLuminance() > 0.6
-            ? const Color(0xFF1A1A1A)
-            : Colors.white;
+    if (_currentLiturgy == null) {
+      final accent = colors.primary;
+      return palette.copyWith(
+        accent: accent,
+        tint: accent.withOpacity(0.12),
+        border: accent.withOpacity(0.45),
+        onAccent: colors.onPrimary,
+        chipBg: accent.withOpacity(0.12),
+        chipText: accent,
+        secondaryAccent: accent,
+      );
     }
+    return palette;
   }
 
-  Color _litChipBg(Color c) {
-    final lum = c.computeLuminance();
-    if (lum > 0.85) return const Color(0xFFF0F0F0);
-    if (lum < 0.08) return Colors.black.withOpacity(0.45);
-    return _litBg(c);
-  }
-
-  Color _litChipBorder(Color c) {
-    final lum = c.computeLuminance();
-    if (lum > 0.85) return const Color(0xFFBDBDBD);
-    if (lum < 0.08) return const Color(0xFF555555);
-    return _litBorder(c);
-  }
-
-  Color _litChipText(Color c) {
-    return _litTextOnAccent(c, _currentLiturgy?.color);
+  bool _isWhiteLiturgy() {
+    final code = _currentLiturgy?.color.trim().toLowerCase();
+    return code == 'white' || code == 'gold' || code == 'putih';
   }
 
   Widget _buildTicketCard(MassSchedule item) {
@@ -1230,8 +1451,11 @@ class _SchedulePageState extends State<SchedulePage> {
     final colors = theme.colorScheme;
     final textPrimary = colors.onSurface;
     final textSecondary = colors.onSurface.withOpacity(0.7);
-    final litPalette = _resolveLiturgicalPalette(colors);
-    final litColor = litPalette.accentColor;
+    final palette = _resolvePalette(colors);
+    final isWhite = _isWhiteLiturgy();
+    final secondaryAccent =
+        palette.secondaryAccent ?? const Color(0xFF0088CC);
+    final litColor = palette.accent;
     final litLabel = (_currentLiturgy?.color ?? "Liturgi").toUpperCase();
 
     return Container(
@@ -1258,6 +1482,17 @@ class _SchedulePageState extends State<SchedulePage> {
               decoration: BoxDecoration(
                 color: litColor,
                 borderRadius: BorderRadius.circular(6),
+                border:
+                    isWhite ? Border.all(color: palette.border) : null,
+                boxShadow: isWhite
+                    ? [
+                        BoxShadow(
+                          color: secondaryAccent.withOpacity(0.12),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
               ),
             ),
           ),
@@ -1334,20 +1569,39 @@ class _SchedulePageState extends State<SchedulePage> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: _litChipBg(litColor),
+                              color: palette.chipBg,
                               borderRadius: BorderRadius.circular(999),
-                              border:
-                                  Border.all(color: _litChipBorder(litColor)),
+                              border: Border.all(color: palette.border),
                             ),
                             child: Text(
                               litLabel,
                               style: GoogleFonts.outfit(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                color: _litChipText(litColor),
+                                color: palette.chipText,
                               ),
                             ),
                           ),
+                          if (isActive) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: palette.chipBg,
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(color: palette.border),
+                              ),
+                              child: Text(
+                                "AKTIF",
+                                style: GoogleFonts.outfit(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: palette.chipText,
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                       Text(
@@ -1774,18 +2028,4 @@ class _SchedulePageState extends State<SchedulePage> {
       ),
     );
   }
-}
-
-class _LiturgicalPalette {
-  final Color accentColor;
-  final Color tintBackground;
-  final Color textOnAccent;
-  final Color borderColor;
-
-  const _LiturgicalPalette({
-    required this.accentColor,
-    required this.tintBackground,
-    required this.textOnAccent,
-    required this.borderColor,
-  });
 }
