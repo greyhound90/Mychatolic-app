@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:mychatolic_app/features/auth/pages/login_page.dart';
 import 'package:mychatolic_app/pages/main_page.dart';
+import 'package:mychatolic_app/shared/widgets/app_state_scaffold.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -17,6 +18,7 @@ class _SplashPageState extends State<SplashPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _arrowAnimation;
+  bool _isNavigating = false;
 
   @override
   void initState() {
@@ -39,6 +41,8 @@ class _SplashPageState extends State<SplashPage>
   }
 
   Future<void> _navigateToNextPage() async {
+    if (_isNavigating) return;
+    if (mounted) setState(() => _isNavigating = true);
     final supabase = Supabase.instance.client;
     final session = supabase.auth.currentSession;
 
@@ -139,6 +143,8 @@ class _SplashPageState extends State<SplashPage>
           MaterialPageRoute(builder: (context) => const LoginPage()),
         );
       }
+    } finally {
+      if (mounted) setState(() => _isNavigating = false);
     }
   }
 
@@ -147,34 +153,37 @@ class _SplashPageState extends State<SplashPage>
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      // Wrap the entire Body in GestureDetector with Translucent behavior
-      body: GestureDetector(
-        behavior:
-            HitTestBehavior.translucent, // Critical for full screen interaction
-        onVerticalDragEnd: (details) {
-          // Detect upward swipe (negative velocity)
-          if (details.primaryVelocity != null &&
-              details.primaryVelocity! < -200) {
-            _navigateToNextPage();
-          }
-        },
-        child: Stack(
-          children: [
-            // Layer 1: Premium Gradient Background
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    theme.scaffoldBackgroundColor,
-                    isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
-                  ],
+    return AppStateScaffold(
+      loading: _isNavigating,
+      error: null,
+      child: Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        // Wrap the entire Body in GestureDetector with Translucent behavior
+        body: GestureDetector(
+          behavior:
+              HitTestBehavior.translucent, // Critical for full screen interaction
+          onVerticalDragEnd: (details) {
+            // Detect upward swipe (negative velocity)
+            if (details.primaryVelocity != null &&
+                details.primaryVelocity! < -200) {
+              _navigateToNextPage();
+            }
+          },
+          child: Stack(
+            children: [
+              // Layer 1: Premium Gradient Background
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      theme.scaffoldBackgroundColor,
+                      isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                    ],
+                  ),
                 ),
               ),
-            ),
 
             // Layer 2: Scattered Background Icons ("Stickers")
             _buildBackgroundIcon(
@@ -332,7 +341,8 @@ class _SplashPageState extends State<SplashPage>
                 ),
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );

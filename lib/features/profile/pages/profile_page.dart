@@ -24,6 +24,7 @@ import 'package:mychatolic_app/pages/story/story_view_page.dart';
 import 'package:mychatolic_app/features/profile/pages/edit_profile_page.dart';
 import 'package:mychatolic_app/features/radar/pages/create_personal_radar_page.dart';
 import 'package:mychatolic_app/features/auth/pages/verification_page.dart';
+import 'package:mychatolic_app/shared/widgets/app_state_scaffold.dart';
 import 'package:share_plus/share_plus.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -56,7 +57,7 @@ class _ProfilePageState extends State<ProfilePage>
   Map<String, int> _stats = {'followers': 0, 'following': 0, 'posts': 0};
   bool _isFollowing = false;
   bool _isMe = false;
-  
+
   _ProfilePalette get _palette => _ProfilePalette.of(context);
 
   // Post Lists (Pagination State)
@@ -571,103 +572,84 @@ class _ProfilePageState extends State<ProfilePage>
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Scaffold(
-        backgroundColor: _palette.background,
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
     // DEBUG: Check Status
     if (_profile != null) {
       if (kDebugMode) {
         debugPrint('Current Verification Status by ENUM: ${_profile!.verificationStatus}');
       }
     }
+    final hasError = _error != null || _profile == null;
+    final errorMessage = _error ?? "Data profil tidak ditemukan.";
+    final displayProfile = _profile;
 
-    if (_error != null || _profile == null) {
-      return Scaffold(
-        backgroundColor: _palette.background,
-        appBar: AppBar(title: const Text("Profil")),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, size: 48, color: _palette.disabled),
-              const SizedBox(height: 16),
-              Text(_error ?? "Data profil tidak ditemukan.",
-                  style: GoogleFonts.outfit(color: _palette.mutedText)),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _loadProfileData,
-                child: const Text("Coba Lagi"),
-              )
-            ],
-          ),
-        ),
-      );
-    }
-
-    final displayProfile = _profile!;
-
-    return Scaffold(
-      backgroundColor: _palette.background,
-      // RefreshIndicator wrapping NestedScrollView
-      body: RefreshIndicator(
-        onRefresh: _loadProfileData,
-        child: NestedScrollView(
-          controller: _scrollController,
-          headerSliverBuilder: (context, innerBoxIsScrolled) {
-            return [
-              SliverToBoxAdapter(
-                child: ProfileHeader(
-                  profile: displayProfile,
-                  stats: _stats,
-                  isMe: _isMe,
-                  isFollowing: _isFollowing,
-                  onFollowToggle: _handleFollowToggle,
-                  onChatTap: _navigateToChat,
-                  onInviteTap: _handleInviteToMass,
-                  onEditTap: _handleEditProfile,
-                  onSettingsTap: _openSettings,
-                  hasStories: _userStories.isNotEmpty,
-                  onAvatarTap: _handleAvatarTap,
-                  onBannerTap: _handleBannerTap,
-                  onShareTap: _shareProfile,
-                  isBackEnabled: widget.isBackButtonEnabled,
-                ),
-              ),
-              SliverPersistentHeader(
-                delegate: _SliverTabBarDelegate(
-                  TabBar(
+    return AppStateScaffold(
+      loading: _isLoading,
+      error: hasError ? errorMessage : null,
+      title: "Profil",
+      onRetry: hasError ? _loadProfileData : null,
+      child: displayProfile == null
+          ? const SizedBox.shrink()
+          : Scaffold(
+              backgroundColor: _palette.background,
+              body: RefreshIndicator(
+                onRefresh: _loadProfileData,
+                child: NestedScrollView(
+                  controller: _scrollController,
+                  headerSliverBuilder: (context, innerBoxIsScrolled) {
+                    return [
+                      SliverToBoxAdapter(
+                        child: ProfileHeader(
+                          profile: displayProfile,
+                          stats: _stats,
+                          isMe: _isMe,
+                          isFollowing: _isFollowing,
+                          onFollowToggle: _handleFollowToggle,
+                          onChatTap: _navigateToChat,
+                          onInviteTap: _handleInviteToMass,
+                          onEditTap: _handleEditProfile,
+                          onSettingsTap: _openSettings,
+                          hasStories: _userStories.isNotEmpty,
+                          onAvatarTap: _handleAvatarTap,
+                          onBannerTap: _handleBannerTap,
+                          onShareTap: _shareProfile,
+                          isBackEnabled: widget.isBackButtonEnabled,
+                        ),
+                      ),
+                      SliverPersistentHeader(
+                        delegate: _SliverTabBarDelegate(
+                          TabBar(
                     controller: _tabController,
+                    indicatorColor: _palette.primary,
                     indicatorWeight: 3,
+                    labelColor: _palette.text,
+                    unselectedLabelColor: _palette.disabled,
                     labelStyle: GoogleFonts.outfit(
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
                       letterSpacing: 0.4,
                     ),
-                    tabs: [
-                      const Tab(text: "GALERI"),
-                      const Tab(text: "STATUS"),
-                      if (_isMe) const Tab(text: "DISIMPAN"),
+                            tabs: [
+                              const Tab(text: "GALERI"),
+                              const Tab(text: "STATUS"),
+                              if (_isMe) const Tab(text: "DISIMPAN"),
+                            ],
+                          ),
+                        ),
+                        pinned: true,
+                      ),
+                    ];
+                  },
+                  body: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildGridPosts(_photoPosts),
+                      _buildListPosts(_textPosts),
+                      if (_isMe) _buildGridPosts(_savedPosts, isSavedView: true),
                     ],
                   ),
                 ),
-                pinned: true,
               ),
-            ];
-          },
-          body: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildGridPosts(_photoPosts),
-              _buildListPosts(_textPosts),
-              if (_isMe) _buildGridPosts(_savedPosts, isSavedView: true),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 
@@ -757,22 +739,41 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   Widget _buildEmptyState(String msg) {
+    final palette = _ProfilePalette.of(context);
     return CustomScrollView(
       slivers: [
-        SliverFillRemaining(
-          hasScrollBody: false,
+        SliverToBoxAdapter(
           child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.camera_alt_outlined, size: 64, color: _palette.mutedText),
-                const SizedBox(height: 16),
-                Text(
-                  msg,
-                  style: GoogleFonts.outfit(color: _palette.disabled, fontSize: 16),
-                ),
-              ],
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              decoration: BoxDecoration(
+                color: palette.backgroundAlt,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: palette.text.withValues(alpha: 0.08)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.camera_alt_outlined,
+                      size: 48, color: palette.disabled),
+                  const SizedBox(height: 10),
+                  Text(
+                    msg,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(
+                      color: palette.mutedText,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
             ),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: SizedBox(
+            height: 16 + MediaQuery.of(context).padding.bottom,
           ),
         ),
       ],
@@ -944,10 +945,10 @@ class ProfileHeader extends StatelessWidget {
                 padding: padding,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: _palette.background.withValues(alpha: 0.5),
+                  color: Colors.black.withValues(alpha: 0.45),
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(
-                    color: _palette.border.withValues(alpha: 0.5),
+                    color: Colors.white.withValues(alpha: 0.2),
                   ),
                 ),
                 child: icon,
@@ -1009,13 +1010,13 @@ class ProfileHeader extends StatelessWidget {
               children: [
                 glassIconButton(
                   onTap: onSettingsTap,
-                  icon: Icon(Icons.settings, color: _palette.text, size: 22),
+                  icon: const Icon(Icons.settings, color: Colors.white, size: 22),
                 ),
                 if (isMe) ...[
                   const SizedBox(height: 10),
                   glassIconButton(
                     onTap: onBannerTap,
-                    icon: Icon(Icons.photo_camera, size: 22, color: _palette.text),
+                    icon: const Icon(Icons.photo_camera, size: 22, color: Colors.white),
                   ),
                 ],
               ],
@@ -1028,7 +1029,7 @@ class ProfileHeader extends StatelessWidget {
             left: 16,
             child: glassIconButton(
               onTap: () => Navigator.pop(context),
-              icon: Icon(Icons.arrow_back, color: _palette.text, size: 24),
+              icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
             ),
           ),
         // 2. WHITE CARD BODY
@@ -1037,8 +1038,8 @@ class ProfileHeader extends StatelessWidget {
           padding: EdgeInsets.only(top: cardTopPadding, bottom: 20),
           decoration: BoxDecoration(
             color: _palette.backgroundAlt,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-            border: Border.all(color: _palette.text.withValues(alpha: 0.06)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+            border: Border.all(color: _palette.text.withValues(alpha: 0.08)),
             boxShadow: [
               BoxShadow(
                 color: _palette.shadow.withValues(alpha: 0.12),
@@ -1056,8 +1057,8 @@ class ProfileHeader extends StatelessWidget {
                   margin: const EdgeInsets.symmetric(horizontal: 20),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
-                    color: _palette.primary.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(18),
+                    color: _palette.backgroundAlt,
+                    borderRadius: BorderRadius.circular(22),
                     border: Border.all(
                       color: _palette.text.withValues(alpha: 0.08),
                     ),
@@ -1098,13 +1099,13 @@ class ProfileHeader extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(Icons.water_drop,
-                                  size: 14, color: _palette.muted),
+                                  size: 14, color: _palette.disabled),
                               const SizedBox(width: 4),
                               Text(
                                 "Nama Baptis: ${profile.baptismName}",
                                 style: GoogleFonts.outfit(
                                   fontSize: 14,
-                                  color: _palette.muted,
+                                  color: _palette.mutedText,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -1120,16 +1121,16 @@ class ProfileHeader extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: _palette.muted.withValues(alpha: 0.15),
+                              color: _palette.backgroundAlt,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                  color: _palette.muted.withValues(alpha: 0.4)),
+                                  color: _palette.text.withValues(alpha: 0.12)),
                             ),
                             child: Text(
                               "${profile.age} Tahun",
                               style: GoogleFonts.outfit(
                                 fontSize: 12,
-                                color: _palette.primaryDark,
+                                color: _palette.mutedText,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -1145,16 +1146,16 @@ class ProfileHeader extends StatelessWidget {
               // Section 2: Bio + location
               animateSection(
                 Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: _palette.backgroundAlt,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: _palette.text.withValues(alpha: 0.06)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _palette.shadow.withValues(alpha: 0.08),
-                        blurRadius: 12,
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: _palette.backgroundAlt,
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: _palette.text.withValues(alpha: 0.08)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _palette.shadow.withValues(alpha: 0.08),
+                      blurRadius: 12,
                         offset: const Offset(0, 6),
                       ),
                     ],
@@ -1180,8 +1181,8 @@ class ProfileHeader extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.location_on_outlined,
-                              size: 16, color: _palette.mutedText),
+                        Icon(Icons.location_on_outlined,
+                            size: 16, color: _palette.disabled),
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(
@@ -1197,8 +1198,8 @@ class ProfileHeader extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.church_outlined,
-                              size: 16, color: _palette.mutedText),
+                        Icon(Icons.church_outlined,
+                            size: 16, color: _palette.disabled),
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(
@@ -1224,12 +1225,12 @@ class ProfileHeader extends StatelessWidget {
               // Section 3: Action buttons
               animateSection(
                 Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: _palette.backgroundAlt,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: _palette.text.withValues(alpha: 0.06)),
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: _palette.backgroundAlt,
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: _palette.text.withValues(alpha: 0.08)),
                     boxShadow: [
                       BoxShadow(
                         color: _palette.shadow.withValues(alpha: 0.08),
@@ -1251,7 +1252,7 @@ class ProfileHeader extends StatelessWidget {
                               label: Text("Edit Profil", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: _palette.onPrimary)),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: _palette.primary,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
                                 elevation: 0,
                               ),
                             ),
@@ -1262,7 +1263,7 @@ class ProfileHeader extends StatelessWidget {
                             icon: Icon(Icons.share_outlined, size: 16, color: _palette.text),
                             label: Text("Share Profile", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: _palette.text)),
                             style: OutlinedButton.styleFrom(
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
                               side: BorderSide(color: _palette.text.withValues(alpha: 0.2)),
                             ),
                           ),
@@ -1275,7 +1276,7 @@ class ProfileHeader extends StatelessWidget {
                       icon: Icon(Icons.mark_chat_unread_outlined, size: 16, color: _palette.text),
                       label: Text("Chat", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: _palette.text)),
                       style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
                         side: BorderSide(color: _palette.text.withValues(alpha: 0.2)),
                       ),
                     );
@@ -1284,7 +1285,7 @@ class ProfileHeader extends StatelessWidget {
                       onPressed: onInviteTap,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _palette.muted,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
                         elevation: 0,
                       ),
                       child: Text(
@@ -1341,8 +1342,8 @@ class ProfileHeader extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: _palette.backgroundAlt,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: _palette.text.withValues(alpha: 0.06)),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: _palette.text.withValues(alpha: 0.08)),
                     boxShadow: [
                       BoxShadow(
                         color: _palette.shadow.withValues(alpha: 0.08),
@@ -1616,7 +1617,7 @@ class _ProfilePalette {
       text: onSurface,
       mutedText: onSurface.withOpacity(0.7),
       border: theme.dividerColor,
-      disabled: onSurface.withOpacity(0.4),
+      disabled: onSurface.withOpacity(0.6),
       success: colors.secondary,
       danger: colors.error,
       shadow: theme.shadowColor,

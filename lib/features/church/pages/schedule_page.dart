@@ -264,6 +264,15 @@ class _SchedulePageState extends State<SchedulePage> {
                         width: 1.6,
                       ),
                     ),
+                    dayNumStyle: GoogleFonts.outfit(
+                      color: _litText(liturgicalColor),
+                      fontWeight: FontWeight.bold,
+                    ),
+                    dayStrStyle: GoogleFonts.outfit(
+                      color: _litText(liturgicalColor).withOpacity(0.9),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   todayStyle: DayStyle(
                     decoration: BoxDecoration(
@@ -272,6 +281,34 @@ class _SchedulePageState extends State<SchedulePage> {
                         color: liturgicalColor.withValues(alpha: 0.9),
                         width: 1.6,
                       ),
+                    ),
+                    dayNumStyle: GoogleFonts.outfit(
+                      color: textPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    dayStrStyle: GoogleFonts.outfit(
+                      color: textSecondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  inactiveDayStyle: DayStyle(
+                    dayNumStyle: GoogleFonts.outfit(
+                      color: textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    dayStrStyle: GoogleFonts.outfit(
+                      color: textSecondary,
+                      fontSize: 11,
+                    ),
+                  ),
+                  disabledDayStyle: DayStyle(
+                    dayNumStyle: GoogleFonts.outfit(
+                      color: textMuted,
+                    ),
+                    dayStrStyle: GoogleFonts.outfit(
+                      color: textMuted,
+                      fontSize: 11,
                     ),
                   ),
                 ),
@@ -470,7 +507,7 @@ class _SchedulePageState extends State<SchedulePage> {
     // Default values if no liturgy
     final bgColor = _currentLiturgy != null
         ? LiturgyService.getLiturgicalColor(_currentLiturgy!.color)
-        : Colors.blue;
+        : Theme.of(context).colorScheme.primary;
 
     final textColor = LiturgyService.getLiturgicalTextColor(
       _currentLiturgy?.color,
@@ -756,21 +793,21 @@ class _SchedulePageState extends State<SchedulePage> {
     );
   }
 
-  Color _litBg(Color c) => c.withOpacity(0.16);
+  Color _litBg(Color c) => c.withOpacity(0.14);
   Color _litBorder(Color c) => c.withOpacity(0.55);
   Color _litText(Color c) =>
-      (c.computeLuminance() > 0.6) ? const Color(0xFF121212) : Colors.white;
+      (c.computeLuminance() > 0.65) ? const Color(0xFF121212) : Colors.white;
 
   Color _litChipBg(Color c) {
     final lum = c.computeLuminance();
-    if (lum > 0.8) return c.withOpacity(0.65);
-    if (lum < 0.08) return Colors.black.withOpacity(0.35);
+    if (lum > 0.8) return c.withOpacity(0.18);
+    if (lum < 0.08) return Colors.black.withOpacity(0.45);
     return _litBg(c);
   }
 
   Color _litChipBorder(Color c) {
     final lum = c.computeLuminance();
-    if (lum > 0.8) return c.withOpacity(0.9);
+    if (lum > 0.8) return c.withOpacity(0.6);
     if (lum < 0.08) return const Color(0xFF555555);
     return _litBorder(c);
   }
@@ -798,8 +835,8 @@ class _SchedulePageState extends State<SchedulePage> {
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _litBorder(litColor).withOpacity(0.18)),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colors.onSurface.withOpacity(0.08)),
         boxShadow: [
           BoxShadow(
             color: theme.shadowColor.withValues(alpha: 0.2),
@@ -816,7 +853,7 @@ class _SchedulePageState extends State<SchedulePage> {
             decoration: BoxDecoration(
               color: litColor,
               borderRadius: const BorderRadius.horizontal(
-                left: Radius.circular(16),
+                left: Radius.circular(20),
               ),
             ),
           ),
