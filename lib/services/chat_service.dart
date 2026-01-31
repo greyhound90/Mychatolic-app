@@ -30,13 +30,29 @@ class ChatService {
         final commonChatResponse = await _supabase
             .from('chat_members')
             .select('chat_id')
-            .filter('chat_id', 'in', myChatIds)
+            .inFilter('chat_id', myChatIds)
             .eq('user_id', targetUserId)
             .maybeSingle();
 
         if (commonChatResponse != null) {
-          return commonChatResponse['chat_id'] as String;
+          final chatId = commonChatResponse['chat_id'] as String;
+          await _backfillPrivateChatParticipants(chatId, myId, targetUserId);
+          return chatId;
         }
+      }
+
+      // 2b. Fallback: find by participants if chat_members is missing
+      final existingByParticipants = await _supabase
+          .from('social_chats')
+          .select('id, participants')
+          .eq('is_group', false)
+          .contains('participants', [myId, targetUserId])
+          .maybeSingle();
+      if (existingByParticipants != null) {
+        final chatId = existingByParticipants['id'] as String;
+        await _ensureChatMembers(chatId, [myId, targetUserId]);
+        await _backfillPrivateChatParticipants(chatId, myId, targetUserId);
+        return chatId;
       }
 
       // 3. Create new chat if not found
@@ -46,8 +62,9 @@ class ChatService {
           .insert({
             'is_group': false,
             'creator_id': myId,
+            'participants': [myId, targetUserId],
             'updated_at': DateTime.now().toIso8601String(),
-            // 'last_message': 'Chat started', // Optional
+            'last_message': 'Memulai percakapan',
           })
           .select()
           .single();
@@ -63,6 +80,65 @@ class ChatService {
       return newChatId;
     } catch (e) {
       throw Exception("Gagal menyiapkan chat: ${e.toString()}");
+    }
+  }
+
+  Future<void> _ensureChatMembers(String chatId, List<String> userIds) async {
+    try {
+      final existing = await _supabase
+          .from('chat_members')
+          .select('user_id')
+          .eq('chat_id', chatId)
+          .inFilter('user_id', userIds);
+      final existingIds = (existing as List)
+          .map((e) => e['user_id']?.toString())
+          .whereType<String>()
+          .toSet();
+      final inserts = userIds
+          .where((id) => !existingIds.contains(id))
+          .map((id) => {'chat_id': chatId, 'user_id': id, 'role': 'member'})
+          .toList();
+      if (inserts.isNotEmpty) {
+        await _supabase.from('chat_members').insert(inserts);
+      }
+    } catch (_) {
+      // Best-effort; do not block chat flow.
+    }
+  }
+
+  Future<void> _backfillPrivateChatParticipants(
+    String chatId,
+    String myId,
+    String targetUserId,
+  ) async {
+    try {
+      final existing = await _supabase
+          .from('social_chats')
+          .select('participants')
+          .eq('id', chatId)
+          .maybeSingle();
+      if (existing == null) return;
+
+      final raw = existing['participants'];
+      final List<dynamic> current =
+          raw is List ? List<dynamic>.from(raw) : <dynamic>[];
+      final participants = <String>{};
+      for (final p in current) {
+        if (p == null) continue;
+        participants.add(p.toString());
+      }
+      final needsUpdate = !participants.contains(myId) ||
+          !participants.contains(targetUserId) ||
+          raw is! List;
+      if (!needsUpdate) return;
+
+      participants.add(myId);
+      participants.add(targetUserId);
+      await _supabase.from('social_chats').update({
+        'participants': participants.toList(),
+      }).eq('id', chatId);
+    } catch (_) {
+      // Best-effort backfill; ignore errors to avoid blocking chat flow.
     }
   }
 

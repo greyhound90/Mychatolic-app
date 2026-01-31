@@ -89,6 +89,7 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
   bool _isLoadingMore = false;
   bool _hasMoreMessages = true;
   bool _isNearBottom = true;
+  bool _hasNewMessageWhileAway = false;
   String? _messageError;
   DateTime? _oldestCreatedAt;
 
@@ -203,8 +204,10 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
                   .match({'id': newMsg['id']}).then((_) {});
             }
 
-            if (_isNearBottom) {
+            if (_isNearBottom || !_initialScrollDone) {
               _scrollToBottom();
+            } else if (!_hasNewMessageWhileAway) {
+              safeSetState(() => _hasNewMessageWhileAway = true);
             }
           },
         )
@@ -247,7 +250,13 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
   void _handleScroll() {
     if (!_scrollController.hasClients) return;
     final position = _scrollController.position;
-    _isNearBottom = position.pixels >= position.maxScrollExtent - 120;
+    final nearBottom = position.extentAfter < 250;
+    if (nearBottom != _isNearBottom) {
+      safeSetState(() {
+        _isNearBottom = nearBottom;
+        if (nearBottom) _hasNewMessageWhileAway = false;
+      });
+    }
     if (position.pixels <= 200) {
       _loadOlderMessages();
     }
@@ -295,6 +304,12 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
           if (_scrollController.hasClients) {
             _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
             _initialScrollDone = true;
+            if (mounted) {
+              safeSetState(() {
+                _isNearBottom = true;
+                _hasNewMessageWhileAway = false;
+              });
+            }
           }
         });
       }
@@ -638,7 +653,10 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
     final text = content ?? _textController.text.trim();
     if (text.isEmpty) return;
     
-    if (type == 'text') _textController.clear();
+    if (type == 'text') {
+      _textController.clear();
+      if (mounted) setState(() {});
+    }
 
     final myId = _supabase.auth.currentUser?.id;
     if (myId == null) return;
@@ -703,7 +721,11 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
       await _supabase.from('social_chats').update(updateData).eq('id', widget.chatId);
       
       // Scroll to bottom after sending
-      _scrollToBottom();
+      if (_isNearBottom) {
+        _scrollToBottom();
+      } else if (!_hasNewMessageWhileAway) {
+        safeSetState(() => _hasNewMessageWhileAway = true);
+      }
     } catch (e, st) {
       AppLogger.logError("Send message error", error: e, stackTrace: st);
       if (mounted) AppSnackBar.showError(context, "Gagal mengirim pesan.");
@@ -711,6 +733,12 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
   }
 
   void _scrollToBottom() {
+    if (mounted) {
+      safeSetState(() {
+        _hasNewMessageWhileAway = false;
+        _isNearBottom = true;
+      });
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -747,10 +775,26 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
         ),
         child: SafeArea(
           top: false,
-          child: Column(
+          child: Stack(
             children: [
-              Expanded(child: _buildMessageList()),
-              _buildFloatingInputArea(),
+              Column(
+                children: [
+                  Expanded(child: _buildMessageList()),
+                  _buildFloatingInputArea(),
+                ],
+              ),
+              if (_hasNewMessageWhileAway)
+                Positioned(
+                  right: 16,
+                  bottom: 96 + MediaQuery.of(context).viewInsets.bottom,
+                  child: FloatingActionButton(
+                    heroTag: 'scrollToBottomFab',
+                    mini: true,
+                    backgroundColor: kPrimaryBlue,
+                    onPressed: _scrollToBottom,
+                    child: const Icon(Icons.arrow_downward, color: Colors.white),
+                  ),
+                ),
             ],
           ),
         ),
@@ -1159,7 +1203,10 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
                      child: TextField(
                        controller: _textController,
                        focusNode: _focusNode,
-                       onChanged: _onTypingChanged,
+                       onChanged: (value) {
+                         _onTypingChanged(value);
+                         if (mounted) setState(() {});
+                       },
                        minLines: 1, maxLines: 4,
                        decoration: const InputDecoration(hintText: "Tulis pesan...", border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.symmetric(vertical: 12)),
                      ),

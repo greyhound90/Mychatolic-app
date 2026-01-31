@@ -17,6 +17,7 @@ import 'package:mychatolic_app/core/ui/app_state_view.dart';
 import 'package:mychatolic_app/core/ui/app_snackbar.dart';
 import 'package:mychatolic_app/core/log/app_logger.dart';
 import 'package:mychatolic_app/core/ui/image_prefetch.dart';
+import 'package:mychatolic_app/services/chat_service.dart';
 
 class ChatPage extends StatefulWidget {
   final String? partnerId;
@@ -28,6 +29,7 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final ChatService _chatService = ChatService();
   bool _isRedirecting = false;
 
   List<String> _myChatIds = [];
@@ -42,6 +44,14 @@ class _ChatPageState extends State<ChatPage> {
   // Set untuk menyimpan ID yang sedang dalam proses fetch agar tidak double request
   final Set<String> _fetchingIds = {};
 
+  // Unread count cache per chat
+  final Map<String, int> _unreadCounts = {};
+  Timer? _unreadRefreshTimer;
+  bool _unreadRefreshInFlight = false;
+  String _lastUnreadSignature = '';
+  List<String> _pendingUnreadChatIds = [];
+  DateTime _lastUnreadRefresh = DateTime.fromMillisecondsSinceEpoch(0);
+
   // Pastel Color Palette
   final List<Color> _pastelColors = [
     const Color(0xFFE3F2FD), // Blue Light
@@ -51,6 +61,16 @@ class _ChatPageState extends State<ChatPage> {
     const Color(0xFFFFEBEE), // Pink Light
   ];
 
+  List<dynamic> _safeParticipants(dynamic raw) {
+    return raw is List ? raw : const <dynamic>[];
+  }
+
+  @override
+  void dispose() {
+    _unreadRefreshTimer?.cancel();
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -58,6 +78,60 @@ class _ChatPageState extends State<ChatPage> {
       _handleAutoRedirect(widget.partnerId!);
     }
     _loadMyChatIds();
+  }
+
+  String _chatIdsSignature(List<String> ids) {
+    if (ids.isEmpty) return '';
+    return ids.join('|');
+  }
+
+  void _scheduleUnreadRefresh(List<String> chatIds) {
+    if (chatIds.isEmpty) return;
+    final uniqueIds = chatIds.toSet().toList();
+    final signature = _chatIdsSignature(uniqueIds);
+    final recentlyRefreshed = DateTime.now().difference(_lastUnreadRefresh) < const Duration(seconds: 2);
+    if (signature == _lastUnreadSignature && recentlyRefreshed) return;
+    _lastUnreadSignature = signature;
+    _pendingUnreadChatIds = uniqueIds;
+    _unreadRefreshTimer?.cancel();
+    _unreadRefreshTimer = Timer(const Duration(seconds: 2), () {
+      _refreshUnreadCounts(_pendingUnreadChatIds);
+    });
+  }
+
+  Future<void> _refreshUnreadCounts(List<String> chatIds) async {
+    if (_unreadRefreshInFlight) return;
+    final myId = _supabase.auth.currentUser?.id;
+    if (myId == null || chatIds.isEmpty) return;
+
+    _unreadRefreshInFlight = true;
+    try {
+      final uniqueIds = chatIds.toSet().toList();
+      final futures = uniqueIds.map((chatId) async {
+        try {
+          final count = await _supabase
+              .from('social_messages')
+              .count(CountOption.exact)
+              .eq('chat_id', chatId)
+              .eq('is_read', false)
+              .neq('sender_id', myId);
+          return MapEntry(chatId, count);
+        } catch (_) {
+          return MapEntry(chatId, _unreadCounts[chatId] ?? 0);
+        }
+      }).toList();
+
+      final entries = await Future.wait(futures);
+      if (!mounted) return;
+      safeSetState(() {
+        for (final entry in entries) {
+          _unreadCounts[entry.key] = entry.value;
+        }
+        _lastUnreadRefresh = DateTime.now();
+      });
+    } finally {
+      _unreadRefreshInFlight = false;
+    }
   }
 
   Future<void> _handleAutoRedirect(String partnerId) async {
@@ -69,21 +143,7 @@ class _ChatPageState extends State<ChatPage> {
     }
 
     try {
-      final response = await _supabase.from('social_chats')
-          .select().contains('participants', [myId, partnerId]).eq('is_group', false).maybeSingle();
-
-      String chatId;
-      if (response != null) {
-        chatId = response['id'];
-      } else {
-        final newChat = await _supabase.from('social_chats').insert({
-          'participants': [myId, partnerId],
-          'is_group': false,
-          'updated_at': DateTime.now().toIso8601String(),
-          'last_message': 'Memulai percakapan',
-        }).select().single();
-        chatId = newChat['id'];
-      }
+      final chatId = await _chatService.getOrCreatePrivateChat(partnerId);
 
       final profile = await _supabase.from('profiles').select().eq('id', partnerId).single();
 
@@ -114,7 +174,7 @@ class _ChatPageState extends State<ChatPage> {
       final List<dynamic> response = await _supabase
           .from('profiles')
           .select('id, full_name, avatar_url')
-          .filter('id', 'in', idsToFetch);
+          .inFilter('id', idsToFetch);
 
       safeSetState(() {
         for (var profile in response) {
@@ -146,20 +206,45 @@ class _ChatPageState extends State<ChatPage> {
     });
 
     try {
-      final res = await _supabase
+      final participantRes = await _supabase
           .from('social_chats')
           .select('id, participants')
           .contains('participants', [myId])
           .order('updated_at', ascending: false);
 
-      final ids = (res as List)
+      final participantIds = (participantRes as List)
           .map((e) => e['id']?.toString())
           .whereType<String>()
           .toList();
 
+      final memberRes = await _supabase
+          .from('chat_members')
+          .select('chat_id, social_chats!inner(updated_at)')
+          .eq('user_id', myId)
+          .order(
+            'updated_at',
+            referencedTable: 'social_chats',
+            ascending: false,
+          );
+      final memberIds = (memberRes as List)
+          .map((e) => e['chat_id']?.toString())
+          .whereType<String>()
+          .toList();
+
+      final seen = <String>{};
+      final ids = <String>[];
+      for (final id in participantIds) {
+        if (seen.add(id)) ids.add(id);
+      }
+      for (final id in memberIds) {
+        if (seen.add(id)) ids.add(id);
+      }
+
       safeSetState(() {
         _myChatIds = ids;
         if (_myChatIds.isNotEmpty) {
+          // TODO: SupabaseStreamFilterBuilder (supabase 2.10.2) doesn't support `.contains`.
+          // When supported, prefer server-side contains filter on participants.
           _chatStream = _supabase
               .from('social_chats')
               .stream(primaryKey: ['id'])
@@ -170,6 +255,9 @@ class _ChatPageState extends State<ChatPage> {
         }
         _loadingChatIds = false;
       });
+      if (ids.isNotEmpty) {
+        _scheduleUnreadRefresh(ids);
+      }
     } catch (e, st) {
       AppLogger.logError("Error loading chat ids", error: e, stackTrace: st);
       safeSetState(() {
@@ -303,8 +391,20 @@ class _ChatPageState extends State<ChatPage> {
                                 );
                               }
 
-                              final chats =
+                              final rawChats =
                                   snapshot.data ?? <Map<String, dynamic>>[];
+                              final chats = rawChats.where((chat) {
+                                final id = chat['id']?.toString();
+                                if (id != null && _myChatIds.contains(id)) {
+                                  return true;
+                                }
+                                final participants =
+                                    _safeParticipants(chat['participants']);
+                                return participants
+                                    .map((p) => p?.toString())
+                                    .contains(myId);
+                              }).toList();
+
                               if (chats.isEmpty) {
                                 return AppStateView(
                                   state: AppViewState.empty,
@@ -313,12 +413,20 @@ class _ChatPageState extends State<ChatPage> {
                                 );
                               }
 
+                              final chatIds = chats
+                                  .map((chat) => chat['id']?.toString())
+                                  .whereType<String>()
+                                  .toList();
+                              if (chatIds.isNotEmpty) {
+                                Future.microtask(() => _scheduleUnreadRefresh(chatIds));
+                              }
+
                               // --- BATCH FETCHING TRIGGER ---
                               final missingIds = <String>[];
                               for (var chat in chats) {
                                 if (chat['is_group'] != true) {
-                                  final participants = List<dynamic>.from(
-                                      chat['participants'] ?? []);
+                                  final participants = _safeParticipants(
+                                      chat['participants']);
                                   final partnerId = participants.firstWhere(
                                     (id) => id != myId,
                                     orElse: () => null,
@@ -349,11 +457,13 @@ class _ChatPageState extends State<ChatPage> {
                                       final chat = chats[index];
                                       Map<String, dynamic>? partnerProfile;
                                       String myIdVerified = myId;
+                                      final chatId = chat['id']?.toString();
+                                      final unreadCount = chatId != null ? (_unreadCounts[chatId] ?? 0) : 0;
 
                                       if (chat['is_group'] != true) {
                                         final participants =
-                                            List<dynamic>.from(
-                                                chat['participants'] ?? []);
+                                            _safeParticipants(
+                                                chat['participants']);
                                         final partnerId = participants
                                             .firstWhere((id) => id != myId,
                                                 orElse: () => null);
@@ -375,6 +485,10 @@ class _ChatPageState extends State<ChatPage> {
                                               chatData: chat,
                                               myId: myIdVerified,
                                               partnerProfile: partnerProfile,
+                                              unreadCount: unreadCount,
+                                              onChatOpened: chatId == null
+                                                  ? null
+                                                  : () => _scheduleUnreadRefresh([chatId]),
                                               backgroundColor: _pastelColors[
                                                   index %
                                                       _pastelColors.length],
@@ -400,12 +514,16 @@ class _ChatTile extends StatelessWidget {
   final Map<String, dynamic> chatData;
   final String myId;
   final Map<String, dynamic>? partnerProfile;
+  final int unreadCount;
+  final VoidCallback? onChatOpened;
   final Color backgroundColor;
 
   const _ChatTile({
     required this.chatData, 
     required this.myId, 
     this.partnerProfile,
+    required this.unreadCount,
+    this.onChatOpened,
     required this.backgroundColor,
   });
 
@@ -452,6 +570,9 @@ class _ChatTile extends StatelessWidget {
       final time = chatData['updated_at'] != null 
           ? timeago.format(DateTime.parse(chatData['updated_at']), locale: 'id') 
           : '';
+      final isUnread = unreadCount > 0;
+      final lastMessage = chatData['last_message'];
+      final lastMessageType = chatData['last_message_type'];
       
       String name = '...';
       String? avatarUrl;
@@ -484,9 +605,10 @@ class _ChatTile extends StatelessWidget {
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // More spacing
         decoration: BoxDecoration(
-          color: backgroundColor, // Cyclic Pastel Color
-          borderRadius: BorderRadius.circular(20), 
-          // Flat Block style: No heavy shadow
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isUnread ? AppColors.primary.withOpacity(0.25) : AppColors.border),
+          boxShadow: AppShadows.level1,
         ),
         child: Material(
           color: Colors.transparent,
@@ -502,18 +624,28 @@ class _ChatTile extends StatelessWidget {
                 isGroup: isGroup,
                 opponentProfile: profileForNav,
                 source: 'chat_list',
-              )));
+              ))).then((_) => onChatOpened?.call());
             },
             onLongPress: () => _deleteChat(context),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16), // Slightly more vertical padding from original
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
               child: Row(
                  children: [
+                   Container(
+                     width: 4,
+                     height: 46,
+                     decoration: BoxDecoration(
+                       color: backgroundColor.withOpacity(0.9),
+                       borderRadius: BorderRadius.circular(4),
+                     ),
+                   ),
+                   const SizedBox(width: 12),
                    // Avatar with Thick White Border (Pop-up effect)
                    Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2.5), // Thick White Border
+                        color: backgroundColor.withOpacity(0.35),
+                        border: Border.all(color: Colors.white, width: 2.5),
                         boxShadow: [
                            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6, offset: const Offset(0, 2))
                         ]
@@ -537,15 +669,23 @@ class _ChatTile extends StatelessWidget {
                         children: [
                           Text(
                              name, 
-                             style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 16, color: const Color(0xFF1E293B)), // W700 Bold
+                             style: GoogleFonts.outfit(
+                               fontWeight: FontWeight.w700,
+                               fontSize: 16,
+                               color: const Color(0xFF1E293B),
+                             ),
                              maxLines: 1
                           ),
                           const SizedBox(height: 4),
                           Text(
-                             chatData['last_message'] ?? '', 
+                             _buildPreviewText(lastMessage, lastMessageType),
                              maxLines: 1, 
                              overflow: TextOverflow.ellipsis, 
-                             style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF64748B), fontWeight: FontWeight.normal)
+                             style: GoogleFonts.outfit(
+                               fontSize: 13,
+                               color: isUnread ? const Color(0xFF334155) : const Color(0xFF64748B),
+                               fontWeight: isUnread ? FontWeight.w600 : FontWeight.normal,
+                             )
                           ),
                         ],
                      ),
@@ -553,10 +693,21 @@ class _ChatTile extends StatelessWidget {
                    
                    const SizedBox(width: 8),
                    
-                   // Time
-                   Text(
-                      time, 
-                      style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w600)
+                   // Time + Unread
+                   Column(
+                     crossAxisAlignment: CrossAxisAlignment.end,
+                     children: [
+                       Text(
+                         time,
+                         style: GoogleFonts.outfit(
+                           fontSize: 11,
+                           color: const Color(0xFF94A3B8),
+                           fontWeight: FontWeight.w600,
+                         ),
+                       ),
+                       const SizedBox(height: 8),
+                       if (isUnread) _UnreadBadge(count: unreadCount),
+                     ],
                    ),
                  ],
               ),
@@ -564,5 +715,54 @@ class _ChatTile extends StatelessWidget {
           ),
         ),
       );
+  }
+
+  String _buildPreviewText(dynamic lastMessage, dynamic lastMessageType) {
+    final type = lastMessageType?.toString() ?? '';
+    if (type == 'image') return '📷 Foto';
+    if (type == 'audio') return '🎤 Pesan Suara';
+    if (type == 'location') return '📍 Lokasi';
+    if (type == 'beeb') return '👋 BEEB!';
+
+    final text = (lastMessage ?? '').toString();
+    if (text.isEmpty) return '';
+    final lower = text.toLowerCase();
+    if (lower.contains('beeb') || text.contains('👋')) return '👋 BEEB!';
+    if (lower.contains('foto') || lower.contains('gambar') || text.contains('📷')) return '📷 Foto';
+    if (lower.contains('lokasi') || text.contains('📍')) return '📍 Lokasi';
+    if (lower.contains('pesan suara') || lower.contains('voice') || text.contains('🎤')) return '🎤 Pesan Suara';
+    return text;
+  }
+}
+
+class _UnreadBadge extends StatelessWidget {
+  final int count;
+  const _UnreadBadge({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    final display = count > 99 ? '99+' : count.toString();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.3),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        display,
+        style: GoogleFonts.outfit(
+          fontSize: 11,
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
   }
 }
