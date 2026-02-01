@@ -168,7 +168,7 @@ class _ChatPageState extends State<ChatPage> {
     }
 
     try {
-      final chatId = await _chatService.getOrCreatePrivateChat(partnerId);
+      final chatId = await _chatService.getOrCreateDirectChat(partnerId);
 
       final profile = await _supabase.from('profiles').select().eq('id', partnerId).single();
 
@@ -352,14 +352,6 @@ class _ChatPageState extends State<ChatPage> {
         actions: [
           Semantics(
             button: true,
-            label: t.a11yChatSearch,
-            child: IconButton(
-              icon: const Icon(Icons.search, color: AppColors.text),
-              onPressed: _openSearchUser,
-            ),
-          ),
-          Semantics(
-            button: true,
             label: t.a11yChatCreate,
             child: IconButton(
               icon: const Icon(Icons.add_circle_outline, color: AppColors.text),
@@ -372,6 +364,10 @@ class _ChatPageState extends State<ChatPage> {
       body: Column(
         children: [
           const StoryRail(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+            child: _buildSearchTile(t),
+          ),
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 250),
@@ -623,6 +619,51 @@ class _ChatPageState extends State<ChatPage> {
     } catch (e) {
       AppSnackBar.showError(context, t.chatLoadErrorMessage);
     }
+  }
+
+  Widget _buildSearchTile(AppLocalizations t) {
+    return InkWell(
+      onTap: _openSearchUser,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.border),
+          boxShadow: AppShadows.level1,
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.search, color: AppColors.textMuted),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    t.chatSearchTileTitle,
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.text,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    t.chatSearchTileSubtitle,
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.textMuted),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _showJoinLinkDialog() async {

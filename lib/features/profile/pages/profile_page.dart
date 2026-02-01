@@ -17,7 +17,7 @@ import 'package:mychatolic_app/widgets/post_card.dart';
 import 'package:mychatolic_app/pages/post_detail_screen.dart';
 import 'package:mychatolic_app/pages/main_page.dart';
 import 'package:mychatolic_app/features/settings/pages/settings_page.dart';
-import 'package:mychatolic_app/features/social/pages/chat_page.dart';
+import 'package:mychatolic_app/features/social/pages/social_chat_detail_page.dart';
 import 'package:mychatolic_app/pages/story/story_view_page.dart';
 import 'package:mychatolic_app/features/profile/pages/edit_profile_page.dart';
 import 'package:mychatolic_app/features/radar/pages/create_personal_radar_page.dart';
@@ -425,13 +425,25 @@ class _ProfilePageState extends State<ProfilePage>
       return;
     }
 
-    if (!mounted) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ChatPage(partnerId: _profile!.id),
-      ),
-    );
+    try {
+      final chatId = await _chatService.getOrCreateDirectChat(_profile!.id);
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SocialChatDetailPage(
+            chatId: chatId,
+            isGroup: false,
+            opponentProfile: _profile!.toJson(),
+            source: 'profile',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        AppSnackBar.showError(context, "Gagal membuka chat");
+      }
+    }
   }
 
   void _handleInviteToMass() {

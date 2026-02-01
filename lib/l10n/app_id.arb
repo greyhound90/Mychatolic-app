@@ -331,5 +331,7 @@
   "friendSearchChurchHint": "Pilih Paroki",
   "friendSearchReset": "Reset Filter",
   "friendSearchEmptyTitle": "Tidak ada hasil",
-  "friendSearchEmptySubtitle": "Coba kata kunci lain"
+  "friendSearchEmptySubtitle": "Coba kata kunci lain",
+  "friendSearchEmptyCriteriaTitle": "Ketik nama atau pilih filter",
+  "friendSearchEmptyCriteriaSubtitle": "Cari berdasarkan nama, lokasi, atau keduanya"
 }

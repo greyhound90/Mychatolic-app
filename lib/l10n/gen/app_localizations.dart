@@ -1699,6 +1699,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Try a different keyword'**
   String get friendSearchEmptySubtitle;
+
+  /// No description provided for @friendSearchEmptyCriteriaTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a name or choose a filter'**
+  String get friendSearchEmptyCriteriaTitle;
+
+  /// No description provided for @friendSearchEmptyCriteriaSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name, location, or both'**
+  String get friendSearchEmptyCriteriaSubtitle;
 }
 
 class _AppLocalizationsDelegate

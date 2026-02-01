@@ -91,6 +91,17 @@ class _FriendSearchPageState extends State<FriendSearchPage> {
   }
 
   Future<void> _performSearch() async {
+    final hasCriteria = _hasCriteria();
+    if (!hasCriteria) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _searchResults = [];
+        });
+      }
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     // Construct Query String -> Actually, the advanced RPC uses 'search_term'.
@@ -184,6 +195,14 @@ class _FriendSearchPageState extends State<FriendSearchPage> {
       _churches = [];
     });
     _performSearch();
+  }
+
+  bool _hasCriteria() {
+    final hasText = _searchController.text.trim().isNotEmpty;
+    final hasFilter = _selectedCountryId != null ||
+        _selectedDioceseId != null ||
+        _selectedChurchId != null;
+    return hasText || hasFilter;
   }
 
   @override
@@ -323,7 +342,7 @@ class _FriendSearchPageState extends State<FriendSearchPage> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _searchResults.isEmpty
-                ? _buildEmptyState(t)
+                ? _buildEmptyState(t, hasCriteria: _hasCriteria())
                 : ListView.separated(
                     padding: const EdgeInsets.all(16),
                     itemCount: _searchResults.length,
@@ -486,7 +505,7 @@ class _FriendSearchPageState extends State<FriendSearchPage> {
     );
   }
 
-  Widget _buildEmptyState(AppLocalizations t) {
+  Widget _buildEmptyState(AppLocalizations t, {required bool hasCriteria}) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -494,12 +513,12 @@ class _FriendSearchPageState extends State<FriendSearchPage> {
           const Icon(Icons.search_off, size: 48, color: AppColors.textMuted),
           const SizedBox(height: 16),
           Text(
-            t.friendSearchEmptyTitle,
+            hasCriteria ? t.friendSearchEmptyTitle : t.friendSearchEmptyCriteriaTitle,
             style: GoogleFonts.outfit(color: AppColors.text),
           ),
           const SizedBox(height: 6),
           Text(
-            t.friendSearchEmptySubtitle,
+            hasCriteria ? t.friendSearchEmptySubtitle : t.friendSearchEmptyCriteriaSubtitle,
             style: GoogleFonts.outfit(color: AppColors.textMuted),
           ),
         ],

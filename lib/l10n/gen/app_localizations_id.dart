@@ -848,4 +848,11 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get friendSearchEmptySubtitle => 'Coba kata kunci lain';
+
+  @override
+  String get friendSearchEmptyCriteriaTitle => 'Ketik nama atau pilih filter';
+
+  @override
+  String get friendSearchEmptyCriteriaSubtitle =>
+      'Cari berdasarkan nama, lokasi, atau keduanya';
 }

@@ -850,4 +850,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get friendSearchEmptySubtitle => 'Try a different keyword';
+
+  @override
+  String get friendSearchEmptyCriteriaTitle => 'Type a name or choose a filter';
+
+  @override
+  String get friendSearchEmptyCriteriaSubtitle =>
+      'Search by name, location, or both';
 }

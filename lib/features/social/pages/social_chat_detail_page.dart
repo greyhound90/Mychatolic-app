@@ -90,10 +90,12 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
   bool _hasMoreMessages = true;
   bool _isNearBottom = true;
   bool _hasNewMessageWhileAway = false;
+  bool _isSending = false;
   String? _messageError;
   DateTime? _oldestCreatedAt;
 
   RealtimeChannel? _messageChannel;
+  final Set<String> _animatedMessageIds = {};
 
   @override
   void initState() {
@@ -268,6 +270,7 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
       _messageError = null;
       _messages.clear();
       _messageIds.clear();
+      _animatedMessageIds.clear();
       _hasMoreMessages = true;
       _oldestCreatedAt = null;
       _initialScrollDone = false;
@@ -289,7 +292,10 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
         _messages.addAll(ordered);
         for (final msg in ordered) {
           final id = msg['id']?.toString();
-          if (id != null) _messageIds.add(id);
+          if (id != null) {
+            _messageIds.add(id);
+            _animatedMessageIds.add(id);
+          }
         }
         if (_messages.isNotEmpty) {
           _oldestCreatedAt =
@@ -354,6 +360,10 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
       safeSetState(() {
         if (newItems.isNotEmpty) {
           _messages.insertAll(0, newItems);
+          for (final msg in newItems) {
+            final id = msg['id']?.toString();
+            if (id != null) _animatedMessageIds.add(id);
+          }
           _oldestCreatedAt =
               DateTime.tryParse(_messages.first['created_at'].toString());
         }
@@ -660,6 +670,9 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
 
     final myId = _supabase.auth.currentUser?.id;
     if (myId == null) return;
+    if (_isSending) return;
+
+    safeSetState(() => _isSending = true);
 
     try {
       if (_editingMessageId != null) {
@@ -721,14 +734,12 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
       await _supabase.from('social_chats').update(updateData).eq('id', widget.chatId);
       
       // Scroll to bottom after sending
-      if (_isNearBottom) {
-        _scrollToBottom();
-      } else if (!_hasNewMessageWhileAway) {
-        safeSetState(() => _hasNewMessageWhileAway = true);
-      }
+      _scrollToBottom();
     } catch (e, st) {
       AppLogger.logError("Send message error", error: e, stackTrace: st);
       if (mounted) AppSnackBar.showError(context, "Gagal mengirim pesan.");
+    } finally {
+      if (mounted) safeSetState(() => _isSending = false);
     }
   }
 
@@ -945,6 +956,7 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
 
   Widget _buildDateHeader(String dateStr) {
     final date = DateTime.parse(dateStr).toLocal();
+    final label = _formatDateHeader(date);
     return Center(
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 24),
@@ -961,7 +973,7 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
              child: Padding(
                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                child: Text(
-                 DateFormat('dd MMM yyyy').format(date), 
+                 label, 
                  style: GoogleFonts.outfit(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w600)
                ),
              ),
@@ -971,6 +983,16 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
     );
   }
 
+  String _formatDateHeader(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final target = DateTime(date.year, date.month, date.day);
+    final diff = today.difference(target).inDays;
+    if (diff == 0) return 'Hari ini';
+    if (diff == 1) return 'Kemarin';
+    return DateFormat('dd MMM yyyy').format(date);
+  }
+
   Widget _buildAnimatedBubble(Map<String, dynamic> msg, bool isMe) {
     final type = msg['type'] ?? 'text';
     final content = msg['content'] ?? '';
@@ -978,6 +1000,7 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
     final reply = msg['reply_context'];
     final isEdited = msg['is_edited'] == true; 
     final isRead = msg['is_read'] == true;
+    final msgId = msg['id']?.toString();
 
     Widget bubbleContent;
     if (type == 'beeb') {
@@ -1024,7 +1047,7 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
       bubbleContent = _buildTextBubble(isMe, content, time, isEdited, isRead); 
     } 
 
-    return Align(
+    final bubble = Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12), 
@@ -1062,6 +1085,34 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
           ],
         ),
       ),
+    );
+
+    final shouldAnimate = msgId != null && !_animatedMessageIds.contains(msgId);
+    if (!shouldAnimate) return bubble;
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      onEnd: () {
+        if (!mounted || msgId == null) return;
+        if (!_animatedMessageIds.contains(msgId)) {
+          safeSetState(() => _animatedMessageIds.add(msgId));
+        }
+      },
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, (1 - value) * 8),
+            child: Transform.scale(
+              scale: 0.98 + (0.02 * value),
+              child: child,
+            ),
+          ),
+        );
+      },
+      child: bubble,
     );
   }
 
@@ -1188,14 +1239,14 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
           else
             Row(
               children: [
-                 Semantics(
-                   button: true,
-                   label: "Tambah lampiran",
-                   child: IconButton(
-                     icon: const Icon(Icons.add, color: kPrimaryBlue),
-                     onPressed: _showAttachmentSheet,
-                   ),
-                 ),
+                Semantics(
+                  button: true,
+                  label: "Tambah lampiran",
+                  child: IconButton(
+                    icon: const Icon(Icons.add, color: kPrimaryBlue),
+                    onPressed: _isSending ? null : _showAttachmentSheet,
+                  ),
+                ),
                  Expanded(
                    child: Container(
                      padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1218,8 +1269,20 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
                       button: true,
                       label: "Kirim pesan",
                       child: GestureDetector(
-                        onTap: () => _sendMessage(type: 'text'),
-                        child: CircleAvatar(backgroundColor: kPrimaryBlue, child: const Icon(Icons.send, color: Colors.white, size: 20)),
+                        onTap: _isSending ? null : () => _sendMessage(type: 'text'),
+                        child: CircleAvatar(
+                          backgroundColor: kPrimaryBlue,
+                          child: _isSending
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : const Icon(Icons.send, color: Colors.white, size: 20),
+                        ),
                       ),
                     )
                  else // Mic or Beeb
@@ -1227,11 +1290,23 @@ class _SocialChatDetailPageState extends State<SocialChatDetailPage> with Ticker
                       button: true,
                       label: "Kirim BEEB, tekan dan tahan untuk rekam suara",
                       child: GestureDetector(
-                        onTap: _sendBeeb,
-                        onLongPress: _startRecording,
-                        onLongPressMoveUpdate: _handleDragUpdate,
-                        onLongPressEnd: (details) => _stopRecordingAndSend(),
-                        child: CircleAvatar(backgroundColor: Colors.orange, child: Image.asset('assets/beep.png', width: 24)),
+                        onTap: _isSending ? null : _sendBeeb,
+                        onLongPress: _isSending ? null : _startRecording,
+                        onLongPressMoveUpdate: _isSending ? null : _handleDragUpdate,
+                        onLongPressEnd: _isSending ? null : (details) => _stopRecordingAndSend(),
+                        child: CircleAvatar(
+                          backgroundColor: Colors.orange,
+                          child: _isSending
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : Image.asset('assets/beep.png', width: 24),
+                        ),
                       ),
                     )
               ],

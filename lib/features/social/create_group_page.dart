@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mychatolic_app/features/social/pages/social_chat_detail_page.dart';
 import 'package:mychatolic_app/widgets/safe_network_image.dart'; // Pastikan import ini ada
 import 'package:mychatolic_app/core/ui/permission_prompt.dart';
+import 'package:mychatolic_app/services/chat_service.dart';
 
 class CreateGroupPage extends StatefulWidget {
   final List<String>? allowedUserIds;
@@ -17,6 +18,7 @@ class CreateGroupPage extends StatefulWidget {
 
 class _CreateGroupPageState extends State<CreateGroupPage> {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final ChatService _chatService = ChatService();
   final TextEditingController _groupNameController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
 
@@ -113,6 +115,31 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
     }
   }
 
+  Future<void> _showMutualRequiredDialog(List<String> ineligibleNames) async {
+    final names = ineligibleNames.take(3).join(', ');
+    final extra = ineligibleNames.length > 3
+        ? " dan ${ineligibleNames.length - 3} lainnya"
+        : "";
+    final message = ineligibleNames.isEmpty
+        ? "Semua anggota harus saling follow dengan Anda."
+        : "Beberapa anggota belum saling follow dengan Anda: $names$extra.";
+
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Syarat Grup"),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _createGroup() async {
     final groupName = _groupNameController.text.trim();
     if (groupName.isEmpty) {
@@ -126,7 +153,10 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
 
     setState(() => _isCreating = true);
     final myId = _supabase.auth.currentUser?.id;
-    if (myId == null) return;
+    if (myId == null) {
+      if (mounted) setState(() => _isCreating = false);
+      return;
+    }
 
     try {
       // 1. Upload Image (Optional)
@@ -138,31 +168,30 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
         uploadedAvatarUrl = _supabase.storage.from('chat-uploads').getPublicUrl(fileName);
       }
 
-      final participantList = [myId, ..._selectedUserIds];
+      final selectedIds = _selectedUserIds.toList();
+      final eligibleIds = widget.allowedUserIds != null
+          ? selectedIds.where(widget.allowedUserIds!.contains).toList()
+          : await _chatService.filterEligibleMembers(selectedIds);
 
-      // 2. Insert Social Chat
-      final chatData = await _supabase
-          .from('social_chats')
-          .insert({
-            'is_group': true,
-            'group_name': groupName,
-            'group_avatar_url': uploadedAvatarUrl,
-            'admin_id': myId,
-            'updated_at': DateTime.now().toIso8601String(),
-            'last_message': 'Grup "$groupName" dibuat',
-            'participants': participantList, 
-          })
-          .select()
-          .single();
+      if (eligibleIds.length != selectedIds.length) {
+        final ineligibleIds = selectedIds.where((id) => !eligibleIds.contains(id)).toList();
+        final ineligibleNames = ineligibleIds.map((id) {
+          final user = _allUsers.firstWhere(
+            (u) => u['id'] == id,
+            orElse: () => const {'full_name': 'User'},
+          );
+          return (user['full_name'] ?? 'User').toString();
+        }).toList();
+        if (mounted) setState(() => _isCreating = false);
+        await _showMutualRequiredDialog(ineligibleNames);
+        return;
+      }
 
-      final chatId = chatData['id'];
-
-      // 3. Insert Chat Members (Pivot)
-      final List<Map<String, dynamic>> membersData = participantList.map((uid) {
-        return { 'chat_id': chatId, 'user_id': uid };
-      }).toList();
-
-      await _supabase.from('chat_members').insert(membersData);
+      final chatId = await _chatService.createGroupChat(
+        name: groupName,
+        photoUrl: uploadedAvatarUrl,
+        memberIds: eligibleIds,
+      );
 
       if (!mounted) return;
 
@@ -270,51 +299,64 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
 
           // User List
           Expanded(
-             child: _isLoading 
+            child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : ListView.separated(
-                    padding: const EdgeInsets.only(bottom: 80), 
-                    itemCount: _filteredUsers.length,
-                    separatorBuilder: (_,__) => const Divider(height: 1, indent: 70),
-                    itemBuilder: (context, index) {
-                      final user = _filteredUsers[index];
-                      final isSelected = _selectedUserIds.contains(user['id']);
-                      final avatarUrl = user['avatar_url'];
-
-                      // LOGIC GAMBAR AMAN (Mencegah Crash UI)
-                      Widget avatarWidget;
-                      if (avatarUrl != null && avatarUrl.toString().isNotEmpty && !avatarUrl.toString().startsWith('file://')) {
-                        avatarWidget = CircleAvatar(
-                          radius: 24,
-                          backgroundImage: NetworkImage(avatarUrl),
-                          backgroundColor: Colors.grey[200],
-                        );
-                      } else {
-                        avatarWidget = CircleAvatar(
-                          radius: 24,
-                          backgroundColor: Colors.grey[200],
-                          child: const Icon(Icons.person, color: Colors.grey),
-                        );
-                      }
-
-                      return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                        leading: avatarWidget,
-                        title: Text(user['full_name'] ?? 'User', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
-                        trailing: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 24, height: 24,
-                          decoration: BoxDecoration(
-                            color: isSelected ? kPrimary : Colors.transparent,
-                            border: Border.all(color: isSelected ? kPrimary : Colors.grey, width: 2),
-                            shape: BoxShape.circle,
+                : _filteredUsers.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Text(
+                            widget.allowedUserIds != null
+                                ? "Tidak ada teman mutual yang bisa ditambahkan."
+                                : "Tidak ada hasil. Coba kata kunci lain.",
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.outfit(color: Colors.grey, fontSize: 14),
                           ),
-                          child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 16) : null,
                         ),
-                        onTap: () => _toggleSelection(user['id']),
-                      );
-                    },
-                  ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.only(bottom: 80),
+                        itemCount: _filteredUsers.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1, indent: 70),
+                        itemBuilder: (context, index) {
+                          final user = _filteredUsers[index];
+                          final isSelected = _selectedUserIds.contains(user['id']);
+                          final avatarUrl = user['avatar_url'];
+
+                          // LOGIC GAMBAR AMAN (Mencegah Crash UI)
+                          Widget avatarWidget;
+                          if (avatarUrl != null && avatarUrl.toString().isNotEmpty && !avatarUrl.toString().startsWith('file://')) {
+                            avatarWidget = CircleAvatar(
+                              radius: 24,
+                              backgroundImage: NetworkImage(avatarUrl),
+                              backgroundColor: Colors.grey[200],
+                            );
+                          } else {
+                            avatarWidget = CircleAvatar(
+                              radius: 24,
+                              backgroundColor: Colors.grey[200],
+                              child: const Icon(Icons.person, color: Colors.grey),
+                            );
+                          }
+
+                          return ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                            leading: avatarWidget,
+                            title: Text(user['full_name'] ?? 'User', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                            trailing: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: 24, height: 24,
+                              decoration: BoxDecoration(
+                                color: isSelected ? kPrimary : Colors.transparent,
+                                border: Border.all(color: isSelected ? kPrimary : Colors.grey, width: 2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 16) : null,
+                            ),
+                            onTap: () => _toggleSelection(user['id']),
+                          );
+                        },
+                      ),
           ),
         ],
       ),

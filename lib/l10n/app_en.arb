@@ -331,5 +331,7 @@
   "friendSearchChurchHint": "Select parish",
   "friendSearchReset": "Reset filters",
   "friendSearchEmptyTitle": "No results found",
-  "friendSearchEmptySubtitle": "Try a different keyword"
+  "friendSearchEmptySubtitle": "Try a different keyword",
+  "friendSearchEmptyCriteriaTitle": "Type a name or choose a filter",
+  "friendSearchEmptyCriteriaSubtitle": "Search by name, location, or both"
 }

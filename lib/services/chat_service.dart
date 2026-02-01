@@ -17,6 +17,123 @@ class ChatService {
     }
   }
 
+  /// Alias for direct 1:1 chat creation to keep API consistent.
+  Future<String> getOrCreateDirectChat(String otherUserId) async {
+    return getOrCreatePrivateChat(otherUserId);
+  }
+
+  /// Creates a basic group chat and returns the chatId.
+  /// Validates that all memberIds are mutual-follow with current user.
+  Future<String> createGroupChat({
+    required String name,
+    String? photoUrl,
+    required List<String> memberIds,
+  }) async {
+    final myId = _supabase.auth.currentUser?.id;
+    if (myId == null) {
+      throw Exception("User belum login");
+    }
+
+    final cleaned = memberIds
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty && id != myId)
+        .toSet()
+        .toList();
+
+    if (cleaned.isEmpty) {
+      throw Exception("Pilih minimal 1 anggota");
+    }
+
+    final eligible = await filterEligibleMembers(cleaned);
+    if (eligible.length != cleaned.length) {
+      throw Exception("Semua anggota harus saling follow dengan Anda");
+    }
+
+    final participants = <String>{myId, ...eligible}.toList();
+    final now = DateTime.now().toIso8601String();
+
+    final chatData = await _supabase
+        .from('social_chats')
+        .insert({
+          'is_group': true,
+          'group_name': name,
+          'group_avatar_url': photoUrl,
+          'admin_id': myId,
+          'updated_at': now,
+          'last_message': 'Grup "$name" dibuat',
+          'participants': participants,
+        })
+        .select('id')
+        .single();
+
+    final chatId = chatData['id']?.toString();
+    if (chatId == null || chatId.isEmpty) {
+      throw Exception("Gagal membuat grup");
+    }
+
+    final membersData = participants
+        .map((uid) => {'chat_id': chatId, 'user_id': uid})
+        .toList();
+    await _supabase.from('chat_members').insert(membersData);
+
+    return chatId;
+  }
+
+  /// Checks if both users follow each other (mutual follow).
+  Future<bool> isMutualFollow(String a, String b) async {
+    if (a.isEmpty || b.isEmpty) return false;
+    final ab = await _supabase
+        .from('followers')
+        .select('follower_id')
+        .eq('follower_id', a)
+        .eq('following_id', b)
+        .limit(1)
+        .maybeSingle();
+    if (ab == null) return false;
+    final ba = await _supabase
+        .from('followers')
+        .select('follower_id')
+        .eq('follower_id', b)
+        .eq('following_id', a)
+        .limit(1)
+        .maybeSingle();
+    return ba != null;
+  }
+
+  /// Filters the provided user ids to those that are mutual-follow with current user.
+  Future<List<String>> filterEligibleMembers(List<String> picked) async {
+    final myId = _supabase.auth.currentUser?.id;
+    if (myId == null) return [];
+
+    final cleaned = picked
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty && id != myId)
+        .toSet()
+        .toList();
+    if (cleaned.isEmpty) return [];
+
+    final followingRes = await _supabase
+        .from('followers')
+        .select('following_id')
+        .eq('follower_id', myId);
+    final followerRes = await _supabase
+        .from('followers')
+        .select('follower_id')
+        .eq('following_id', myId);
+
+    final followingIds = (followingRes as List)
+        .map((row) => row['following_id']?.toString())
+        .whereType<String>()
+        .toSet();
+    final followerIds = (followerRes as List)
+        .map((row) => row['follower_id']?.toString())
+        .whereType<String>()
+        .toSet();
+
+    final mutualIds = followingIds.intersection(followerIds);
+    return cleaned.where(mutualIds.contains).toList();
+  }
+
   /// Streams messages for a given chat room in real-time.
   Stream<List<Map<String, dynamic>>> getMessagesStream(String roomId) {
     return _supabase
