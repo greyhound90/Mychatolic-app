@@ -1615,6 +1615,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Leave group is not available yet.'**
   String get chatLeaveUnavailable;
+
+  /// No description provided for @chatSearchTileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Search friends'**
+  String get chatSearchTileTitle;
+
+  /// No description provided for @chatSearchTileSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Find people from your parish'**
+  String get chatSearchTileSubtitle;
+
+  /// No description provided for @chatPreviewEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a conversation'**
+  String get chatPreviewEmpty;
+
+  /// No description provided for @chatYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get chatYesterday;
 }
 
 class _AppLocalizationsDelegate

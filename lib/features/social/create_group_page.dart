@@ -64,11 +64,9 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
 
       if (allowedIds != null) {
         query = query.inFilter('id', allowedIds);
-      } else {
-        query = query.limit(50);
       }
 
-      final data = await query;
+      final data = allowedIds != null ? await query : await query.limit(50);
 
       if (mounted) {
         setState(() {

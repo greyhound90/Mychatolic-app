@@ -9,7 +9,7 @@ class ChatInboxService {
   Future<Map<String, int>> fetchUnreadCounts({
     required String myId,
     required List<String> chatIds,
-    int limit = 500,
+    int limit = 800,
   }) async {
     if (chatIds.isEmpty) return {};
 
@@ -79,7 +79,9 @@ class ChatInboxService {
         lastMessage?['location_lng'] != null;
 
     if (messageType == 'beeb') return '👋 BEEB!';
-    if (messageType == 'image' || hasImage) return '📷 Foto';
+    if (messageType == 'image' || messageType == 'photo' || hasImage) {
+      return '📷 Foto';
+    }
     if (messageType == 'audio' || hasAudio) return '🎤 Pesan suara';
     if (messageType == 'location' || hasLocation) return '📍 Lokasi';
 

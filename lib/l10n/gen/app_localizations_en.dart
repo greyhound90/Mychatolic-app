@@ -808,4 +808,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatLeaveUnavailable => 'Leave group is not available yet.';
+
+  @override
+  String get chatSearchTileTitle => 'Search friends';
+
+  @override
+  String get chatSearchTileSubtitle => 'Find people from your parish';
+
+  @override
+  String get chatPreviewEmpty => 'Start a conversation';
+
+  @override
+  String get chatYesterday => 'Yesterday';
 }

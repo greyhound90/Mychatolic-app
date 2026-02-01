@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:mychatolic_app/l10n/gen/app_localizations.dart';
 
 import 'package:mychatolic_app/features/social/pages/social_chat_detail_page.dart';
@@ -93,12 +93,12 @@ class _ChatPageState extends State<ChatPage> {
     final uniqueIds = chatIds.toSet().toList();
     final signature = _chatIdsSignature(uniqueIds);
     final recentlyRefreshed =
-        DateTime.now().difference(_lastUnreadRefresh) < const Duration(milliseconds: 800);
+        DateTime.now().difference(_lastUnreadRefresh) < const Duration(milliseconds: 600);
     if (signature == _lastUnreadSignature && recentlyRefreshed) return;
     _lastUnreadSignature = signature;
     _pendingUnreadChatIds = uniqueIds;
     _unreadRefreshTimer?.cancel();
-    _unreadRefreshTimer = Timer(const Duration(milliseconds: 700), () {
+    _unreadRefreshTimer = Timer(const Duration(milliseconds: 600), () {
       _refreshUnreadCounts(_pendingUnreadChatIds);
     });
   }
@@ -131,12 +131,12 @@ class _ChatPageState extends State<ChatPage> {
     final uniqueIds = chatIds.toSet().toList();
     final signature = _chatIdsSignature(uniqueIds);
     final recentlyRefreshed =
-        DateTime.now().difference(_lastPreviewRefresh) < const Duration(milliseconds: 800);
+        DateTime.now().difference(_lastPreviewRefresh) < const Duration(milliseconds: 600);
     if (signature == _lastPreviewSignature && recentlyRefreshed) return;
     _lastPreviewSignature = signature;
     _pendingPreviewChatIds = uniqueIds;
     _previewRefreshTimer?.cancel();
-    _previewRefreshTimer = Timer(const Duration(milliseconds: 700), () {
+    _previewRefreshTimer = Timer(const Duration(milliseconds: 600), () {
       _refreshPreviewCache(_pendingPreviewChatIds);
     });
   }
@@ -371,8 +371,19 @@ class _ChatPageState extends State<ChatPage> {
       ),
       body: Column(
         children: [
-          if (_loadingChatIds) const ChatStorySkeleton() else const StoryRail(),
-          Expanded(child: _buildChatList(myId, t)),
+          const StoryRail(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+            child: _buildSearchTile(t),
+          ),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              child: _buildChatList(myId, t),
+            ),
+          ),
         ],
       ),
     );
@@ -380,25 +391,26 @@ class _ChatPageState extends State<ChatPage> {
 
   Widget _buildChatList(String myId, AppLocalizations t) {
     if (_loadingChatIds) {
-      return const ChatInboxSkeleton();
+      return const ChatInboxSkeleton(key: ValueKey('chat_loading'));
     }
     if (_chatIdsError != null) {
-      return _buildErrorState(t, onRetry: _refreshInbox);
+      return _buildErrorState(t, onRetry: _refreshInbox, key: const ValueKey('chat_error'));
     }
     if (_myChatIds.isEmpty || _chatStream == null) {
-      return _buildEmptyState(t);
+      return _buildEmptyState(t, key: const ValueKey('chat_empty'));
     }
 
     return StreamBuilder<List<Map<String, dynamic>>>(
+      key: const ValueKey('chat_stream'),
       stream: _chatStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting &&
             !snapshot.hasData) {
-          return const ChatInboxSkeleton();
+          return const ChatInboxSkeleton(key: ValueKey('chat_loading_stream'));
         }
 
         if (snapshot.hasError) {
-          return _buildErrorState(t, onRetry: _refreshInbox);
+          return _buildErrorState(t, onRetry: _refreshInbox, key: const ValueKey('chat_error_stream'));
         }
 
         final rawChats = snapshot.data ?? <Map<String, dynamic>>[];
@@ -412,7 +424,7 @@ class _ChatPageState extends State<ChatPage> {
         }).toList();
 
         if (chats.isEmpty) {
-          return _buildEmptyState(t);
+          return _buildEmptyState(t, key: const ValueKey('chat_empty_stream'));
         }
 
         final chatIds = chats
@@ -457,97 +469,99 @@ class _ChatPageState extends State<ChatPage> {
 
         return RefreshIndicator(
           onRefresh: _refreshInbox,
-          child: AnimationLimiter(
-            child: ListView.builder(
-              padding: const EdgeInsets.only(bottom: 80, top: 8),
-              itemCount: chats.length,
-              itemBuilder: (context, index) {
-                final chat = chats[index];
-                final chatId = chat['id']?.toString();
-                if (chatId == null || chatId.isEmpty) {
-                  return const SizedBox.shrink();
-                }
-                final unreadCount =
-                    _unreadCounts[chatId] ?? 0;
-                Map<String, dynamic>? partnerProfile;
-                Map<String, dynamic> profileForNav = {};
-                String? avatarUrl;
-                final isGroup = chat['is_group'] == true;
+          child: ListView.builder(
+            padding: const EdgeInsets.only(bottom: 80, top: 8),
+            itemCount: chats.length,
+            itemBuilder: (context, index) {
+              final chat = chats[index];
+              final chatId = chat['id']?.toString();
+              if (chatId == null || chatId.isEmpty) {
+                return const SizedBox.shrink();
+              }
+              final unreadCount = _unreadCounts[chatId] ?? 0;
+              Map<String, dynamic>? partnerProfile;
+              Map<String, dynamic> profileForNav = {};
+              String? avatarUrl;
+              final isGroup = chat['is_group'] == true;
 
-                if (isGroup) {
-                  final name = chat['group_name'] ?? 'Grup';
-                  avatarUrl = chat['group_avatar_url'];
-                  profileForNav = {
-                    'id': chatId,
-                    'full_name': name,
-                    'avatar_url': avatarUrl,
-                    'group_name': name,
-                    'group_avatar_url': avatarUrl,
-                  };
-                } else {
-                  final participants = _safeParticipants(chat['participants']);
-                  final partnerId = participants.firstWhere(
-                    (id) => id != myId,
-                    orElse: () => null,
-                  );
-                  if (partnerId != null) {
-                    partnerProfile = _profileCache[partnerId];
-                    profileForNav = partnerProfile ?? {};
-                    avatarUrl = partnerProfile?['avatar_url'];
-                  }
-                }
-
-                ImagePrefetch.prefetch(context, avatarUrl);
-
-                final preview = _inboxService.buildPreview(
-                  chatRow: chat,
-                  lastMessage: _lastMessageCache[chatId],
+              if (isGroup) {
+                final name = chat['group_name'] ?? 'Grup';
+                avatarUrl = chat['group_avatar_url'];
+                profileForNav = {
+                  'id': chatId,
+                  'full_name': name,
+                  'avatar_url': avatarUrl,
+                  'group_name': name,
+                  'group_avatar_url': avatarUrl,
+                };
+              } else {
+                final participants = _safeParticipants(chat['participants']);
+                final partnerId = participants.firstWhere(
+                  (id) => id != myId,
+                  orElse: () => null,
                 );
+                if (partnerId != null) {
+                  partnerProfile = _profileCache[partnerId];
+                  profileForNav = partnerProfile ?? {};
+                  avatarUrl = partnerProfile?['avatar_url'];
+                }
+              }
 
-                final isOnline = chat['is_online'] == true ||
-                    (partnerProfile?['is_online'] == true);
+              ImagePrefetch.prefetch(context, avatarUrl);
 
-                return AnimationConfiguration.staggeredList(
-                  position: index,
-                  duration: const Duration(milliseconds: 300),
-                  child: SlideAnimation(
-                    verticalOffset: 24,
-                    child: FadeInAnimation(
-                      child: ChatInboxTile(
-                        chatData: chat,
-                        partnerProfile: partnerProfile,
-                        previewText: preview,
-                        unreadCount: unreadCount,
-                        isOnline: isOnline,
-                        onTap: () {
-                          if (!isGroup && partnerProfile == null) return;
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => SocialChatDetailPage(
-                                chatId: chatId,
-                                isGroup: isGroup,
-                                opponentProfile: profileForNav,
-                                source: 'chat_list',
-                              ),
-                            ),
-                          ).then((_) {
-                            if (chatId != null && chatId.isNotEmpty) {
-                              _scheduleUnreadRefresh([chatId]);
-                            }
-                          });
-                        },
-                        onDelete: () {
-                          if (chatId == null) return;
-                          _deleteChat(chatId);
-                        },
-                        onLeaveGroup: isGroup ? _leaveGroupUnavailable : null,
-                      ),
+              final preview = _inboxService.buildPreview(
+                chatRow: chat,
+                lastMessage: _lastMessageCache[chatId],
+              );
+
+              final previewText =
+                  preview.isEmpty ? t.chatPreviewEmpty : preview;
+
+              final isOnline = chat['is_online'] == true ||
+                  (partnerProfile?['is_online'] == true);
+
+              final updatedAt = chat['last_message_at'] ?? chat['updated_at'];
+              final timeLabel = _formatChatTime(context, updatedAt, t);
+
+              return TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 220),
+                builder: (context, value, child) {
+                  final offset = 12 * (1 - value);
+                  return Opacity(
+                    opacity: value,
+                    child: Transform.translate(
+                      offset: Offset(0, offset),
+                      child: child,
                     ),
-                  ),
-                );
-              },
-            ),
+                  );
+                },
+                child: ChatInboxTile(
+                  chatData: chat,
+                  partnerProfile: partnerProfile,
+                  previewText: previewText,
+                  timeLabel: timeLabel,
+                  unreadCount: unreadCount,
+                  isOnline: isOnline,
+                  onTap: () {
+                    if (!isGroup && partnerProfile == null) return;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => SocialChatDetailPage(
+                          chatId: chatId,
+                          isGroup: isGroup,
+                          opponentProfile: profileForNav,
+                          source: 'chat_list',
+                        ),
+                      ),
+                    ).then((_) => _refreshInbox());
+                  },
+                  onDelete: () => _deleteChat(chatId),
+                  onLeaveGroup: isGroup ? _leaveGroupUnavailable : null,
+                ),
+              );
+            },
           ),
         );
       },
@@ -579,7 +593,7 @@ class _ChatPageState extends State<ChatPage> {
       context,
       MaterialPageRoute(builder: (_) => const SearchUserPage()),
     );
-    _loadMyChatIds();
+    _refreshInbox();
   }
 
   Future<void> _openCreateGroup() async {
@@ -610,7 +624,7 @@ class _ChatPageState extends State<ChatPage> {
           builder: (_) => CreateGroupPage(allowedUserIds: mutualIds),
         ),
       );
-      _loadMyChatIds();
+      _refreshInbox();
     } catch (e) {
       AppSnackBar.showError(context, t.chatLoadErrorMessage);
     }
@@ -739,8 +753,9 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  Widget _buildEmptyState(AppLocalizations t) {
+  Widget _buildEmptyState(AppLocalizations t, {Key? key}) {
     return Center(
+      key: key,
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Container(
@@ -785,8 +800,13 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget _buildErrorState(AppLocalizations t, {required VoidCallback onRetry}) {
+  Widget _buildErrorState(
+    AppLocalizations t, {
+    required VoidCallback onRetry,
+    Key? key,
+  }) {
     return Center(
+      key: key,
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Container(
@@ -828,5 +848,81 @@ class _ChatPageState extends State<ChatPage> {
         ),
       ),
     );
+  }
+
+  Widget _buildSearchTile(AppLocalizations t) {
+    return InkWell(
+      onTap: _openSearchUser,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.border),
+          boxShadow: AppShadows.level1,
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.search, color: AppColors.textMuted),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    t.chatSearchTileTitle,
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.text,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    t.chatSearchTileSubtitle,
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.textMuted),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatChatTime(
+    BuildContext context,
+    dynamic raw,
+    AppLocalizations t,
+  ) {
+    if (raw == null) return '';
+    DateTime? dt;
+    if (raw is DateTime) {
+      dt = raw;
+    } else {
+      try {
+        dt = DateTime.parse(raw.toString());
+      } catch (_) {
+        dt = null;
+      }
+    }
+    if (dt == null) return '';
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final date = DateTime(dt.year, dt.month, dt.day);
+    final diff = today.difference(date).inDays;
+    final locale = Localizations.localeOf(context).toString();
+    if (diff == 0) {
+      return DateFormat('HH:mm', locale).format(dt);
+    }
+    if (diff == 1) {
+      return t.chatYesterday;
+    }
+    return DateFormat('dd MMM', locale).format(dt);
   }
 }

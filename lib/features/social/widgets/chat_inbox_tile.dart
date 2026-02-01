@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:timeago/timeago.dart' as timeago;
-
 import 'package:mychatolic_app/core/design_tokens.dart';
 import 'package:mychatolic_app/l10n/gen/app_localizations.dart';
 import 'package:mychatolic_app/widgets/safe_network_image.dart';
@@ -10,6 +8,7 @@ class ChatInboxTile extends StatelessWidget {
   final Map<String, dynamic> chatData;
   final Map<String, dynamic>? partnerProfile;
   final String previewText;
+  final String timeLabel;
   final int unreadCount;
   final VoidCallback onTap;
   final VoidCallback onDelete;
@@ -21,6 +20,7 @@ class ChatInboxTile extends StatelessWidget {
     required this.chatData,
     required this.partnerProfile,
     required this.previewText,
+    required this.timeLabel,
     required this.unreadCount,
     required this.onTap,
     required this.onDelete,
@@ -32,10 +32,6 @@ class ChatInboxTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     final isGroup = chatData['is_group'] == true;
-    final updatedAt = chatData['updated_at'];
-    final time = updatedAt != null
-        ? timeago.format(DateTime.parse(updatedAt), locale: 'id')
-        : '';
     final name = isGroup
         ? (chatData['group_name'] ?? 'Grup').toString()
         : (partnerProfile?['full_name'] ?? 'User').toString();
@@ -173,7 +169,7 @@ class ChatInboxTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      time,
+                      timeLabel,
                       style: GoogleFonts.outfit(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,

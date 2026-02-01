@@ -806,4 +806,16 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get chatLeaveUnavailable => 'Keluar grup belum tersedia.';
+
+  @override
+  String get chatSearchTileTitle => 'Cari Teman';
+
+  @override
+  String get chatSearchTileSubtitle => 'Temukan teman berdasarkan gereja';
+
+  @override
+  String get chatPreviewEmpty => 'Memulai percakapan';
+
+  @override
+  String get chatYesterday => 'Kemarin';
 }

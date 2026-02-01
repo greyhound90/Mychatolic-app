@@ -317,5 +317,9 @@
   "chatLeaveGroupMessage": "You will leave this group chat.",
   "chatLeaveGroupConfirm": "Leave",
   "chatLeaveGroup": "Leave",
-  "chatLeaveUnavailable": "Leave group is not available yet."
+  "chatLeaveUnavailable": "Leave group is not available yet.",
+  "chatSearchTileTitle": "Search friends",
+  "chatSearchTileSubtitle": "Find people from your parish",
+  "chatPreviewEmpty": "Start a conversation",
+  "chatYesterday": "Yesterday"
 }

@@ -317,5 +317,9 @@
   "chatLeaveGroupMessage": "Kamu akan keluar dari grup ini.",
   "chatLeaveGroupConfirm": "Keluar",
   "chatLeaveGroup": "Keluar",
-  "chatLeaveUnavailable": "Keluar grup belum tersedia."
+  "chatLeaveUnavailable": "Keluar grup belum tersedia.",
+  "chatSearchTileTitle": "Cari Teman",
+  "chatSearchTileSubtitle": "Temukan teman berdasarkan gereja",
+  "chatPreviewEmpty": "Memulai percakapan",
+  "chatYesterday": "Kemarin"
 }
