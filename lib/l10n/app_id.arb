@@ -321,5 +321,15 @@
   "chatSearchTileTitle": "Cari Teman",
   "chatSearchTileSubtitle": "Temukan teman berdasarkan gereja",
   "chatPreviewEmpty": "Memulai percakapan",
-  "chatYesterday": "Kemarin"
+  "chatYesterday": "Kemarin",
+  "friendSearchTitle": "Cari Teman",
+  "friendSearchSelectTitle": "Pilih Teman",
+  "friendSearchHint": "Cari nama teman...",
+  "friendSearchFilterTitle": "Filter Lokasi",
+  "friendSearchCountryHint": "Pilih Negara",
+  "friendSearchDioceseHint": "Pilih Keuskupan",
+  "friendSearchChurchHint": "Pilih Paroki",
+  "friendSearchReset": "Reset Filter",
+  "friendSearchEmptyTitle": "Tidak ada hasil",
+  "friendSearchEmptySubtitle": "Coba kata kunci lain"
 }

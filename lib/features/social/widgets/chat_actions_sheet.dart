@@ -4,13 +4,11 @@ import 'package:mychatolic_app/core/design_tokens.dart';
 import 'package:mychatolic_app/l10n/gen/app_localizations.dart';
 
 class ChatActionsSheet extends StatelessWidget {
-  final VoidCallback onNewChat;
   final VoidCallback onCreateGroup;
   final VoidCallback onJoinLink;
 
   const ChatActionsSheet({
     super.key,
-    required this.onNewChat,
     required this.onCreateGroup,
     required this.onJoinLink,
   });
@@ -36,13 +34,6 @@ class ChatActionsSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          _ActionItem(
-            icon: Icons.chat_bubble_outline,
-            title: t.chatActionNewChat,
-            subtitle: t.chatActionNewChatSubtitle,
-            onTap: onNewChat,
-          ),
-          const SizedBox(height: 8),
           _ActionItem(
             icon: Icons.group_add_outlined,
             title: t.chatActionCreateGroup,

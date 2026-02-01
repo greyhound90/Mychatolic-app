@@ -7,7 +7,7 @@ import 'package:mychatolic_app/l10n/gen/app_localizations.dart';
 
 import 'package:mychatolic_app/features/social/pages/social_chat_detail_page.dart';
 import 'package:mychatolic_app/widgets/story_rail.dart';
-import 'package:mychatolic_app/features/social/search_user_page.dart';
+import 'package:mychatolic_app/features/social/pages/friend_search_page.dart';
 import 'package:mychatolic_app/features/social/create_group_page.dart';
 import 'package:mychatolic_app/core/design_tokens.dart';
 import 'package:mychatolic_app/core/ui/app_state.dart';
@@ -372,10 +372,6 @@ class _ChatPageState extends State<ChatPage> {
       body: Column(
         children: [
           const StoryRail(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
-            child: _buildSearchTile(t),
-          ),
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 250),
@@ -581,7 +577,6 @@ class _ChatPageState extends State<ChatPage> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (_) => ChatActionsSheet(
-        onNewChat: _openSearchUser,
         onCreateGroup: _openCreateGroup,
         onJoinLink: _showJoinLinkDialog,
       ),
@@ -591,7 +586,7 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> _openSearchUser() async {
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const SearchUserPage()),
+      MaterialPageRoute(builder: (_) => const FriendSearchPage()),
     );
     _refreshInbox();
   }
@@ -780,19 +775,6 @@ class _ChatPageState extends State<ChatPage> {
                 textAlign: TextAlign.center,
                 style: GoogleFonts.outfit(color: AppColors.textBody),
               ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: _openSearchUser,
-                icon: const Icon(Icons.search),
-                label: Text(t.chatEmptyCta),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-              ),
             ],
           ),
         ),
@@ -845,51 +827,6 @@ class _ChatPageState extends State<ChatPage> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSearchTile(AppLocalizations t) {
-    return InkWell(
-      onTap: _openSearchUser,
-      borderRadius: BorderRadius.circular(18),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.border),
-          boxShadow: AppShadows.level1,
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.search, color: AppColors.textMuted),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    t.chatSearchTileTitle,
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.text,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    t.chatSearchTileSubtitle,
-                    style: GoogleFonts.outfit(
-                      fontSize: 12,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right, color: AppColors.textMuted),
-          ],
         ),
       ),
     );

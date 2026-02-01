@@ -818,4 +818,34 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get chatYesterday => 'Kemarin';
+
+  @override
+  String get friendSearchTitle => 'Cari Teman';
+
+  @override
+  String get friendSearchSelectTitle => 'Pilih Teman';
+
+  @override
+  String get friendSearchHint => 'Cari nama teman...';
+
+  @override
+  String get friendSearchFilterTitle => 'Filter Lokasi';
+
+  @override
+  String get friendSearchCountryHint => 'Pilih Negara';
+
+  @override
+  String get friendSearchDioceseHint => 'Pilih Keuskupan';
+
+  @override
+  String get friendSearchChurchHint => 'Pilih Paroki';
+
+  @override
+  String get friendSearchReset => 'Reset Filter';
+
+  @override
+  String get friendSearchEmptyTitle => 'Tidak ada hasil';
+
+  @override
+  String get friendSearchEmptySubtitle => 'Coba kata kunci lain';
 }

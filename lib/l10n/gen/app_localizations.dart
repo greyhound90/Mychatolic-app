@@ -1639,6 +1639,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Yesterday'**
   String get chatYesterday;
+
+  /// No description provided for @friendSearchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Search friends'**
+  String get friendSearchTitle;
+
+  /// No description provided for @friendSearchSelectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select friends'**
+  String get friendSearchSelectTitle;
+
+  /// No description provided for @friendSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name...'**
+  String get friendSearchHint;
+
+  /// No description provided for @friendSearchFilterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Location filters'**
+  String get friendSearchFilterTitle;
+
+  /// No description provided for @friendSearchCountryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select country'**
+  String get friendSearchCountryHint;
+
+  /// No description provided for @friendSearchDioceseHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select diocese'**
+  String get friendSearchDioceseHint;
+
+  /// No description provided for @friendSearchChurchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select parish'**
+  String get friendSearchChurchHint;
+
+  /// No description provided for @friendSearchReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset filters'**
+  String get friendSearchReset;
+
+  /// No description provided for @friendSearchEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No results found'**
+  String get friendSearchEmptyTitle;
+
+  /// No description provided for @friendSearchEmptySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Try a different keyword'**
+  String get friendSearchEmptySubtitle;
 }
 
 class _AppLocalizationsDelegate

@@ -321,5 +321,15 @@
   "chatSearchTileTitle": "Search friends",
   "chatSearchTileSubtitle": "Find people from your parish",
   "chatPreviewEmpty": "Start a conversation",
-  "chatYesterday": "Yesterday"
+  "chatYesterday": "Yesterday",
+  "friendSearchTitle": "Search friends",
+  "friendSearchSelectTitle": "Select friends",
+  "friendSearchHint": "Search by name...",
+  "friendSearchFilterTitle": "Location filters",
+  "friendSearchCountryHint": "Select country",
+  "friendSearchDioceseHint": "Select diocese",
+  "friendSearchChurchHint": "Select parish",
+  "friendSearchReset": "Reset filters",
+  "friendSearchEmptyTitle": "No results found",
+  "friendSearchEmptySubtitle": "Try a different keyword"
 }

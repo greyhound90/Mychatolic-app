@@ -6,6 +6,8 @@ import 'package:mychatolic_app/features/profile/pages/profile_page.dart';
 import 'package:mychatolic_app/services/master_data_service.dart';
 import 'package:mychatolic_app/services/profile_service.dart';
 import 'package:mychatolic_app/widgets/safe_network_image.dart';
+import 'package:mychatolic_app/l10n/gen/app_localizations.dart';
+import 'package:mychatolic_app/core/design_tokens.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class FriendSearchPage extends StatefulWidget {
@@ -186,27 +188,28 @@ class _FriendSearchPageState extends State<FriendSearchPage> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor:
-          Colors.grey[50], // Lighter theme as per ProfilePage style
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(
-          widget.isSelectionMode ? "Pilih Teman" : "Cari Teman",
+          widget.isSelectionMode ? t.friendSearchSelectTitle : t.friendSearchTitle,
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.bold,
-            color: Colors.black,
+            color: AppColors.text,
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.surface,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: const IconThemeData(color: AppColors.text),
       ),
       body: Column(
         children: [
           // 1. SEARCH BAR & FILTERS
           Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            color: AppColors.surface,
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             child: Column(
               children: [
                 // Search Field
@@ -214,19 +217,19 @@ class _FriendSearchPageState extends State<FriendSearchPage> {
                   controller: _searchController,
                   onChanged: _onSearchChanged,
                   decoration: InputDecoration(
-                    hintText: "Cari nama umat...",
-                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                    hintText: t.friendSearchHint,
+                    prefixIcon: const Icon(Icons.search, color: AppColors.textMuted),
                     filled: true,
-                    fillColor: Colors.grey[100],
+                    fillColor: AppColors.surfaceAlt,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(18),
                       borderSide: BorderSide.none,
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                 ),
 
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
 
                 // Expandable Filter
                 Theme(
@@ -235,10 +238,10 @@ class _FriendSearchPageState extends State<FriendSearchPage> {
                   ).copyWith(dividerColor: Colors.transparent),
                   child: ExpansionTile(
                     title: Text(
-                      "Filter Lokasi",
+                      t.friendSearchFilterTitle,
                       style: GoogleFonts.outfit(
                         fontWeight: FontWeight.bold,
-                        color: Colors.blue,
+                        color: colorScheme.primary,
                       ),
                     ),
                     initiallyExpanded: _isFilterExpanded,
@@ -248,7 +251,7 @@ class _FriendSearchPageState extends State<FriendSearchPage> {
                     children: [
                       // Row 1: Country
                       _buildDropdown(
-                        hint: "Pilih Negara",
+                        hint: t.friendSearchCountryHint,
                         value: _selectedCountryId,
                         items: _countries,
                         onChanged: (val) {
@@ -267,7 +270,7 @@ class _FriendSearchPageState extends State<FriendSearchPage> {
 
                       // Row 2: Diocese
                       _buildDropdown(
-                        hint: "Pilih Keuskupan",
+                        hint: t.friendSearchDioceseHint,
                         value: _selectedDioceseId,
                         items: _dioceses,
                         enabled: _selectedCountryId != null,
@@ -285,7 +288,7 @@ class _FriendSearchPageState extends State<FriendSearchPage> {
 
                       // Row 3: Church
                       _buildDropdown(
-                        hint: "Pilih Paroki",
+                        hint: t.friendSearchChurchHint,
                         value: _selectedChurchId,
                         items: _churches,
                         enabled: _selectedDioceseId != null,
@@ -302,10 +305,8 @@ class _FriendSearchPageState extends State<FriendSearchPage> {
                           child: TextButton.icon(
                             onPressed: _resetFilters,
                             icon: const Icon(Icons.clear, size: 16),
-                            label: const Text("Reset Filter"),
-                            style: TextButton.styleFrom(
-                              foregroundColor: Colors.red,
-                            ),
+                            label: Text(t.friendSearchReset),
+                            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
                           ),
                         ),
                     ],
@@ -315,14 +316,14 @@ class _FriendSearchPageState extends State<FriendSearchPage> {
             ),
           ),
 
-          const Divider(height: 1),
+          Divider(height: 1, color: AppColors.border),
 
           // 2. RESULTS LIST
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _searchResults.isEmpty
-                ? _buildEmptyState()
+                ? _buildEmptyState(t)
                 : ListView.separated(
                     padding: const EdgeInsets.all(16),
                     itemCount: _searchResults.length,
@@ -347,26 +348,26 @@ class _FriendSearchPageState extends State<FriendSearchPage> {
     bool enabled = true,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: enabled ? Colors.white : Colors.grey[100],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        color: enabled ? AppColors.surface : AppColors.surfaceAlt,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value,
-          hint: Text(hint, style: GoogleFonts.outfit(color: Colors.grey)),
+          hint: Text(hint, style: GoogleFonts.outfit(color: AppColors.textMuted)),
           isExpanded: true,
           items: items.map((item) {
             return DropdownMenuItem<String>(
               value: item['id'].toString(),
-              child: Text(item['name'], style: GoogleFonts.outfit()),
+              child: Text(item['name'], style: GoogleFonts.outfit(color: AppColors.text)),
             );
           }).toList(),
           onChanged: enabled ? onChanged : null,
-          icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
-          dropdownColor: Colors.white,
+          icon: const Icon(Icons.arrow_drop_down, color: AppColors.textMuted),
+          dropdownColor: AppColors.surface,
         ),
       ),
     );
@@ -377,6 +378,7 @@ class _FriendSearchPageState extends State<FriendSearchPage> {
     // We need to instantiate Profile to use its getters easily, or replicate logic.
     // Let's instantiate from Json
     final profile = Profile.fromJson(data);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return GestureDetector(
       onTap: () {
@@ -395,14 +397,14 @@ class _FriendSearchPageState extends State<FriendSearchPage> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.shade100,
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
@@ -430,6 +432,7 @@ class _FriendSearchPageState extends State<FriendSearchPage> {
                           style: GoogleFonts.outfit(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
+                            color: AppColors.text,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -444,7 +447,7 @@ class _FriendSearchPageState extends State<FriendSearchPage> {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.deepPurple,
+                            color: colorScheme.primary,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -468,31 +471,36 @@ class _FriendSearchPageState extends State<FriendSearchPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    "Paroki ${profile.parish ?? '-'} • ${profile.roleLabel}",
-                    style: GoogleFonts.outfit(color: Colors.grey, fontSize: 12),
+                      "Paroki ${profile.parish ?? '-'} • ${profile.roleLabel}",
+                    style: GoogleFonts.outfit(color: AppColors.textBody, fontSize: 12),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+            const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textMuted),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(AppLocalizations t) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.search_off, size: 48, color: Colors.grey),
+          const Icon(Icons.search_off, size: 48, color: AppColors.textMuted),
           const SizedBox(height: 16),
           Text(
-            "Tidak ada hasil ditemukan.",
-            style: GoogleFonts.outfit(color: Colors.grey),
+            t.friendSearchEmptyTitle,
+            style: GoogleFonts.outfit(color: AppColors.text),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            t.friendSearchEmptySubtitle,
+            style: GoogleFonts.outfit(color: AppColors.textMuted),
           ),
         ],
       ),

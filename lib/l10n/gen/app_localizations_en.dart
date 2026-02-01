@@ -820,4 +820,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatYesterday => 'Yesterday';
+
+  @override
+  String get friendSearchTitle => 'Search friends';
+
+  @override
+  String get friendSearchSelectTitle => 'Select friends';
+
+  @override
+  String get friendSearchHint => 'Search by name...';
+
+  @override
+  String get friendSearchFilterTitle => 'Location filters';
+
+  @override
+  String get friendSearchCountryHint => 'Select country';
+
+  @override
+  String get friendSearchDioceseHint => 'Select diocese';
+
+  @override
+  String get friendSearchChurchHint => 'Select parish';
+
+  @override
+  String get friendSearchReset => 'Reset filters';
+
+  @override
+  String get friendSearchEmptyTitle => 'No results found';
+
+  @override
+  String get friendSearchEmptySubtitle => 'Try a different keyword';
 }
